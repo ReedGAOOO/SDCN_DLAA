@@ -1,0 +1,5222 @@
+use cuda: True
+Namespace(name='acm', k=None, lr=0.001, n_clusters=3, n_z=10, pretrain_path='data/acm.pkl', cuda=True, n_input=1870)
+SDCN(
+  (ae): AE(
+    (enc_1): Linear(in_features=1870, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=2000, bias=True)
+    (z_layer): Linear(in_features=2000, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=2000, bias=True)
+    (dec_2): Linear(in_features=2000, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=1870, bias=True)
+  )
+  (gnn_1): GNNLayer()
+  (gnn_2): GNNLayer()
+  (gnn_3): GNNLayer()
+  (gnn_4): GNNLayer()
+  (gnn_5): GNNLayer()
+)
+pae :acc 0.8291 , nmi 0.5049 , ari 0.5581 , f1 0.8309
+
+Epoch 0
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+0Q :acc 0.8291 , nmi 0.5049 , ari 0.5581 , f1 0.8309
+0Z :acc 0.6317 , nmi 0.1873 , ari 0.2121 , f1 0.6234
+0P :acc 0.8298 , nmi 0.5041 , ari 0.5609 , f1 0.8310
+
+Epoch 1
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+1Q :acc 0.7931 , nmi 0.4923 , ari 0.5067 , f1 0.7849
+1Z :acc 0.5296 , nmi 0.1876 , ari 0.1802 , f1 0.4966
+1P :acc 0.8033 , nmi 0.4947 , ari 0.5212 , f1 0.7979
+
+Epoch 2
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+2Q :acc 0.8403 , nmi 0.5296 , ari 0.5859 , f1 0.8410
+2Z :acc 0.6271 , nmi 0.2854 , ari 0.2592 , f1 0.6098
+2P :acc 0.8443 , nmi 0.5363 , ari 0.5953 , f1 0.8446
+
+Epoch 3
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+3Q :acc 0.8281 , nmi 0.5160 , ari 0.5568 , f1 0.8298
+3Z :acc 0.6294 , nmi 0.4155 , ari 0.3845 , f1 0.5572
+3P :acc 0.8430 , nmi 0.5380 , ari 0.5919 , f1 0.8438
+
+Epoch 4
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+4Q :acc 0.8443 , nmi 0.5406 , ari 0.5953 , f1 0.8452
+4Z :acc 0.6691 , nmi 0.4846 , ari 0.4289 , f1 0.6195
+4P :acc 0.8532 , nmi 0.5566 , ari 0.6159 , f1 0.8537
+
+Epoch 5
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+5Q :acc 0.8555 , nmi 0.5608 , ari 0.6220 , f1 0.8551
+5Z :acc 0.7934 , nmi 0.5346 , ari 0.5188 , f1 0.7910
+5P :acc 0.8555 , nmi 0.5605 , ari 0.6219 , f1 0.8550
+
+Epoch 6
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+6Q :acc 0.8489 , nmi 0.5575 , ari 0.6091 , f1 0.8465
+6Z :acc 0.8879 , nmi 0.6392 , ari 0.6972 , f1 0.8888
+6P :acc 0.8516 , nmi 0.5599 , ari 0.6142 , f1 0.8495
+
+Epoch 7
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+7Q :acc 0.8430 , nmi 0.5556 , ari 0.5983 , f1 0.8393
+7Z :acc 0.8902 , nmi 0.6464 , ari 0.7041 , f1 0.8898
+7P :acc 0.8483 , nmi 0.5597 , ari 0.6081 , f1 0.8453
+
+Epoch 8
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+8Q :acc 0.8479 , nmi 0.5614 , ari 0.6078 , f1 0.8447
+8Z :acc 0.8896 , nmi 0.6490 , ari 0.7032 , f1 0.8887
+8P :acc 0.8519 , nmi 0.5662 , ari 0.6157 , f1 0.8491
+
+Epoch 9
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+9Q :acc 0.8575 , nmi 0.5755 , ari 0.6280 , f1 0.8552
+9Z :acc 0.8942 , nmi 0.6611 , ari 0.7148 , f1 0.8936
+9P :acc 0.8588 , nmi 0.5762 , ari 0.6304 , f1 0.8568
+
+Epoch 10
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+10Q :acc 0.8628 , nmi 0.5808 , ari 0.6388 , f1 0.8613
+10Z :acc 0.8899 , nmi 0.6538 , ari 0.7048 , f1 0.8887
+10P :acc 0.8635 , nmi 0.5810 , ari 0.6401 , f1 0.8621
+
+Epoch 11
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+11Q :acc 0.8698 , nmi 0.5917 , ari 0.6538 , f1 0.8690
+11Z :acc 0.8955 , nmi 0.6636 , ari 0.7176 , f1 0.8947
+11P :acc 0.8694 , nmi 0.5900 , ari 0.6529 , f1 0.8686
+
+Epoch 12
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+12Q :acc 0.8694 , nmi 0.5886 , ari 0.6526 , f1 0.8688
+12Z :acc 0.8992 , nmi 0.6698 , ari 0.7260 , f1 0.8989
+12P :acc 0.8698 , nmi 0.5894 , ari 0.6534 , f1 0.8692
+
+Epoch 13
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+13Q :acc 0.8694 , nmi 0.5888 , ari 0.6526 , f1 0.8687
+13Z :acc 0.8919 , nmi 0.6539 , ari 0.7083 , f1 0.8912
+13P :acc 0.8701 , nmi 0.5904 , ari 0.6542 , f1 0.8694
+
+Epoch 14
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+14Q :acc 0.8688 , nmi 0.5882 , ari 0.6511 , f1 0.8679
+14Z :acc 0.8949 , nmi 0.6635 , ari 0.7162 , f1 0.8943
+14P :acc 0.8694 , nmi 0.5896 , ari 0.6527 , f1 0.8686
+
+Epoch 15
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+15Q :acc 0.8681 , nmi 0.5870 , ari 0.6496 , f1 0.8672
+15Z :acc 0.8952 , nmi 0.6648 , ari 0.7171 , f1 0.8948
+15P :acc 0.8681 , nmi 0.5871 , ari 0.6497 , f1 0.8672
+
+Epoch 16
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+16Q :acc 0.8668 , nmi 0.5846 , ari 0.6466 , f1 0.8658
+16Z :acc 0.8942 , nmi 0.6643 , ari 0.7148 , f1 0.8934
+16P :acc 0.8678 , nmi 0.5865 , ari 0.6489 , f1 0.8668
+
+Epoch 17
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+17Q :acc 0.8671 , nmi 0.5854 , ari 0.6474 , f1 0.8661
+17Z :acc 0.8919 , nmi 0.6640 , ari 0.7103 , f1 0.8914
+17P :acc 0.8678 , nmi 0.5866 , ari 0.6489 , f1 0.8668
+
+Epoch 18
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+18Q :acc 0.8671 , nmi 0.5854 , ari 0.6474 , f1 0.8661
+18Z :acc 0.8939 , nmi 0.6629 , ari 0.7141 , f1 0.8934
+18P :acc 0.8678 , nmi 0.5865 , ari 0.6488 , f1 0.8668
+
+Epoch 19
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+19Q :acc 0.8668 , nmi 0.5847 , ari 0.6467 , f1 0.8658
+19Z :acc 0.8959 , nmi 0.6654 , ari 0.7184 , f1 0.8958
+19P :acc 0.8674 , nmi 0.5858 , ari 0.6482 , f1 0.8665
+
+Epoch 20
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+20Q :acc 0.8668 , nmi 0.5845 , ari 0.6467 , f1 0.8658
+20Z :acc 0.8909 , nmi 0.6542 , ari 0.7069 , f1 0.8902
+20P :acc 0.8671 , nmi 0.5850 , ari 0.6474 , f1 0.8661
+
+Epoch 21
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+21Q :acc 0.8671 , nmi 0.5850 , ari 0.6474 , f1 0.8661
+21Z :acc 0.8992 , nmi 0.6733 , ari 0.7266 , f1 0.8992
+21P :acc 0.8674 , nmi 0.5858 , ari 0.6482 , f1 0.8665
+
+Epoch 22
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+22Q :acc 0.8671 , nmi 0.5850 , ari 0.6473 , f1 0.8661
+22Z :acc 0.8922 , nmi 0.6541 , ari 0.7095 , f1 0.8916
+22P :acc 0.8674 , nmi 0.5855 , ari 0.6481 , f1 0.8665
+
+Epoch 23
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+23Q :acc 0.8678 , nmi 0.5863 , ari 0.6488 , f1 0.8668
+23Z :acc 0.8955 , nmi 0.6648 , ari 0.7181 , f1 0.8952
+23P :acc 0.8674 , nmi 0.5855 , ari 0.6481 , f1 0.8665
+
+Epoch 24
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+24Q :acc 0.8674 , nmi 0.5855 , ari 0.6481 , f1 0.8665
+24Z :acc 0.9005 , nmi 0.6751 , ari 0.7298 , f1 0.9004
+24P :acc 0.8674 , nmi 0.5855 , ari 0.6481 , f1 0.8665
+
+Epoch 25
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+25Q :acc 0.8674 , nmi 0.5855 , ari 0.6481 , f1 0.8665
+25Z :acc 0.8916 , nmi 0.6515 , ari 0.7077 , f1 0.8908
+25P :acc 0.8674 , nmi 0.5855 , ari 0.6481 , f1 0.8665
+
+Epoch 26
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+26Q :acc 0.8674 , nmi 0.5855 , ari 0.6481 , f1 0.8665
+26Z :acc 0.9012 , nmi 0.6782 , ari 0.7316 , f1 0.9013
+26P :acc 0.8674 , nmi 0.5855 , ari 0.6481 , f1 0.8665
+
+Epoch 27
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+27Q :acc 0.8671 , nmi 0.5847 , ari 0.6472 , f1 0.8662
+27Z :acc 0.8906 , nmi 0.6490 , ari 0.7054 , f1 0.8899
+27P :acc 0.8671 , nmi 0.5847 , ari 0.6472 , f1 0.8662
+
+Epoch 28
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+28Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+28Z :acc 0.8922 , nmi 0.6531 , ari 0.7095 , f1 0.8918
+28P :acc 0.8671 , nmi 0.5847 , ari 0.6472 , f1 0.8662
+
+Epoch 29
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+29Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+29Z :acc 0.8945 , nmi 0.6588 , ari 0.7150 , f1 0.8944
+29P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 30
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+30Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+30Z :acc 0.8883 , nmi 0.6439 , ari 0.6999 , f1 0.8877
+30P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 31
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+31Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+31Z :acc 0.8959 , nmi 0.6644 , ari 0.7185 , f1 0.8957
+31P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 32
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+32Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+32Z :acc 0.8893 , nmi 0.6464 , ari 0.7023 , f1 0.8889
+32P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 33
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+33Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+33Z :acc 0.8893 , nmi 0.6492 , ari 0.7028 , f1 0.8888
+33P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 34
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+34Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+34Z :acc 0.8926 , nmi 0.6554 , ari 0.7103 , f1 0.8923
+34P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 35
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+35Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+35Z :acc 0.8889 , nmi 0.6450 , ari 0.7012 , f1 0.8885
+35P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 36
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+36Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+36Z :acc 0.8879 , nmi 0.6463 , ari 0.6997 , f1 0.8874
+36P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 37
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+37Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+37Z :acc 0.8909 , nmi 0.6476 , ari 0.7056 , f1 0.8906
+37P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 38
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+38Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+38Z :acc 0.8873 , nmi 0.6424 , ari 0.6976 , f1 0.8868
+38P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 39
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+39Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+39Z :acc 0.8879 , nmi 0.6454 , ari 0.6995 , f1 0.8875
+39P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 40
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+40Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+40Z :acc 0.8916 , nmi 0.6483 , ari 0.7070 , f1 0.8912
+40P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 41
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+41Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+41Z :acc 0.8883 , nmi 0.6443 , ari 0.6999 , f1 0.8878
+41P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 42
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+42Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+42Z :acc 0.8886 , nmi 0.6465 , ari 0.7010 , f1 0.8881
+42P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 43
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+43Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+43Z :acc 0.8886 , nmi 0.6442 , ari 0.7003 , f1 0.8879
+43P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 44
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+44Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+44Z :acc 0.8916 , nmi 0.6516 , ari 0.7077 , f1 0.8914
+44P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 45
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+45Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+45Z :acc 0.8856 , nmi 0.6383 , ari 0.6935 , f1 0.8849
+45P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 46
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+46Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+46Z :acc 0.8886 , nmi 0.6441 , ari 0.7003 , f1 0.8880
+46P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 47
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+47Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+47Z :acc 0.8936 , nmi 0.6556 , ari 0.7122 , f1 0.8935
+47P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 48
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+48Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+48Z :acc 0.8846 , nmi 0.6372 , ari 0.6914 , f1 0.8837
+48P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 49
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+49Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+49Z :acc 0.8912 , nmi 0.6500 , ari 0.7067 , f1 0.8911
+49P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 50
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+50Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+50Z :acc 0.8916 , nmi 0.6500 , ari 0.7073 , f1 0.8914
+50P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 51
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+51Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+51Z :acc 0.8850 , nmi 0.6387 , ari 0.6923 , f1 0.8840
+51P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 52
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+52Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+52Z :acc 0.8962 , nmi 0.6605 , ari 0.7182 , f1 0.8962
+52P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 53
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+53Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+53Z :acc 0.8889 , nmi 0.6454 , ari 0.7012 , f1 0.8882
+53P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 54
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+54Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+54Z :acc 0.8899 , nmi 0.6488 , ari 0.7036 , f1 0.8895
+54P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 55
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+55Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+55Z :acc 0.8922 , nmi 0.6513 , ari 0.7089 , f1 0.8921
+55P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 56
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+56Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+56Z :acc 0.8919 , nmi 0.6523 , ari 0.7082 , f1 0.8914
+56P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 57
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+57Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+57Z :acc 0.8886 , nmi 0.6445 , ari 0.7003 , f1 0.8882
+57P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 58
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+58Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+58Z :acc 0.8932 , nmi 0.6528 , ari 0.7109 , f1 0.8929
+58P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 59
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+59Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+59Z :acc 0.8919 , nmi 0.6517 , ari 0.7079 , f1 0.8915
+59P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 60
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+60Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+60Z :acc 0.8886 , nmi 0.6452 , ari 0.7003 , f1 0.8882
+60P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 61
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+61Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+61Z :acc 0.8936 , nmi 0.6520 , ari 0.7114 , f1 0.8933
+61P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 62
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+62Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+62Z :acc 0.8869 , nmi 0.6455 , ari 0.6972 , f1 0.8864
+62P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 63
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+63Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+63Z :acc 0.8942 , nmi 0.6515 , ari 0.7126 , f1 0.8941
+63P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 64
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+64Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+64Z :acc 0.8876 , nmi 0.6428 , ari 0.6980 , f1 0.8872
+64P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 65
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+65Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+65Z :acc 0.8889 , nmi 0.6482 , ari 0.7016 , f1 0.8884
+65P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 66
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+66Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+66Z :acc 0.8952 , nmi 0.6539 , ari 0.7150 , f1 0.8952
+66P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 67
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+67Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+67Z :acc 0.8856 , nmi 0.6426 , ari 0.6941 , f1 0.8849
+67P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 68
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+68Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+68Z :acc 0.8936 , nmi 0.6513 , ari 0.7113 , f1 0.8934
+68P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 69
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+69Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+69Z :acc 0.8945 , nmi 0.6524 , ari 0.7134 , f1 0.8945
+69P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 70
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+70Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+70Z :acc 0.8860 , nmi 0.6435 , ari 0.6950 , f1 0.8852
+70P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 71
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+71Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+71Z :acc 0.8949 , nmi 0.6542 , ari 0.7144 , f1 0.8946
+71P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 72
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+72Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+72Z :acc 0.8942 , nmi 0.6540 , ari 0.7131 , f1 0.8942
+72P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 73
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+73Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+73Z :acc 0.8863 , nmi 0.6426 , ari 0.6955 , f1 0.8855
+73P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 74
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+74Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+74Z :acc 0.8972 , nmi 0.6594 , ari 0.7200 , f1 0.8972
+74P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 75
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+75Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+75Z :acc 0.8869 , nmi 0.6356 , ari 0.6946 , f1 0.8863
+75P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 76
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+76Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+76Z :acc 0.8902 , nmi 0.6569 , ari 0.7057 , f1 0.8900
+76P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 77
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+77Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+77Z :acc 0.8955 , nmi 0.6540 , ari 0.7155 , f1 0.8952
+77P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 78
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+78Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+78Z :acc 0.8843 , nmi 0.6376 , ari 0.6907 , f1 0.8833
+78P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 79
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+79Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+79Z :acc 0.8926 , nmi 0.6531 , ari 0.7098 , f1 0.8924
+79P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 80
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+80Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+80Z :acc 0.8909 , nmi 0.6512 , ari 0.7064 , f1 0.8905
+80P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 81
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+81Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+81Z :acc 0.8840 , nmi 0.6337 , ari 0.6892 , f1 0.8830
+81P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 82
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+82Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+82Z :acc 0.8965 , nmi 0.6594 , ari 0.7188 , f1 0.8965
+82P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 83
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+83Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+83Z :acc 0.8922 , nmi 0.6517 , ari 0.7088 , f1 0.8921
+83P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 84
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+84Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+84Z :acc 0.8883 , nmi 0.6496 , ari 0.7008 , f1 0.8875
+84P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 85
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+85Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+85Z :acc 0.8929 , nmi 0.6500 , ari 0.7095 , f1 0.8925
+85P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 86
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+86Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+86Z :acc 0.8962 , nmi 0.6586 , ari 0.7180 , f1 0.8961
+86P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 87
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+87Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+87Z :acc 0.8889 , nmi 0.6470 , ari 0.7015 , f1 0.8886
+87P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 88
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+88Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+88Z :acc 0.8932 , nmi 0.6523 , ari 0.7108 , f1 0.8928
+88P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 89
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+89Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+89Z :acc 0.8942 , nmi 0.6539 , ari 0.7130 , f1 0.8939
+89P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 90
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+90Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+90Z :acc 0.8899 , nmi 0.6482 , ari 0.7037 , f1 0.8896
+90P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 91
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+91Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+91Z :acc 0.8942 , nmi 0.6528 , ari 0.7129 , f1 0.8940
+91P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 92
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+92Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+92Z :acc 0.8916 , nmi 0.6484 , ari 0.7068 , f1 0.8912
+92P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 93
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+93Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+93Z :acc 0.8869 , nmi 0.6447 , ari 0.6974 , f1 0.8864
+93P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 94
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+94Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+94Z :acc 0.8932 , nmi 0.6498 , ari 0.7103 , f1 0.8931
+94P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 95
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+95Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+95Z :acc 0.8926 , nmi 0.6494 , ari 0.7089 , f1 0.8922
+95P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 96
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+96Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+96Z :acc 0.8876 , nmi 0.6431 , ari 0.6983 , f1 0.8872
+96P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 97
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+97Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+97Z :acc 0.8926 , nmi 0.6489 , ari 0.7089 , f1 0.8924
+97P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 98
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+98Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+98Z :acc 0.8899 , nmi 0.6469 , ari 0.7033 , f1 0.8894
+98P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 99
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+99Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+99Z :acc 0.8899 , nmi 0.6447 , ari 0.7030 , f1 0.8897
+99P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 100
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+100Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+100Z :acc 0.8906 , nmi 0.6460 , ari 0.7044 , f1 0.8902
+100P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 101
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+101Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+101Z :acc 0.8866 , nmi 0.6403 , ari 0.6957 , f1 0.8861
+101P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 102
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+102Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+102Z :acc 0.8922 , nmi 0.6484 , ari 0.7083 , f1 0.8921
+102P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 103
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+103Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+103Z :acc 0.8866 , nmi 0.6431 , ari 0.6962 , f1 0.8859
+103P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 104
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+104Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+104Z :acc 0.8919 , nmi 0.6471 , ari 0.7073 , f1 0.8916
+104P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 105
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+105Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+105Z :acc 0.8883 , nmi 0.6440 , ari 0.6997 , f1 0.8877
+105P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 106
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+106Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+106Z :acc 0.8886 , nmi 0.6413 , ari 0.6998 , f1 0.8882
+106P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 107
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+107Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+107Z :acc 0.8893 , nmi 0.6446 , ari 0.7016 , f1 0.8888
+107P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 108
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+108Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+108Z :acc 0.8909 , nmi 0.6447 , ari 0.7050 , f1 0.8907
+108P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 109
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+109Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+109Z :acc 0.8883 , nmi 0.6448 , ari 0.6997 , f1 0.8876
+109P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 110
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+110Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+110Z :acc 0.8929 , nmi 0.6491 , ari 0.7096 , f1 0.8929
+110P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 111
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+111Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+111Z :acc 0.8850 , nmi 0.6391 , ari 0.6923 , f1 0.8841
+111P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 112
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+112Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+112Z :acc 0.8939 , nmi 0.6491 , ari 0.7114 , f1 0.8940
+112P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 113
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+113Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+113Z :acc 0.8783 , nmi 0.6295 , ari 0.6783 , f1 0.8770
+113P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 114
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+114Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+114Z :acc 0.8955 , nmi 0.6518 , ari 0.7149 , f1 0.8957
+114P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 115
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+115Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+115Z :acc 0.8797 , nmi 0.6386 , ari 0.6827 , f1 0.8786
+115P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 116
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+116Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+116Z :acc 0.8856 , nmi 0.6305 , ari 0.6907 , f1 0.8851
+116P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 117
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+117Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+117Z :acc 0.8952 , nmi 0.6595 , ari 0.7159 , f1 0.8954
+117P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 118
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+118Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+118Z :acc 0.8879 , nmi 0.6451 , ari 0.6992 , f1 0.8872
+118P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 119
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+119Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+119Z :acc 0.8896 , nmi 0.6405 , ari 0.7008 , f1 0.8892
+119P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 120
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+120Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+120Z :acc 0.8899 , nmi 0.6487 , ari 0.7039 , f1 0.8895
+120P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 121
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+121Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+121Z :acc 0.8912 , nmi 0.6471 , ari 0.7061 , f1 0.8911
+121P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 122
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+122Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+122Z :acc 0.8916 , nmi 0.6475 , ari 0.7067 , f1 0.8912
+122P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 123
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+123Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+123Z :acc 0.8853 , nmi 0.6387 , ari 0.6929 , f1 0.8845
+123P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 124
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+124Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+124Z :acc 0.8939 , nmi 0.6497 , ari 0.7117 , f1 0.8938
+124P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 125
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+125Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+125Z :acc 0.8899 , nmi 0.6418 , ari 0.7025 , f1 0.8899
+125P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 126
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+126Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+126Z :acc 0.8787 , nmi 0.6271 , ari 0.6783 , f1 0.8774
+126P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 127
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+127Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+127Z :acc 0.8929 , nmi 0.6468 , ari 0.7092 , f1 0.8928
+127P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 128
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+128Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+128Z :acc 0.8896 , nmi 0.6451 , ari 0.7024 , f1 0.8894
+128P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 129
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+129Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+129Z :acc 0.8860 , nmi 0.6401 , ari 0.6944 , f1 0.8852
+129P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 130
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+130Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+130Z :acc 0.8926 , nmi 0.6463 , ari 0.7085 , f1 0.8923
+130P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 131
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+131Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+131Z :acc 0.8883 , nmi 0.6439 , ari 0.6997 , f1 0.8880
+131P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 132
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+132Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+132Z :acc 0.8936 , nmi 0.6505 , ari 0.7109 , f1 0.8932
+132P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 133
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+133Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+133Z :acc 0.8876 , nmi 0.6436 , ari 0.6987 , f1 0.8870
+133P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 134
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+134Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+134Z :acc 0.8889 , nmi 0.6429 , ari 0.7007 , f1 0.8887
+134P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 135
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+135Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+135Z :acc 0.8922 , nmi 0.6459 , ari 0.7077 , f1 0.8921
+135P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 136
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+136Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+136Z :acc 0.8833 , nmi 0.6353 , ari 0.6885 , f1 0.8826
+136P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 137
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+137Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+137Z :acc 0.8919 , nmi 0.6473 , ari 0.7074 , f1 0.8918
+137P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 138
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+138Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+138Z :acc 0.8932 , nmi 0.6494 , ari 0.7103 , f1 0.8930
+138P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 139
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+139Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+139Z :acc 0.8876 , nmi 0.6412 , ari 0.6979 , f1 0.8873
+139P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 140
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+140Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+140Z :acc 0.8879 , nmi 0.6402 , ari 0.6984 , f1 0.8875
+140P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 141
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+141Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+141Z :acc 0.8916 , nmi 0.6482 , ari 0.7068 , f1 0.8912
+141P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 142
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+142Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+142Z :acc 0.8896 , nmi 0.6450 , ari 0.7023 , f1 0.8897
+142P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 143
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+143Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+143Z :acc 0.8869 , nmi 0.6419 , ari 0.6967 , f1 0.8862
+143P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 144
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+144Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+144Z :acc 0.8879 , nmi 0.6417 , ari 0.6986 , f1 0.8874
+144P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 145
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+145Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+145Z :acc 0.8945 , nmi 0.6516 , ari 0.7133 , f1 0.8947
+145P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 146
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+146Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+146Z :acc 0.8780 , nmi 0.6289 , ari 0.6774 , f1 0.8768
+146P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 147
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+147Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+147Z :acc 0.8929 , nmi 0.6462 , ari 0.7089 , f1 0.8928
+147P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 148
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+148Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+148Z :acc 0.8873 , nmi 0.6410 , ari 0.6972 , f1 0.8870
+148P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 149
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+149Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+149Z :acc 0.8860 , nmi 0.6399 , ari 0.6945 , f1 0.8850
+149P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 150
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+150Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+150Z :acc 0.8949 , nmi 0.6518 , ari 0.7139 , f1 0.8950
+150P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 151
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+151Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+151Z :acc 0.8886 , nmi 0.6434 , ari 0.7004 , f1 0.8881
+151P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 152
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+152Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+152Z :acc 0.8790 , nmi 0.6218 , ari 0.6767 , f1 0.8780
+152P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 153
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+153Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+153Z :acc 0.8949 , nmi 0.6566 , ari 0.7145 , f1 0.8953
+153P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 154
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+154Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+154Z :acc 0.8906 , nmi 0.6432 , ari 0.7041 , f1 0.8905
+154P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 155
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+155Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+155Z :acc 0.8777 , nmi 0.6147 , ari 0.6719 , f1 0.8766
+155P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 156
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+156Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+156Z :acc 0.8879 , nmi 0.6493 , ari 0.6998 , f1 0.8877
+156P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 157
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+157Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+157Z :acc 0.8979 , nmi 0.6611 , ari 0.7212 , f1 0.8983
+157P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 158
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+158Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+158Z :acc 0.8863 , nmi 0.6380 , ari 0.6944 , f1 0.8855
+158P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 159
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+159Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+159Z :acc 0.8803 , nmi 0.6221 , ari 0.6790 , f1 0.8796
+159P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 160
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+160Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+160Z :acc 0.8889 , nmi 0.6446 , ari 0.7010 , f1 0.8887
+160P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 161
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+161Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+161Z :acc 0.8939 , nmi 0.6548 , ari 0.7124 , f1 0.8942
+161P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 162
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+162Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+162Z :acc 0.8912 , nmi 0.6466 , ari 0.7059 , f1 0.8909
+162P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 163
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+163Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+163Z :acc 0.8833 , nmi 0.6278 , ari 0.6860 , f1 0.8826
+163P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 164
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+164Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+164Z :acc 0.8893 , nmi 0.6440 , ari 0.7016 , f1 0.8888
+164P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 165
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+165Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+165Z :acc 0.8886 , nmi 0.6454 , ari 0.7006 , f1 0.8883
+165P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 166
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+166Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+166Z :acc 0.8929 , nmi 0.6460 , ari 0.7089 , f1 0.8931
+166P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 167
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+167Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+167Z :acc 0.8906 , nmi 0.6447 , ari 0.7042 , f1 0.8901
+167P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 168
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+168Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+168Z :acc 0.8846 , nmi 0.6374 , ari 0.6915 , f1 0.8838
+168P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 169
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+169Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+169Z :acc 0.8922 , nmi 0.6445 , ari 0.7074 , f1 0.8923
+169P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 170
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+170Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+170Z :acc 0.8869 , nmi 0.6395 , ari 0.6963 , f1 0.8865
+170P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 171
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+171Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+171Z :acc 0.8919 , nmi 0.6483 , ari 0.7075 , f1 0.8916
+171P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 172
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+172Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+172Z :acc 0.8909 , nmi 0.6428 , ari 0.7044 , f1 0.8908
+172P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 173
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+173Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+173Z :acc 0.8853 , nmi 0.6401 , ari 0.6932 , f1 0.8846
+173P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 174
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+174Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+174Z :acc 0.8909 , nmi 0.6452 , ari 0.7051 , f1 0.8909
+174P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 175
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+175Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+175Z :acc 0.8912 , nmi 0.6485 , ari 0.7063 , f1 0.8908
+175P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 176
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+176Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+176Z :acc 0.8896 , nmi 0.6439 , ari 0.7024 , f1 0.8894
+176P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 177
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+177Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+177Z :acc 0.8889 , nmi 0.6424 , ari 0.7008 , f1 0.8887
+177P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 178
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+178Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+178Z :acc 0.8876 , nmi 0.6425 , ari 0.6984 , f1 0.8871
+178P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 179
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+179Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+179Z :acc 0.8909 , nmi 0.6444 , ari 0.7048 , f1 0.8909
+179P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 180
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+180Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+180Z :acc 0.8830 , nmi 0.6358 , ari 0.6880 , f1 0.8821
+180P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 181
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+181Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+181Z :acc 0.8942 , nmi 0.6514 , ari 0.7122 , f1 0.8946
+181P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 182
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+182Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+182Z :acc 0.8704 , nmi 0.6206 , ari 0.6618 , f1 0.8687
+182P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 183
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+183Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+183Z :acc 0.8886 , nmi 0.6348 , ari 0.6977 , f1 0.8887
+183P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 184
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+184Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+184Z :acc 0.8873 , nmi 0.6418 , ari 0.6973 , f1 0.8866
+184P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 185
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+185Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+185Z :acc 0.8922 , nmi 0.6496 , ari 0.7086 , f1 0.8919
+185P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 186
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+186Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+186Z :acc 0.8926 , nmi 0.6468 , ari 0.7084 , f1 0.8926
+186P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 187
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+187Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+187Z :acc 0.8787 , nmi 0.6300 , ari 0.6792 , f1 0.8773
+187P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 188
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+188Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+188Z :acc 0.8912 , nmi 0.6458 , ari 0.7058 , f1 0.8911
+188P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 189
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+189Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+189Z :acc 0.8936 , nmi 0.6495 , ari 0.7110 , f1 0.8937
+189P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 190
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+190Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+190Z :acc 0.8813 , nmi 0.6338 , ari 0.6845 , f1 0.8803
+190P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 191
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+191Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+191Z :acc 0.8873 , nmi 0.6341 , ari 0.6949 , f1 0.8870
+191P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 192
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+192Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+192Z :acc 0.8873 , nmi 0.6363 , ari 0.6963 , f1 0.8872
+192P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 193
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+193Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+193Z :acc 0.8843 , nmi 0.6385 , ari 0.6912 , f1 0.8836
+193P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 194
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+194Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+194Z :acc 0.8860 , nmi 0.6297 , ari 0.6914 , f1 0.8858
+194P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 195
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+195Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+195Z :acc 0.8893 , nmi 0.6491 , ari 0.7028 , f1 0.8886
+195P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 196
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+196Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+196Z :acc 0.8843 , nmi 0.6382 , ari 0.6909 , f1 0.8837
+196P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 197
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+197Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+197Z :acc 0.8932 , nmi 0.6474 , ari 0.7097 , f1 0.8933
+197P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 198
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+198Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+198Z :acc 0.8902 , nmi 0.6446 , ari 0.7034 , f1 0.8896
+198P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+
+Epoch 199
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([3025, 500])
+Encoder Layer 2: torch.Size([3025, 500])
+Encoder Layer 3: torch.Size([3025, 2000])
+Latent Space: torch.Size([3025, 10])
+Decoder Layer 1: torch.Size([3025, 2000])
+Decoder Layer 2: torch.Size([3025, 500])
+Decoder Layer 3: torch.Size([3025, 500])
+Output Layer: torch.Size([3025, 1870])
+
+GCN Architecture:
+------------------------------
+Layer 1: torch.Size([3025, 500])
+Layer 2: torch.Size([3025, 500])
+Layer 3: torch.Size([3025, 2000])
+Layer 4: torch.Size([3025, 10])
+Layer 5: torch.Size([3025, 3])
+
+199Q :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+199Z :acc 0.8846 , nmi 0.6399 , ari 0.6919 , f1 0.8838
+199P :acc 0.8668 , nmi 0.5839 , ari 0.6465 , f1 0.8658
+Training complete. Results saved to 'training_results.csv'.
+Final clustering results saved to 'final_cluster_results.csv'.

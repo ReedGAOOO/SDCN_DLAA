@@ -1,0 +1,123 @@
+def sgat(gw,
+        node_feat,
+        edge_feat,
+        hidden_size,
+        name,
+        activation='relu',
+        combine='mean',
+        num_heads=4,
+        feat_drop=0.2,
+        attn_drop=0.2,
+        is_test=False):
+    """
+    The sgat function can aggregate the edge-neighbors of node to update the node embedding.
+    Adapted from https://github.com/PaddlePaddle/PGL/blob/main/pgl/layers/conv.py.
+    Args:
+        gw(GraphWrapper): A graph wrapper for edge-node graph.
+        node_feat(Variable): A tensor of node-edge features with shape (num_nodes + num_nodes, feature_size).
+        edge_feat(Variable): A tensor of spatial distance features with shape (num_edges, feature_size).
+        combine(str): The choice of combining multi-head embeddings. It can be mean, max or dense.
+
+        hidden_size: The hidden size for gat.
+        activation: The activation for the output.
+        name: Gat layer names.
+        num_heads: The head number in gat.
+        feat_drop: Dropout rate for feature.
+        attn_drop: Dropout rate for attention.
+        is_test: Whether in test phrase.
+    Returns:
+        Variable: The updated node-edge feature matrix with shape (num_nodes + num_edges, feature_size).
+    """
+
+    def send_attention(src_feat, dst_feat, edge_feat):
+        output = src_feat["left_a"] + dst_feat["right_a"]
+        if 'edge_a' in edge_feat:
+            output += edge_feat["edge_a"]
+        output = L.leaky_relu(
+            output, alpha=0.2)  # (num_edges, num_heads)
+        return {"alpha": output, "h": src_feat["h"]}
+
+    def reduce_attention(msg):
+        alpha = msg["alpha"]  # lod-tensor (batch_size, seq_len, num_heads)
+        h = msg["h"]
+        alpha = paddle_helper.sequence_softmax(alpha)
+        old_h = h
+        h = L.reshape(h, [-1, num_heads, hidden_size])
+        alpha = L.reshape(alpha, [-1, num_heads, 1])
+        if attn_drop > 1e-15:
+            alpha = L.dropout(
+                alpha,
+                dropout_prob=attn_drop,
+                is_test=is_test,
+                dropout_implementation="upscale_in_train")
+        h = h * alpha
+        h = L.reshape(h, [-1, num_heads * hidden_size])
+        h = L.lod_reset(h, old_h)
+        return L.sequence_pool(h, "sum")
+
+    if feat_drop > 1e-15:
+        node_feat = L.dropout(
+                node_feat,
+                dropout_prob=feat_drop,
+                is_test=is_test,
+                dropout_implementation='upscale_in_train')
+        edge_feat = L.dropout(
+                edge_feat,
+                dropout_prob=feat_drop,
+                is_test=is_test,
+                dropout_implementation='upscale_in_train')
+
+    ft = L.fc(node_feat,
+                         hidden_size * num_heads,
+                         bias_attr=False,
+                         param_attr=fluid.ParamAttr(name=name + '_weight'))
+    left_a = L.create_parameter(
+        shape=[num_heads, hidden_size],
+        dtype='float32',
+        name=name + '_gat_l_A')
+    right_a = L.create_parameter(
+        shape=[num_heads, hidden_size],
+        dtype='float32',
+        name=name + '_gat_r_A')
+    reshape_ft = L.reshape(ft, [-1, num_heads, hidden_size])
+    left_a_value = L.reduce_sum(reshape_ft * left_a, -1)
+    right_a_value = L.reduce_sum(reshape_ft * right_a, -1)
+
+    fd = L.fc(edge_feat,
+            size=hidden_size * num_heads,
+            bias_attr=False,
+            param_attr=fluid.ParamAttr(name=name + '_fc_eW'))
+    edge_a = L.create_parameter(
+            shape=[num_heads, hidden_size],
+            dtype='float32',
+            name=name + '_gat_d_A')
+    fd = L.reshape(fd, [-1, num_heads, hidden_size])
+    edge_a_value = L.reduce_sum(fd * edge_a, -1)
+    efeat_list = [('edge_a', edge_a_value)]
+
+    msg = gw.send(
+        send_attention,
+        nfeat_list=[("h", ft), ("left_a", left_a_value),
+                    ("right_a", right_a_value)], efeat_list=efeat_list)
+    output = gw.recv(msg, reduce_attention)
+
+    if combine == 'mean':
+        output = L.reshape(output, [-1, num_heads, hidden_size])
+        output = L.reduce_mean(output, dim=1)
+        num_heads = 1
+    if combine == 'max':
+        output = L.reshape(output, [-1, num_heads, hidden_size])
+        output = L.reduce_max(output, dim=1)
+        num_heads = 1
+    if combine == 'dense':
+        output = L.fc(output, hidden_size, bias_attr=False, param_attr=fluid.ParamAttr(name=name + '_dense_combine'))
+        num_heads = 1
+
+    bias = L.create_parameter(
+        shape=[hidden_size * num_heads],
+        dtype='float32',
+        is_bias=True,
+        name=name + '_bias')
+    bias.stop_gradient = True
+    output = L.elementwise_add(output, bias, act=activation)
+    return output
