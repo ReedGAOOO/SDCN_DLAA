@@ -1,0 +1,71 @@
+use cuda: True
+Namespace(name='usps', k=3, lr=0.001, n_clusters=10, n_z=10, pretrain_path='data/usps.pkl', dropout=0.2, heads=4, edge_dim=256, edge_dummy_type='onehot', uniform_all_ones=False, use_edge_attr=False, max_edges_per_node=10, spatial_weight=0.01, edge_weight=0.01, cuda=True, device=device(type='cuda'), n_input=256)
+SDCN_Spatial_Improved(
+  (ae): AE(
+    (enc_1): Linear(in_features=256, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=2000, bias=True)
+    (z_layer): Linear(in_features=2000, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=2000, bias=True)
+    (dec_2): Linear(in_features=2000, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=256, bias=True)
+  )
+  (spatial_embedding): SpatialEmbedding(
+    (embed_layer): Linear(in_features=256, out_features=10, bias=False)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(500, 500)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(500, 500)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_fc): Linear(in_features=6000, out_features=2000, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(2000, 2000)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(10, 10)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(10, 10)
+    )
+  )
+  (proj1): Linear(in_features=256, out_features=500, bias=True)
+  (proj2): Linear(in_features=500, out_features=500, bias=True)
+  (proj3): Linear(in_features=500, out_features=2000, bias=True)
+  (proj4): Linear(in_features=2000, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=10, bias=True)
+  (edge_decoder): EdgeDecoder(
+    (edge_fc): Linear(in_features=20, out_features=256, bias=True)
+  )
+)
+pae :acc 0.3992 , nmi 0.3080 , ari 0.2406 , f1 0.3665
