@@ -247,6 +247,7 @@ def sgat(gw,
             size=hidden_size * num_heads,
             bias_attr=False,
             param_attr=fluid.ParamAttr(name=name + '_fc_eW'))
+    #实现了GATconv同框的edge_attr参与
     edge_a = L.create_parameter(
             shape=[num_heads, hidden_size],
             dtype='float32',

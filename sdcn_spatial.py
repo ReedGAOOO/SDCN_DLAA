@@ -22,8 +22,8 @@ import sys
 import os
 from datetime import datetime
 
-# Import SpatialConv and related components from SMAN_layers_pyg
-from SMAN_layers_pyg import SpatialConv, SpatialEmbedding, graph_pooling
+# Import SpatialConv from DLAA
+from DLAA import SpatialConv
 
 
 class AE(nn.Module):
@@ -42,7 +42,7 @@ class AE(nn.Module):
         self.dec_2 = Linear(n_dec_1, n_dec_2)
         self.dec_3 = Linear(n_dec_2, n_dec_3)
         self.x_bar_layer = Linear(n_dec_3, n_input)
-
+ 
     def forward(self, x):
         enc_h1 = F.relu(self.enc_1(x))
         enc_h2 = F.relu(self.enc_2(enc_h1))
@@ -76,8 +76,8 @@ class SDCN_Spatial(nn.Module):
     SDCN model with SpatialConv layers replacing GNNLayers
     """
     def __init__(self, n_enc_1, n_enc_2, n_enc_3, n_dec_1, n_dec_2, n_dec_3,
-                n_input, n_z, n_clusters, v=1, dropout=0.2, heads=4, edge_dim=None,
-                edge_dummy_type="onehot", max_edges_per_node=10):
+                n_input, n_z, n_clusters, v=1, dropout=0.2, heads=4, edge_dim=None, 
+                max_edges_per_node=10):
         super(SDCN_Spatial, self).__init__()
         # Initialize epoch tracking variables
         self.current_epoch = 0
@@ -91,8 +91,6 @@ class SDCN_Spatial(nn.Module):
         self.dropout = dropout
         self.heads = heads
         self.edge_dim = edge_dim if edge_dim is not None else n_input
-        self.hidden_size = n_enc_1  # 使用 n_enc_1 作为 hidden_size，用于生成 dummy 边特征
-        self.edge_dummy_type = edge_dummy_type
         self.max_edges_per_node = max_edges_per_node  # 每个节点最大考虑的边数
 
         # Autoencoder for intra information
@@ -106,15 +104,14 @@ class SDCN_Spatial(nn.Module):
             n_input=n_input,
             n_z=n_z)
         
-        # Spatial embedding layer for edge features
-        self.spatial_embedding = SpatialEmbedding(self.edge_dim, n_z)
+        # No longer needed: spatial embedding layer
         
         # SpatialConv layers replacing GNNLayers
-        self.spatial_conv1 = SpatialConv(n_enc_1, dropout=dropout, heads=heads)
-        self.spatial_conv2 = SpatialConv(n_enc_2, dropout=dropout, heads=heads)
-        self.spatial_conv3 = SpatialConv(n_enc_3, dropout=dropout, heads=heads)
-        self.spatial_conv4 = SpatialConv(n_z, dropout=dropout, heads=heads)
-        self.spatial_conv5 = SpatialConv(n_clusters, dropout=dropout, heads=heads)
+        self.spatial_conv1 = SpatialConv(n_enc_1, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
+        self.spatial_conv2 = SpatialConv(n_enc_2, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
+        self.spatial_conv3 = SpatialConv(n_enc_3, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
+        self.spatial_conv4 = SpatialConv(n_z, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
+        self.spatial_conv5 = SpatialConv(n_clusters, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
         
         # Projection layers to match dimensions between layers
         self.proj1 = nn.Linear(n_input, n_enc_1)
@@ -126,15 +123,20 @@ class SDCN_Spatial(nn.Module):
         # Cluster layer
         self.cluster_layer = Parameter(torch.Tensor(n_clusters, n_z))
         torch.nn.init.xavier_normal_(self.cluster_layer.data)
+        
+        # Add edge feature projection layer for initial edge features
+        self.initial_edge_proj = None
+        if edge_dim is not None and edge_dim != n_input:
+            self.initial_edge_proj = nn.Linear(edge_dim, edge_dim)
 
-    def _prepare_pyg_data(self, x, adj, edge_attr=None, max_edges_per_node=10):
+    def _prepare_pyg_data(self, x, adj, edge_attr, max_edges_per_node=10):
         """
-        Prepare PyG Data object   from node features and adjacency matrix
+        Prepare PyG Data object from node features and adjacency matrix
         
         Args:
             x: Node features [num_nodes, feature_dim]
             adj: Adjacency matrix [num_nodes, num_nodes]
-            edge_attr: Optional edge features [num_edges, edge_dim]
+            edge_attr: Edge features [num_edges, edge_dim]
             max_edges_per_node: Maximum number of edges to consider per node for edge-to-edge connections
         Returns:
             data: PyG Data object
@@ -170,34 +172,12 @@ class SDCN_Spatial(nn.Module):
         # 更新边数量
         num_edges = edge_index.size(1)
         
-        # Use provided edge features if available, otherwise create dummy features
-        if edge_attr is not None:
-            # Use the provided edge features
-            dist_feat = edge_attr
-            # If needed, reshape or process the edge features
-            if dist_feat.shape[1] != self.edge_dim:
-                print(f"Warning: Edge feature dimension ({dist_feat.shape[1]}) doesn't match expected edge_dim ({self.edge_dim})")
-                # Could add reshaping logic here if needed
-        else:
-            # Create dummy distance features (one-hot encoded)
-            # 使用 self.hidden_size 而不是 self.edge_dim 来确保维度匹配
-            if self.edge_dummy_type == "onehot":
-                # 使用 one-hot 编码，但维度固定为 hidden_size
-                dist_feat = torch.zeros(num_edges, self.hidden_size).to(x.device)
-                for i in range(num_edges):
-                    src, dst = edge_index[0, i], edge_index[1, i]
-                    # Simple distance metric: one-hot encoding of the difference between node indices
-                    dist_idx = (src - dst).abs() % self.hidden_size
-                    dist_feat[i, dist_idx] = 1.0
-            elif self.edge_dummy_type == "uniform":
-                # 使用统一值为 1 的边特征，维度固定为 hidden_size
-                dist_feat = torch.zeros(num_edges, self.hidden_size).to(x.device)
-                # 对于 uniform 模式，可以选择全 1 或者只在第一维为 1
-                if hasattr(args, 'uniform_all_ones') and args.uniform_all_ones:
-                    dist_feat = torch.ones(num_edges, self.hidden_size).to(x.device)
-                else:
-                    dist_feat[:, 0] = 1.0
-  # 只在第一维为 1，其余为 0
+        # Process edge features
+        dist_feat = edge_attr
+        
+        # Apply initial projection if needed
+        if self.initial_edge_proj is not None:
+            dist_feat = self.initial_edge_proj(dist_feat)
         
         # Create edge-to-edge graph more efficiently
         # Build a mapping from nodes to their connected edges
@@ -347,13 +327,24 @@ def train_sdcn_spatial(dataset, args, edge_attr=None):
     Args:
         dataset: Dataset object containing features and labels
         args: Arguments for training
+        edge_attr: Edge features [num_edges, edge_dim]
     """
+    
+    # Check if edge_attr is provided, if not, create simple edge features
+    if edge_attr is None:
+        # Load KNN Graph to get number of edges
+        adj = load_graph(args.name, args.k)
+        edge_index, _ = dense_to_sparse(adj)
+        num_edges = edge_index.size(1)
+        
+        # Create simple edge features (all ones)
+        print(f"No edge features provided. Creating simple edge features with dimension {args.edge_dim}")
+        edge_attr = torch.ones(num_edges, args.edge_dim)
     
     # Create model
     model = SDCN_Spatial(
         500, 500, 2000, 2000, 500, 500,
         n_input=args.n_input,
-        edge_dummy_type=args.edge_dummy_type,
         n_z=args.n_z,
         n_clusters=args.n_clusters,
         v=1.0,
@@ -505,8 +496,6 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument('--heads', type=int, default=4)
     parser.add_argument('--edge_dim', type=int, default=None, help='Dimension of edge features. If None, will use n_input')
-    parser.add_argument('--edge_dummy_type', type=str, default="onehot", choices=["onehot", "uniform"], help='Type of dummy edge features to use when real edge features are not available')
-    parser.add_argument('--uniform_all_ones', action='store_true', help='When using uniform dummy edge features, set all dimensions to 1 instead of just the first dimension')
     parser.add_argument('--use_edge_attr', action='store_true', help='Use edge attributes from dataset if available')
     parser.add_argument('--max_edges_per_node', type=int, default=10, help='Maximum number of edges to consider per node for edge-to-edge connections')
     
@@ -559,6 +548,7 @@ if __name__ == "__main__":
     # If edge_dim is still None, set it to n_input
     if args.edge_dim is None:
         args.edge_dim = args.n_input
+        print(f"Setting edge_dim to n_input: {args.edge_dim}")
     
     print(args)
     

@@ -22,8 +22,8 @@ import sys
 import os
 from datetime import datetime
 
-# Import SpatialConv and related components from SMAN_layers_pyg
-from SMAN_layers_pyg import SpatialConv, SpatialEmbedding, graph_pooling
+# Import SpatialConv from DLAA
+from DLAA import SpatialConv
 
 
 class AE(nn.Module):
@@ -132,8 +132,7 @@ class SDCN_Spatial_Improved(nn.Module):
             n_input=n_input,
             n_z=n_z)
         
-        # Spatial embedding layer for edge features
-        self.spatial_embedding = SpatialEmbedding(self.edge_dim, n_z)
+        # No longer needed: spatial embedding layer
         
         # SpatialConv layers replacing GNNLayers
         self.spatial_conv1 = SpatialConv(n_enc_1, dropout=dropout, heads=heads)
@@ -261,8 +260,8 @@ class SDCN_Spatial_Improved(nn.Module):
         else:
             # 如果没有边对边连接，创建一个空的边索引张量
             edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(x.device)
-        
-        # Create PyG Data object
+            
+        # 创建PyG Data对象
         data = Data(
             x=x,
             edge_index=edge_index,

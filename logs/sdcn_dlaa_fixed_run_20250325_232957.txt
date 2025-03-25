@@ -1,0 +1,82 @@
+使用CUDA: True
+节点特征形状: (543, 3)
+边特征形状: torch.Size([293972, 10])
+节点数量: 543
+特征维度: 3
+边特征维度: 10
+聚类数量: 3
+
+开始训练修复版SDCN_DLAA模型...
+性能优化：预计算图结构...
+构建边到边连接...
+预计算完成：节点到节点边数量: 293972, 边到边连接数量: 48870
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=2000, bias=True)
+    (z_layer): Linear(in_features=2000, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=2000, bias=True)
+    (dec_2): Linear(in_features=2000, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=3, bias=True)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=2000, bias=True)
+    (edge_fc): Linear(in_features=6000, out_features=2000, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=4)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=3, bias=True)
+    (edge_fc): Linear(in_features=9, out_features=3, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(3, 3, heads=4)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=500, bias=True)
+  (proj2): Linear(in_features=500, out_features=500, bias=True)
+  (proj3): Linear(in_features=500, out_features=2000, bias=True)
+  (proj4): Linear(in_features=2000, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+  (initial_edge_proj): Linear(in_features=10, out_features=10, bias=True)
+)
+初始聚类完成。聚类数量: 3
+Epoch 0 评估出错: CUDA out of memory. Tried to allocate 4.38 GiB. GPU 
+Epoch 1 评估出错: CUDA out of memory. Tried to allocate 4.38 GiB. GPU 

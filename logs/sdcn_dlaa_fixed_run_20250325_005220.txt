@@ -1,0 +1,288 @@
+使用CUDA: True
+节点特征形状: (543, 3)
+边特征形状: torch.Size([293972, 10])
+节点数量: 543
+特征维度: 3
+边特征维度: 10
+聚类数量: 3
+
+开始训练修复版SDCN_DLAA模型...
+性能优化：预计算图结构...
+构建边到边连接...
+预计算完成：节点到节点边数量: 293972, 边到边连接数量: 48870
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=2000, bias=True)
+    (z_layer): Linear(in_features=2000, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=2000, bias=True)
+    (dec_2): Linear(in_features=2000, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=3, bias=True)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(500, 500)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(500, 500)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=2000, bias=True)
+    (edge_fc): Linear(in_features=6000, out_features=2000, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(2000, 2000)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(10, 10)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=3, bias=True)
+    (edge_fc): Linear(in_features=9, out_features=3, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): CustomGATConv(3, 3)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=500, bias=True)
+  (proj2): Linear(in_features=500, out_features=500, bias=True)
+  (proj3): Linear(in_features=500, out_features=2000, bias=True)
+  (proj4): Linear(in_features=2000, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+  (initial_edge_proj): Linear(in_features=10, out_features=10, bias=True)
+)
+初始聚类完成。聚类数量: 3
+Epoch 0 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 1 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 2 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 3 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 4 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 5 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 6 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 7 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 8 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 9 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 10 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 11 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 12 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 13 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 14 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 15 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 16 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 17 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 18 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 19 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 20 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 21 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 22 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 23 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 24 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 25 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 26 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 27 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 28 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 29 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 30 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 31 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 32 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 33 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 34 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 35 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 36 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 37 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 38 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 39 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 40 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 41 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 42 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 43 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 44 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 45 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 46 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 47 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 48 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 49 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 50 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 51 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 52 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 53 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 54 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 55 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 56 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 57 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 58 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 59 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 60 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 61 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 62 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 63 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 64 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 65 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 66 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 67 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 68 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 69 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 70 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 71 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 72 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 73 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 74 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 75 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 76 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 77 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 78 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 79 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 80 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 81 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 82 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 83 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 84 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 85 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 86 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 87 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 88 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 89 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 90 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 91 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 92 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 93 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 94 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 95 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 96 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 97 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 98 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 99 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 100 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 101 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 102 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 103 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 104 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 105 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 106 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 107 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 108 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 109 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 110 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 111 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 112 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 113 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 114 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 115 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 116 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 117 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 118 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 119 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 120 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 121 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 122 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 123 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 124 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 125 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 126 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 127 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 128 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 129 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 130 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 131 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 132 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 133 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 134 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 135 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 136 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 137 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 138 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 139 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 140 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 141 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 142 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 143 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 144 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 145 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 146 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 147 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 148 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 149 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 150 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 151 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 152 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 153 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 154 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 155 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 156 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 157 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 158 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 159 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 160 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 161 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 162 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 163 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 164 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 165 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 166 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 167 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 168 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 169 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 170 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 171 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 172 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 173 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 174 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 175 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 176 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 177 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 178 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 179 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 180 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 181 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 182 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 183 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 184 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 185 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 186 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 187 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 188 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 189 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 190 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 191 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 192 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 193 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 194 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 195 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 196 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 197 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 198 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+Epoch 199 评估出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+获取最终聚类结果出错: Found indices in 'edge_index' that are larger than 3 (got 542). Please ensure that all indices in 'edge_index' point to valid indices in the interval [0, 4) in your node feature matrix and try again.
+训练完成。结果已保存到 'sdcn_dlaa_training_results.csv'.
+最终聚类结果已保存到 'sdcn_dlaa_final_cluster_results.csv'.
+
+聚类分布:
+聚类 0: 543 个节点 (100.00%)
+
+训练完成！
