@@ -1,0 +1,18 @@
+使用CUDA: True
+节点特征形状: (543, 3)
+边特征形状: torch.Size([293972, 10])
+从数据推断 edge_dim: 10
+节点数量: 543
+特征维度 (n_input): 3
+目标边特征维度 (edge_dim): 10
+聚类数量 (n_clusters): 3
+隐空间维度 (n_z): 10
+学习率: 0.001
+Dropout: 0.2
+注意力头数: 4
+最大邻边数 (edge-to-edge): 10
+
+开始训练 SDCN_DLAA (Hetero) 模型...
+训练过程中发生错误: 'Namespace' object has no attribute 'name'
+
+测试脚本执行完成！日志和结果文件已生成。

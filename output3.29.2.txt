@@ -1,0 +1,720 @@
+PART 2 graphic card: 24GB RTX3090
+
+root@autodl-container-7bde4db23d-2fda7f40:~/autodl-tmp# python run_hidden_size_test.py
+开始批量测试脚本: test_sdcn_dlaa_NEW_hiddensize.py
+将固定 heads = 1
+将依次使用以下 hidden size profiles [hs1, hs2, hs3] 进行测试:
+  - [256, 256, 256]
+  - [500, 500, 512]
+  - [256, 256, 1024]
+  - [500, 500, 1024]
+------------------------------------------------------------
+
+=======>>>>> 开始测试: hs=[256,256,256], heads = 1 <<<<<=======
+执行命令: /root/miniconda3/bin/python test_sdcn_dlaa_NEW_hiddensize.py --heads 1 --hs1 256 --hs2 256 --hs3 256
+------------------------------------------------------------
+使用CUDA: True
+节点特征形状: (543, 3)
+边特征形状: torch.Size([293972, 10])
+
+--- 参数配置 ---
+学习率 (lr): 0.001
+聚类数量 (n_clusters): 3
+潜在空间维度 (n_z): 10
+Dropout率: 0.2
+GAT头数 (heads): 1
+边特征维度 (edge_dim): 10
+每个节点最大边数 (max_edges_per_node): 10
+隐藏层大小 1 (hs1): 256
+隐藏层大小 2 (hs2): 256
+隐藏层大小 3 (hs3): 256
+--- 数据信息 ---
+节点数量: 543
+特征维度 (n_input): 3
+边特征形状: torch.Size([293972, 10])
+-----------------
+
+
+开始训练可变隐藏层大小的SDCN_DLAA模型...
+性能优化：预计算图结构...
+构建边到边连接...
+预计算完成：节点到节点边数量: 293972, 边到边连接数量: 48870
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=256, bias=True)
+    (enc_2): Linear(in_features=256, out_features=256, bias=True)
+    (enc_3): Linear(in_features=256, out_features=256, bias=True)
+    (z_layer): Linear(in_features=256, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=256, bias=True)
+    (dec_2): Linear(in_features=256, out_features=256, bias=True)
+    (dec_3): Linear(in_features=256, out_features=256, bias=True)
+    (x_bar_layer): Linear(in_features=256, out_features=3, bias=True)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=256, bias=True)
+    (edge_fc): Linear(in_features=768, out_features=256, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=256, bias=True)
+    (edge_fc): Linear(in_features=768, out_features=256, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=256, bias=True)
+    (edge_fc): Linear(in_features=768, out_features=256, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=3, bias=True)
+    (edge_fc): Linear(in_features=9, out_features=3, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=256, bias=True)
+  (proj2): Linear(in_features=256, out_features=256, bias=True)
+  (proj3): Linear(in_features=256, out_features=256, bias=True)
+  (proj4): Linear(in_features=256, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+  (initial_edge_proj): Linear(in_features=10, out_features=10, bias=True)
+)
+初始聚类完成。聚类数量: 3
+
+Epoch 0
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 256])
+Encoder Layer 2: torch.Size([543, 256])
+Encoder Layer 3: torch.Size([543, 256])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 256])
+Decoder Layer 2: torch.Size([543, 256])
+Decoder Layer 3: torch.Size([543, 256])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 256])
+Layer 2: torch.Size([543, 256])
+Layer 3: torch.Size([543, 256])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 0, 聚类分布: [  0 543]
+Epoch 0 训练出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 1 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 2 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 3 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 4 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 5 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 6 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 7 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 8 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 9 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 10 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 11 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 12 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 13 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 14 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 15 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 16 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 17 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 18 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 19 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 20 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 21 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 22 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 23 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 24 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 25 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 26 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 27 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 28 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 29 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 30 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 31 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 32 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 33 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 34 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 35 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 36 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 37 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 38 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 39 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 40 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 41 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 42 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 43 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 44 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 45 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 46 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 47 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 48 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 49 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 50 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 51 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 52 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 53 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 54 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 55 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 56 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 57 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 58 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+Epoch 59 评估出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+获取最终聚类结果出错: CUDA out of memory. Tried to allocate 288.00 MiB. GPU 
+训练完成。结果已保存到 'sdcn_dlaa_hiddensize_training_results_hs256-256-256_heads1.csv'.
+最终聚类结果已保存到 'sdcn_dlaa_hiddensize_final_clusters_hs256-256-256_heads1.csv'.
+
+聚类分布:
+聚类 0: 0 个节点 (0.00%)
+聚类 1: 543 个节点 (100.00%)
+
+训练完成！
+------------------------------------------------------------
+=======>>>>> 测试完成: hs=[256,256,256], heads = 1 (成功) <<<<<=======
+
+
+=======>>>>> 开始测试: hs=[500,500,512], heads = 1 <<<<<=======
+执行命令: /root/miniconda3/bin/python test_sdcn_dlaa_NEW_hiddensize.py --heads 1 --hs1 500 --hs2 500 --hs3 512
+------------------------------------------------------------
+使用CUDA: True
+节点特征形状: (543, 3)
+边特征形状: torch.Size([293972, 10])
+
+--- 参数配置 ---
+学习率 (lr): 0.001
+聚类数量 (n_clusters): 3
+潜在空间维度 (n_z): 10
+Dropout率: 0.2
+GAT头数 (heads): 1
+边特征维度 (edge_dim): 10
+每个节点最大边数 (max_edges_per_node): 10
+隐藏层大小 1 (hs1): 500
+隐藏层大小 2 (hs2): 500
+隐藏层大小 3 (hs3): 512
+--- 数据信息 ---
+节点数量: 543
+特征维度 (n_input): 3
+边特征形状: torch.Size([293972, 10])
+-----------------
+
+
+开始训练可变隐藏层大小的SDCN_DLAA模型...
+性能优化：预计算图结构...
+构建边到边连接...
+预计算完成：节点到节点边数量: 293972, 边到边连接数量: 48870
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=512, bias=True)
+    (z_layer): Linear(in_features=512, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=512, bias=True)
+    (dec_2): Linear(in_features=512, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=3, bias=True)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=512, bias=True)
+    (edge_fc): Linear(in_features=1536, out_features=512, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(512, 512, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(512, 512, heads=1)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=3, bias=True)
+    (edge_fc): Linear(in_features=9, out_features=3, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=500, bias=True)
+  (proj2): Linear(in_features=500, out_features=500, bias=True)
+  (proj3): Linear(in_features=500, out_features=512, bias=True)
+  (proj4): Linear(in_features=512, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+  (initial_edge_proj): Linear(in_features=10, out_features=10, bias=True)
+)
+初始聚类完成。聚类数量: 3
+Epoch 0 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 1 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 2 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 3 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 4 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 5 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 6 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 7 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 8 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 9 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 10 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 11 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 12 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 13 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 14 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 15 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 16 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 17 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 18 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 19 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 20 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 21 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 22 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 23 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 24 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 25 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 26 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 27 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 28 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 29 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 30 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 31 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 32 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 33 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 34 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 35 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 36 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 37 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 38 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 39 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 40 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 41 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 42 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 43 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 44 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 45 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 46 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 47 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 48 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 49 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 50 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 51 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 52 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 53 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 54 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 55 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 56 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 57 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 58 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+Epoch 59 评估出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+获取最终聚类结果出错: CUDA out of memory. Tried to allocate 576.00 MiB. GPU 
+训练完成。结果已保存到 'sdcn_dlaa_hiddensize_training_results_hs500-500-512_heads1.csv'.
+最终聚类结果已保存到 'sdcn_dlaa_hiddensize_final_clusters_hs500-500-512_heads1.csv'.
+
+聚类分布:
+聚类 0: 543 个节点 (100.00%)
+
+训练完成！
+------------------------------------------------------------
+=======>>>>> 测试完成: hs=[500,500,512], heads = 1 (成功) <<<<<=======
+
+
+=======>>>>> 开始测试: hs=[256,256,1024], heads = 1 <<<<<=======
+执行命令: /root/miniconda3/bin/python test_sdcn_dlaa_NEW_hiddensize.py --heads 1 --hs1 256 --hs2 256 --hs3 1024
+------------------------------------------------------------
+使用CUDA: True
+节点特征形状: (543, 3)
+边特征形状: torch.Size([293972, 10])
+
+--- 参数配置 ---
+学习率 (lr): 0.001
+聚类数量 (n_clusters): 3
+潜在空间维度 (n_z): 10
+Dropout率: 0.2
+GAT头数 (heads): 1
+边特征维度 (edge_dim): 10
+每个节点最大边数 (max_edges_per_node): 10
+隐藏层大小 1 (hs1): 256
+隐藏层大小 2 (hs2): 256
+隐藏层大小 3 (hs3): 1024
+--- 数据信息 ---
+节点数量: 543
+特征维度 (n_input): 3
+边特征形状: torch.Size([293972, 10])
+-----------------
+
+
+开始训练可变隐藏层大小的SDCN_DLAA模型...
+性能优化：预计算图结构...
+构建边到边连接...
+预计算完成：节点到节点边数量: 293972, 边到边连接数量: 48870
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=256, bias=True)
+    (enc_2): Linear(in_features=256, out_features=256, bias=True)
+    (enc_3): Linear(in_features=256, out_features=1024, bias=True)
+    (z_layer): Linear(in_features=1024, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=1024, bias=True)
+    (dec_2): Linear(in_features=1024, out_features=256, bias=True)
+    (dec_3): Linear(in_features=256, out_features=256, bias=True)
+    (x_bar_layer): Linear(in_features=256, out_features=3, bias=True)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=256, bias=True)
+    (edge_fc): Linear(in_features=768, out_features=256, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=256, bias=True)
+    (edge_fc): Linear(in_features=768, out_features=256, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(256, 256, heads=1)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=1024, bias=True)
+    (edge_fc): Linear(in_features=3072, out_features=1024, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(1024, 1024, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(1024, 1024, heads=1)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=3, bias=True)
+    (edge_fc): Linear(in_features=9, out_features=3, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=256, bias=True)
+  (proj2): Linear(in_features=256, out_features=256, bias=True)
+  (proj3): Linear(in_features=256, out_features=1024, bias=True)
+  (proj4): Linear(in_features=1024, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+  (initial_edge_proj): Linear(in_features=10, out_features=10, bias=True)
+)
+初始聚类完成。聚类数量: 3
+Epoch 0 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 1 评估出错: CUDA out of memory. Tried to allocate 1.31 GiB. GPU 
+Epoch 2 评估出错: CUDA out of memory. Tried to allocate 1.31 GiB. GPU 
+Epoch 3 评估出错: CUDA out of memory. Tried to allocate 1.31 GiB. GPU 
+Epoch 4 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 5 评估出错: CUDA out of memory. Tried to allocate 1.31 GiB. GPU 
+Epoch 6 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 7 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 8 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 9 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 10 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 11 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 12 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 13 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 14 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 15 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 16 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 17 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 18 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 19 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 20 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 21 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 22 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 23 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 24 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 25 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 26 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 27 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 28 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 29 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 30 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 31 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 32 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 33 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 34 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 35 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 36 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 37 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 38 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 39 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 40 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 41 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 42 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 43 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 44 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 45 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 46 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 47 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 48 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 49 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 50 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 51 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 52 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 53 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 54 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 55 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 56 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 57 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 58 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 59 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+获取最终聚类结果出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+训练完成。结果已保存到 'sdcn_dlaa_hiddensize_training_results_hs256-256-1024_heads1.csv'.
+最终聚类结果已保存到 'sdcn_dlaa_hiddensize_final_clusters_hs256-256-1024_heads1.csv'.
+
+聚类分布:
+聚类 0: 543 个节点 (100.00%)
+
+训练完成！
+------------------------------------------------------------
+=======>>>>> 测试完成: hs=[256,256,1024], heads = 1 (成功) <<<<<=======
+
+
+=======>>>>> 开始测试: hs=[500,500,1024], heads = 1 <<<<<=======
+执行命令: /root/miniconda3/bin/python test_sdcn_dlaa_NEW_hiddensize.py --heads 1 --hs1 500 --hs2 500 --hs3 1024
+------------------------------------------------------------
+使用CUDA: True
+节点特征形状: (543, 3)
+边特征形状: torch.Size([293972, 10])
+
+--- 参数配置 ---
+学习率 (lr): 0.001
+聚类数量 (n_clusters): 3
+潜在空间维度 (n_z): 10
+Dropout率: 0.2
+GAT头数 (heads): 1
+边特征维度 (edge_dim): 10
+每个节点最大边数 (max_edges_per_node): 10
+隐藏层大小 1 (hs1): 500
+隐藏层大小 2 (hs2): 500
+隐藏层大小 3 (hs3): 1024
+--- 数据信息 ---
+节点数量: 543
+特征维度 (n_input): 3
+边特征形状: torch.Size([293972, 10])
+-----------------
+
+
+开始训练可变隐藏层大小的SDCN_DLAA模型...
+性能优化：预计算图结构...
+构建边到边连接...
+预计算完成：节点到节点边数量: 293972, 边到边连接数量: 48870
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=1024, bias=True)
+    (z_layer): Linear(in_features=1024, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=1024, bias=True)
+    (dec_2): Linear(in_features=1024, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=3, bias=True)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=1024, bias=True)
+    (edge_fc): Linear(in_features=3072, out_features=1024, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(1024, 1024, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(1024, 1024, heads=1)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=3, bias=True)
+    (edge_fc): Linear(in_features=9, out_features=3, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=500, bias=True)
+  (proj2): Linear(in_features=500, out_features=500, bias=True)
+  (proj3): Linear(in_features=500, out_features=1024, bias=True)
+  (proj4): Linear(in_features=1024, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+  (initial_edge_proj): Linear(in_features=10, out_features=10, bias=True)
+)
+初始聚类完成。聚类数量: 3
+Epoch 0 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 1 评估出错: CUDA out of memory. Tried to allocate 3.37 GiB. GPU 
+Epoch 2 评估出错: CUDA out of memory. Tried to allocate 3.37 GiB. GPU 
+Epoch 3 评估出错: CUDA out of memory. Tried to allocate 3.37 GiB. GPU 
+Epoch 4 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 5 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 6 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 7 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 8 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 9 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 10 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 11 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 12 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 13 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 14 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 15 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 16 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 17 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 18 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 19 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 20 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 21 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 22 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 23 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 24 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 25 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 26 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 27 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 28 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 29 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 30 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 31 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 32 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 33 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 34 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 35 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 36 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 37 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 38 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 39 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 40 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 41 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 42 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 43 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 44 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 45 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 46 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 47 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 48 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 49 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 50 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 51 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 52 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 53 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 54 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 55 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 56 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 57 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 58 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+Epoch 59 评估出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+获取最终聚类结果出错: CUDA out of memory. Tried to allocate 1.12 GiB. GPU 
+训练完成。结果已保存到 'sdcn_dlaa_hiddensize_training_results_hs500-500-1024_heads1.csv'.
+最终聚类结果已保存到 'sdcn_dlaa_hiddensize_final_clusters_hs500-500-1024_heads1.csv'.
+
+聚类分布:
+聚类 0: 543 个节点 (100.00%)
+
+训练完成！
+------------------------------------------------------------
+=======>>>>> 测试完成: hs=[500,500,1024], heads = 1 (成功) <<<<<=======
+
+
+==================== 批量测试总结 ====================
+hs=[256,256,256], heads = 1: 成功
+hs=[500,500,512], heads = 1: 成功
+hs=[256,256,1024], heads = 1: 成功
+hs=[500,500,1024], heads = 1: 成功
+======================================================
+所有测试运行完毕。

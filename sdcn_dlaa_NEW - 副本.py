@@ -524,77 +524,49 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
     y = dataset.y
     
     # Initialize cluster centers using pretrained autoencoder
-    # ---> Use no_grad here too for initialization inference <---
-    model.eval() # Set model to eval mode for initialization inference
     with torch.no_grad():
         _, _, _, _, z = model.ae(data)
-    model.train() # Switch back to train mode
-
+    
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
     y_pred = kmeans.fit_predict(z.data.cpu().numpy())
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
-    # Check if y has enough classes for evaluation metrics
-    if len(np.unique(y)) > 1:
-        eva(y, y_pred, 'pae')
-    else:
-        print(f"Initial clustering (pae) completed. Cluster distribution may not be diverse.")
-        print(f"Initial y_pred counts: {np.bincount(y_pred)}")
+    eva(y, y_pred, 'pae')
     
     # Create a list to store results
     results = []
     
     # Training loop
-    for epoch in range(60):
+    for epoch in range(200):
         # Update the current epoch
         model.current_epoch = epoch
         
         if epoch % 1 == 0:
-            # ---> Set model to evaluation mode <---
-            model.eval()
             # Evaluate the model
             try:
-                # ---> Use torch.no_grad() for evaluation inference <---
-                with torch.no_grad():
-                    _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
-
-                # The rest of the calculations generally don't need gradients
+                _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
+                
                 tmp_q = tmp_q.data
                 p = target_distribution(tmp_q)
-
+                
                 res1 = tmp_q.cpu().numpy().argmax(1)  # Q
                 res2 = pred.data.cpu().numpy().argmax(1)  # Z
                 res3 = p.data.cpu().numpy().argmax(1)  # P
-
-                # Check if y has enough classes for evaluation metrics
-                if len(np.unique(y)) > 1:
-                    acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
-                    acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
-                    acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
-                    # Save clustering results for each round
-                    results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
-                else:
-                    # Handle case with insufficient classes in y
-                    print(f"Epoch {epoch} evaluation skipped due to insufficient ground truth classes.")
-                    # Append placeholders or skip appending
-                    results.append([epoch] + [0] * 12) # Example: Append zeros
-
+                
+                # Get evaluation metrics for each round
+                acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
+                acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
+                acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
+                
+                # Save clustering results for each round
+                results.append([epoch, acc1, f1_1, acc2, f1_2, acc3, f1_3])
             except Exception as e:
                 print(f"Epoch {epoch} evaluation error: {str(e)}")
-                # ---> Ensure model returns to train mode even if eval fails <---
-                model.train()
-                continue # Skip to next epoch if evaluation fails
-            finally:
-                # ---> Switch model back to training mode AFTER evaluation try block <---
-                model.train()
+                continue
         
-        # Forward pass (Training) - already wrapped in its own try-except
-        # No changes needed here unless train mode was not set correctly
+        # Forward pass
         try:
-            # Ensure model is in train mode before forward pass for training
-            model.train() # Redundant if correctly placed after eval, but safe
-
             x_bar, q, pred, _, _ = model(data, adj, edge_attr)
-
+            
             # Calculate target distribution
             p = target_distribution(q.data)
             
@@ -618,44 +590,29 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
             continue
     
     # Get final clustering results
-    # ---> Use model.eval() and no_grad() for final inference <---
-    model.eval()
     try:
-        with torch.no_grad():
-            _, _, final_pred, _, _ = model(data, adj, edge_attr)
+        _, _, final_pred, _, _ = model(data, adj, edge_attr)
         final_clusters = final_pred.data.cpu().numpy().argmax(1)
     except Exception as e:
         print(f"Error getting final clustering results: {str(e)}")
-        # Fallback logic...
-        if 'res2' in locals() and res2 is not None:
-             final_clusters = res2
-        elif len(results) > 0 and len(results[-1]) > 6 : # Check if previous eval results exist
-             # Attempt to reconstruct from last valid 'res2' if possible (needs storing res2)
-             # As a simple fallback, use the last recorded P prediction if available
-             if 'res3' in locals() and res3 is not None:
-                 final_clusters = res3
-             else: # Last resort: zeros
-                 final_clusters = np.zeros(len(dataset.x), dtype=int)
-             print("Warning: Using fallback for final clustering results.")
+        # If error, use last successful clustering result
+        if 'res2' in locals():
+            final_clusters = res2
         else:
+            # If no successful clustering results, return zeros
             final_clusters = np.zeros(len(dataset.x), dtype=int)
-            print("Warning: Using zeros for final clustering results due to errors.")
     
     # Save results
-    column_names = ['Epoch', 'Acc_Q', 'F1_Q', 'NMI_Q', 'ARI_Q', 'Acc_Z', 'F1_Z', 'NMI_Z', 'ARI_Z', 'Acc_P', 'F1_P', 'NMI_P', 'ARI_P']
-    if len(results) > 0 and len(results[0]) != len(column_names): # Adjust columns if only epoch was saved
-        column_names = ['Epoch'] + [f'Metric_{i}' for i in range(len(results[0]) - 1)]
-
-    results_df = pd.DataFrame(results, columns=column_names)
+    results_df = pd.DataFrame(results, columns=['Epoch', 'Acc_Q', 'F1_Q', 'Acc_Z', 'F1_Z', 'Acc_P', 'F1_P'])
     results_df.to_csv('sdcn_dlaa_training_results.csv', index=False)
-
+    
     print("Training complete. Results saved to 'sdcn_dlaa_training_results.csv'.")
-
+    
     final_results_df = pd.DataFrame({'Node': np.arange(len(final_clusters)), 'Cluster': final_clusters})
     final_results_df.to_csv('sdcn_dlaa_final_cluster_results.csv', index=False)
-
+    
     print("Final clustering results saved to 'sdcn_dlaa_final_cluster_results.csv'.")
-
+    
     return model, results_df
 
 
@@ -814,19 +771,14 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     y = dataset.y
     
     # 使用预训练的自编码器初始化聚类中心
-    # ---> Use no_grad here too for initialization inference <---
-    model.eval() # Set model to eval mode for initialization inference
     with torch.no_grad():
         _, _, _, _, z = model.ae(data)
-    model.train() # Switch back to train mode
-
-
+    
     # 使用K-means进行初始聚类
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
-    # Ensure z is on CPU for KMeans
     y_pred = kmeans.fit_predict(z.data.cpu().numpy())
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
-
+    
     # 评估初始聚类结果
     if len(np.unique(y)) > 1:  # 如果有真实标签
         eva(y, y_pred, 'pae')
@@ -837,34 +789,28 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     results = []
     
     # 训练循环
-    for epoch in range(60):
+    for epoch in range(200):
         # 更新当前epoch
         model.current_epoch = epoch
         
         if epoch % 1 == 0:
-            # ---> Set model to evaluation mode <---
-            model.eval()
             # 评估模型
             try:
-                # ---> Use torch.no_grad() for evaluation inference <---
-                with torch.no_grad():
-                     _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
-
-                # The rest of the calculations generally don't need gradients
+                _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
+                
                 tmp_q = tmp_q.data
                 p = target_distribution(tmp_q)
-
+                
                 res1 = tmp_q.cpu().numpy().argmax(1)  # Q
                 res2 = pred.data.cpu().numpy().argmax(1)  # Z
                 res3 = p.data.cpu().numpy().argmax(1)  # P
-                last_successful_res2 = res2 # Store the latest successful result
-
+                
                 # 评估每轮的聚类指标
                 if len(np.unique(y)) > 1:  # 如果有真实标签
                     acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
                     acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
                     acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
-
+                    
                     # 保存每轮的聚类结果
                     results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
                 else:
@@ -874,20 +820,12 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                     results.append([epoch] + [0] * 12)  # 占位填充
             except Exception as e:
                 print(f"Epoch {epoch} 评估出错: {str(e)}")
-                 # ---> Ensure model returns to train mode even if eval fails <---
-                model.train()
-                continue # Skip to next epoch if evaluation fails
-            finally:
-                 # ---> Switch model back to training mode AFTER evaluation try block <---
-                model.train()
+                continue
         
-        # 前向传播 (训练) - already wrapped in its own try-except
+        # 前向传播
         try:
-            # Ensure model is in train mode
-            model.train()
-
             x_bar, q, pred, _, _ = model(data, adj, edge_attr)
-
+            
             # 计算目标分布
             p = target_distribution(q.data)
             
@@ -912,51 +850,30 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
             continue
     
     # 获取最终聚类结果
-    # ---> Use model.eval() and no_grad() for final inference <---
-    model.eval()
     try:
-        with torch.no_grad():
-            _, _, final_pred, _, _ = model(data, adj, edge_attr)
+        _, _, final_pred, _, _ = model(data, adj, edge_attr)
         final_clusters = final_pred.data.cpu().numpy().argmax(1)
     except Exception as e:
         print(f"获取最终聚类结果出错: {str(e)}")
         # 如果出错，使用最后一次成功的聚类结果
-        if last_successful_res2 is not None:
-            print("Warning: Using last successful evaluation result for final clusters.")
-            final_clusters = last_successful_res2
+        if 'res2' in locals():
+            final_clusters = res2
         else:
             # 如果没有任何成功的聚类结果，返回全0
-            print("Warning: Using zeros for final clusters due to errors.")
             final_clusters = np.zeros(dataset.num_nodes, dtype=int)
     
-    # Save results
+    # 保存结果
     column_names = ['Epoch', 'Acc_Q', 'F1_Q', 'NMI_Q', 'ARI_Q', 'Acc_Z', 'F1_Z', 'NMI_Z', 'ARI_Z', 'Acc_P', 'F1_P', 'NMI_P', 'ARI_P']
-    # Handle case where no results were appended if all evaluations failed early
-    if not results:
-         print("Warning: No evaluation results were recorded during training.")
-         # Optionally create an empty DataFrame or handle as needed
-         results_df = pd.DataFrame(columns=column_names)
-    elif len(results[0]) != len(column_names): # Adjust columns if only epoch was saved
-        column_names = ['Epoch'] + [f'Metric_{i}' for i in range(len(results[0]) - 1)]
-        results_df = pd.DataFrame(results, columns=column_names)
-    else:
-        results_df = pd.DataFrame(results, columns=column_names)
-
-    # Use specific filenames if running hiddensize test, otherwise use defaults
-    if hasattr(args, 'hs1'): # Check if hiddensize args exist
-        results_filename = f'sdcn_dlaa_hiddensize_training_results_hs{args.hs1}-{args.hs2}-{args.hs3}_heads{args.heads}.csv'
-        final_clusters_filename = f'sdcn_dlaa_hiddensize_final_clusters_hs{args.hs1}-{args.hs2}-{args.hs3}_heads{args.heads}.csv'
-    else:
-        results_filename = 'sdcn_dlaa_training_results.csv'
-        final_clusters_filename = 'sdcn_dlaa_final_cluster_results.csv'
-
-    results_df.to_csv(results_filename, index=False)
-    print(f"训练完成。结果已保存到 '{results_filename}'.")
-
+    results_df = pd.DataFrame(results, columns=column_names)
+    results_df.to_csv('sdcn_dlaa_training_results.csv', index=False)
+    
+    print("训练完成。结果已保存到 'sdcn_dlaa_training_results.csv'.")
+    
     final_results_df = pd.DataFrame({'节点ID': np.arange(len(final_clusters)), '聚类ID': final_clusters})
-    final_results_df.to_csv(final_clusters_filename, index=False)
-    print(f"最终聚类结果已保存到 '{final_clusters_filename}'.")
-
+    final_results_df.to_csv('sdcn_dlaa_final_cluster_results.csv', index=False)
+    
+    print("最终聚类结果已保存到 'sdcn_dlaa_final_cluster_results.csv'.")
+    
     return model, results_df, final_clusters
 
 

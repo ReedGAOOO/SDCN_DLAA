@@ -1,0 +1,153 @@
+使用CUDA: True
+节点特征形状: (543, 3)
+边特征形状: torch.Size([293972, 10])
+从数据推断 edge_dim: 10
+节点数量: 543
+特征维度 (n_input): 3
+目标边特征维度 (edge_dim): 10
+聚类数量 (n_clusters): 3
+隐空间维度 (n_z): 10
+学习率: 0.001
+Dropout: 0.2
+注意力头数: 4
+最大邻边数 (edge-to-edge): 10
+
+开始训练 SDCN_DLAA (Hetero) 模型...
+Precomputing graph structures...
+Building edge-to-edge connections...
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=2000, bias=True)
+    (z_layer): Linear(in_features=2000, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=2000, bias=True)
+    (dec_2): Linear(in_features=2000, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=3, bias=True)
+  )
+  (spatial_conv1): HeteroSpatialConv(
+    (edge_init): EdgeInitLayer()
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (dist_feat_proj_en): Linear(in_features=10, out_features=500, bias=True)
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+  )
+  (spatial_conv2): HeteroSpatialConv(
+    (edge_init): EdgeInitLayer()
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (dist_feat_proj_en): Linear(in_features=10, out_features=500, bias=True)
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+  )
+  (spatial_conv3): HeteroSpatialConv(
+    (edge_init): EdgeInitLayer()
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=4)
+    )
+    (dist_feat_proj_en): Linear(in_features=10, out_features=2000, bias=True)
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=4)
+    )
+  )
+  (spatial_conv4): HeteroSpatialConv(
+    (edge_init): EdgeInitLayer()
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+    (dist_feat_proj_en): Linear(in_features=10, out_features=10, bias=True)
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+  )
+  (spatial_conv5): HeteroSpatialConv(
+    (edge_init): EdgeInitLayer()
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=4)
+    )
+    (dist_feat_proj_en): Linear(in_features=10, out_features=3, bias=True)
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(3, 3, heads=4)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=500, bias=True)
+  (proj2): Linear(in_features=500, out_features=500, bias=True)
+  (proj3): Linear(in_features=500, out_features=2000, bias=True)
+  (proj4): Linear(in_features=2000, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+)
+Initial clustering (pae) completed. Cluster distribution may not be diverse.
+Initial y_pred counts: [180 181 182]
+Epoch 0 evaluation error: 'NoneType' object is not callable
+Epoch 1 evaluation error: 'NoneType' object is not callable
+Epoch 2 evaluation error: 'NoneType' object is not callable
+Epoch 3 evaluation error: 'NoneType' object is not callable
+Epoch 4 evaluation error: 'NoneType' object is not callable
+Epoch 5 evaluation error: 'NoneType' object is not callable
+Epoch 6 evaluation error: 'NoneType' object is not callable
+Epoch 7 evaluation error: 'NoneType' object is not callable
+Epoch 8 evaluation error: 'NoneType' object is not callable
+Epoch 9 evaluation error: 'NoneType' object is not callable
+Epoch 10 evaluation error: 'NoneType' object is not callable
+Epoch 11 evaluation error: 'NoneType' object is not callable
+Epoch 12 evaluation error: 'NoneType' object is not callable
+Epoch 13 evaluation error: 'NoneType' object is not callable
+Epoch 14 evaluation error: 'NoneType' object is not callable
+Epoch 15 evaluation error: 'NoneType' object is not callable
+Epoch 16 evaluation error: 'NoneType' object is not callable
+Epoch 17 evaluation error: 'NoneType' object is not callable
+Epoch 18 evaluation error: 'NoneType' object is not callable
+Epoch 19 evaluation error: 'NoneType' object is not callable
+Epoch 20 evaluation error: 'NoneType' object is not callable
+Epoch 21 evaluation error: 'NoneType' object is not callable
+Epoch 22 evaluation error: 'NoneType' object is not callable
+Epoch 23 evaluation error: 'NoneType' object is not callable
+Epoch 24 evaluation error: 'NoneType' object is not callable
+Epoch 25 evaluation error: 'NoneType' object is not callable
+Epoch 26 evaluation error: 'NoneType' object is not callable
+Epoch 27 evaluation error: 'NoneType' object is not callable
+Epoch 28 evaluation error: 'NoneType' object is not callable
+Epoch 29 evaluation error: 'NoneType' object is not callable
+Epoch 30 evaluation error: 'NoneType' object is not callable
+Epoch 31 evaluation error: 'NoneType' object is not callable
+Epoch 32 evaluation error: 'NoneType' object is not callable
+Epoch 33 evaluation error: 'NoneType' object is not callable
+Epoch 34 evaluation error: 'NoneType' object is not callable
+Epoch 35 evaluation error: 'NoneType' object is not callable
+Epoch 36 evaluation error: 'NoneType' object is not callable
+Epoch 37 evaluation error: 'NoneType' object is not callable
+Epoch 38 evaluation error: 'NoneType' object is not callable
+Epoch 39 evaluation error: 'NoneType' object is not callable
+Epoch 40 evaluation error: 'NoneType' object is not callable
+Epoch 41 evaluation error: 'NoneType' object is not callable
+Epoch 42 evaluation error: 'NoneType' object is not callable
+Epoch 43 evaluation error: 'NoneType' object is not callable
+Epoch 44 evaluation error: 'NoneType' object is not callable
+Epoch 45 evaluation error: 'NoneType' object is not callable
+Epoch 46 evaluation error: 'NoneType' object is not callable
+Epoch 47 evaluation error: 'NoneType' object is not callable
+Epoch 48 evaluation error: 'NoneType' object is not callable
+Epoch 49 evaluation error: 'NoneType' object is not callable
+Epoch 50 evaluation error: 'NoneType' object is not callable
+Epoch 51 evaluation error: 'NoneType' object is not callable
+Epoch 52 evaluation error: 'NoneType' object is not callable
+Epoch 53 evaluation error: 'NoneType' object is not callable
+Epoch 54 evaluation error: 'NoneType' object is not callable
+Epoch 55 evaluation error: 'NoneType' object is not callable
+Epoch 56 evaluation error: 'NoneType' object is not callable
+Epoch 57 evaluation error: 'NoneType' object is not callable
+Epoch 58 evaluation error: 'NoneType' object is not callable
+Epoch 59 evaluation error: 'NoneType' object is not callable
+Error getting final clustering results: 'NoneType' object is not callable
+Warning: Using zeros for final clustering results due to errors.
+Warning: No evaluation results were recorded during training.
+Training complete. Results saved to 'sdcn_dlaa_hetero_training_results.csv'.
+Final clustering results saved to 'sdcn_dlaa_hetero_final_cluster_results.csv'.
+
+测试脚本执行完成！日志和结果文件已生成。
