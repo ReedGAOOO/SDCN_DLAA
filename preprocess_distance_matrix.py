@@ -22,6 +22,7 @@ import pandas as pd
 import scipy.sparse as sp
 import torch
 from torch_geometric.utils import dense_to_sparse
+from torch_geometric.utils import to_undirected
 import argparse
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -266,7 +267,7 @@ def save_processed_data(output_dir, node_features, sparse_adj_binary, edge_index
                 f.write(f"{name}\n")
 
     # 保存处理信息
-    with open(os.path.join(output_dir, 'data_info.txt'), 'w') as f:
+    with open(os.path.join(output_dir, 'data_info.txt'), 'w', encoding='utf-8') as f:
         f.write(f"节点数量: {node_features.shape[0]}\n")
         f.write(f"节点特征维度: {node_features.shape[1]}\n")
         f.write(f"边数量: {edge_index.shape[1]}\n")
@@ -409,29 +410,66 @@ def main():
     sparse_adj_binary = None
     edge_index = None
     edge_attr_distances = None # Store raw distances first
+    
+    num_nodes = distance_matrix.shape[0] # 获取节点数量
 
     if args.method == 'knn':
-        sparse_adj_binary, edge_index, edge_attr_distances = create_knn_graph(distance_matrix, args.k)
+        # 1. 先创建有向 KNN 图
+        print("步骤 1: 创建初始有向 KNN 图...")
+        # 使用临时变量存储有向图的结果
+        sparse_adj_binary_directed, edge_index_directed, edge_attr_distances_directed = create_knn_graph(distance_matrix, args.k)
+
+        # 2. 将有向边索引转换为无向 (取并集)
+        print("步骤 2: 将有向图转换为无向图...")
+        edge_index_tensor = torch.from_numpy(edge_index_directed).long()
+
+        # 调用 to_undirected 对边索引进行对称化
+        edge_index_undirected_tensor = to_undirected(edge_index_tensor, num_nodes=num_nodes)
+        
+        # 将对称化后的边索引转回 numpy 格式，作为最终的 edge_index
+        edge_index = edge_index_undirected_tensor.numpy()
+        print(f"无向化后的边数量: {edge_index.shape[1]}")
+
+        # 3. 重新提取与无向边对应的距离特征 (重要！)
+        #   因为 to_undirected 可能添加了新的边 (j, i)，我们需要为这些边找到对应的距离
+        print("步骤 3: 重新提取与无向边对应的距离特征...")
+        rows_undirected, cols_undirected = edge_index[0], edge_index[1]
+        # 直接从原始距离矩阵中查找新 edge_index 对应的距离
+        edge_attr_distances = distance_matrix[rows_undirected, cols_undirected].reshape(-1, 1)
+        print(f"重新提取的边特征形状: {edge_attr_distances.shape}")
+
+        # 4. 创建最终的二进制稀疏邻接矩阵 (基于无向边)
+        print("步骤 4: 创建最终的无向二进制稀疏邻接矩阵...")
+        sparse_adj_binary = sp.csr_matrix((np.ones(edge_index.shape[1]), (rows_undirected, cols_undirected)),
+                                          shape=(num_nodes, num_nodes))
+        sparsity = 1.0 - (sparse_adj_binary.nnz / (num_nodes * num_nodes))
+        print(f"最终无向邻接矩阵稀疏度: {sparsity:.6f}")
+        
+
     elif args.method == 'threshold':
+        # Threshold 方法如果距离矩阵对称，则结果已经是无向的，无需额外处理
         sparse_adj_binary, edge_index, edge_attr_distances = create_threshold_graph(distance_matrix, args.theta)
+        print("Threshold 方法生成图，假设输入距离矩阵对称，图已为无向。")
     else:
-        raise ValueError(f"未知的稀疏化方法: {args.method}") # Should not happen due to choices
+        raise ValueError(f"未知的稀疏化方法: {args.method}")
 
     # --- Edge Feature Processing ---
-    # 1. Normalize the raw distances
+    # 后续处理现在使用对称化后的 edge_index 和重新提取的 edge_attr_distances
+    print("\n--- 开始处理边特征 ---")
     edge_attr_normalized = normalize_edge_features(edge_attr_distances, args.normalize)
-
-    # 2. Expand dimensions using normalized features
     edge_attr_final = expand_edge_features(edge_attr_normalized, args.edge_dim)
 
-    # 保存处理后的数据
+    # --- 保存和可视化 ---
+    # 使用的是最终（可能已无向化）的 sparse_adj_binary, edge_index, edge_attr_final
+    print("\n--- 开始保存数据 ---")
     save_processed_data(args.output_dir, node_features, sparse_adj_binary, edge_index, edge_attr_final, feature_names)
 
     # 可视化数据
     if args.visualize:
+        print("\n--- 开始可视化数据 ---")
         visualize_data(args.output_dir, node_features, sparse_adj_binary, edge_attr_final)
 
-    print(f"数据预处理 ({args.method} 方法) 完成")
+    print(f"\n数据预处理 ({args.method} 方法) 完成")
 
 
 if __name__ == "__main__":

@@ -897,7 +897,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
             re_loss = F.mse_loss(x_bar, data)
             
             # 综合损失，使用与原始SDCN相同的权重
-            loss = 0.1 * kl_loss + 0.01 * ce_loss + re_loss
+            loss = 1.0 * kl_loss + 0.1 * ce_loss + re_loss
             
             # 反向传播和优化
             optimizer.zero_grad()

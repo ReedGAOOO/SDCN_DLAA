@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "D:\\u6587\u6863\SMAN-SDCN\test_sdcn_dlaa_NEW_sparse.py", line 219, in <module>
+    print("\u4f7f\u7528CUDA: {}".format(args.cuda))
+  File "D:\\u6587\u6863\SMAN-SDCN\test_sdcn_dlaa_NEW_sparse.py", line 28, in write
+    self.terminal.write(message)
+  File "C:\Users\gyj12\.conda\envs\GNN\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>

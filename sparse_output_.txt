@@ -1,0 +1,1 @@
+C:\Users\gyj12\.conda\envs\GNN\python.exe: can't open file 'D:\\\u6587\u6863\\SMAN-SDCN\\run_test_sdcn_dlaa_NEW_sparse.py': [Errno 2] No such file or directory
