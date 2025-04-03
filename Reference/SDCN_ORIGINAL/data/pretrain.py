@@ -9,7 +9,7 @@ from torch.optim import Adam, SGD
 from torch.nn import Linear
 from torch.utils.data import Dataset
 from sklearn.cluster import KMeans
-from evaluation import eva
+from SDCN_ORIGINAL.evaluation import eva
 
 #torch.cuda.set_device(3)
 

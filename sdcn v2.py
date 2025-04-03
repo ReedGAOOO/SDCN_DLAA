@@ -13,9 +13,9 @@ from torch.nn.parameter import Parameter
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from torch.nn import Linear
-from utils import load_data, load_graph
-from GNN import GNNLayer
-from evaluation import eva
+from Reference.SDCN_ORIGINAL.utils import load_data, load_graph
+from Reference.SDCN_ORIGINAL.GNN import GNNLayer
+from SDCN_ORIGINAL.evaluation import eva
 
 # torch.cuda.set_device(1)
 

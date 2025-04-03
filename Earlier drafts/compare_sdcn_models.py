@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from utils import load_data, load_graph
+from Reference.SDCN_ORIGINAL.utils import load_data, load_graph
 from sdcn_spatial import train_sdcn_spatial
 from spatial_sdcn_improved import train_sdcn_spatial_improved
 import pandas as pd

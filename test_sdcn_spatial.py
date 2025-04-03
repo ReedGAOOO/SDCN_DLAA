@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from torch_geometric.data import Data
 from sdcn_spatial import SDCN_Spatial, SpatialEmbedding
-from utils import load_data, load_graph
+from Reference.SDCN_ORIGINAL.utils import load_data, load_graph
 
 
 def test_spatial_embedding():

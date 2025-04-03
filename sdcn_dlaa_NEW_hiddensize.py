@@ -17,8 +17,8 @@ from torch.nn import Linear
 from torch_geometric.data import Data
 from torch_geometric.utils import to_edge_index, dense_to_sparse
 # Assuming utils and evaluation are in the same directory or accessible
-from utils import load_data, load_graph
-from evaluation import eva
+from Reference.SDCN_ORIGINAL.utils import load_data, load_graph
+from SDCN_ORIGINAL.evaluation import eva
 import sys
 import os
 from datetime import datetime
