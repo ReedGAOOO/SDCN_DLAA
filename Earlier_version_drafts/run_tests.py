@@ -3,7 +3,7 @@ import sys
 import unittest
 import time
 import matplotlib.pyplot as plt
-from test_sman_layers_compatibility import TestSMANLayersCompatibility
+from Earlier_version_drafts.test_sman_layers_compatibility import TestSMANLayersCompatibility
 
 def run_unit_tests():
     """运行单元测试"""
