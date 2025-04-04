@@ -1,0 +1,374 @@
+Use CUDA: True
+Loading data from: NEWDATA/processed_knn_k15
+Node features path: NEWDATA/processed_knn_k15\node_features.npy
+Binary adj path: NEWDATA/processed_knn_k15\binary_adj.npz
+Edge attr path: NEWDATA/processed_knn_k15\edge_attr.npy
+Node features shape: (543, 3)
+Edge features shape: torch.Size([10024, 10])
+Number of nodes: 543
+Feature dimensions: 3
+Edge feature dimensions: 10
+Number of clusters: 3
+
+Starting training for SDCN_DLAA model with KNN data...
+Performance optimization: Precomputing graph structure...
+Building edge-to-edge connections...
+Precomputation complete: node-to-node edges: 10024, edge-to-edge connections: 48870
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=2000, bias=True)
+    (z_layer): Linear(in_features=2000, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=2000, bias=True)
+    (dec_2): Linear(in_features=2000, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=3, bias=True)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=4)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=2000, bias=True)
+    (edge_fc): Linear(in_features=6000, out_features=2000, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=4)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(10, 10, heads=4)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=3, bias=True)
+    (edge_fc): Linear(in_features=9, out_features=3, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=4)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(3, 3, heads=4)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=500, bias=True)
+  (proj2): Linear(in_features=500, out_features=500, bias=True)
+  (proj3): Linear(in_features=500, out_features=2000, bias=True)
+  (proj4): Linear(in_features=2000, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+  (initial_edge_proj): Linear(in_features=10, out_features=10, bias=True)
+)
+Initial clustering complete. Number of clusters: 3
+Epoch 0, Cluster distribution: [427  12 104]
+
+Epoch 0
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 0, Loss: inf, KL: 0.0589, CE: inf, RE: 32856.1953
+Epoch 1, Cluster distribution: [543]
+
+Epoch 1
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 2, Cluster distribution: [543]
+
+Epoch 2
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 3, Cluster distribution: [543]
+
+Epoch 3
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 4, Cluster distribution: [543]
+
+Epoch 4
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 5, Cluster distribution: [543]
+
+Epoch 5
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 6, Cluster distribution: [543]
+
+Epoch 6
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 7, Cluster distribution: [543]
+
+Epoch 7
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 8, Cluster distribution: [543]
+
+Epoch 8
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 9, Cluster distribution: [543]
+
+Epoch 9
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 10, Cluster distribution: [543]
+
+Epoch 10
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 10, Loss: nan, KL: nan, CE: nan, RE: nan
+Epoch 11, Cluster distribution: [543]
+
+Epoch 11
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+

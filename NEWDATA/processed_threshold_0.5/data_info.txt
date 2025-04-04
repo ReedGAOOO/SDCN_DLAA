@@ -1,0 +1,5 @@
+Number of nodes: 543
+Node feature dimensions: 3
+Number of edges: 0
+Final edge feature dimensions: 10
+Adjacency matrix sparsity: 1.000000

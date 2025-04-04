@@ -1,0 +1,17 @@
+Use CUDA: True
+Loading data from: NEWDATA/processed_threshold_0.5
+Node features path: NEWDATA/processed_threshold_0.5\node_features.npy
+Binary adj path: NEWDATA/processed_threshold_0.5\binary_adj.npz
+Edge attr path: NEWDATA/processed_threshold_0.5\edge_attr.npy
+Node features shape: (543, 3)
+Edge features shape: torch.Size([0, 10])
+Number of nodes: 543
+Feature dimensions: 3
+Edge feature dimensions: 10
+Number of clusters: 3
+
+Starting training for SDCN_DLAA model with Threshold data...
+Performance optimization: Precomputing graph structure...
+Error occurred during training: max(): Expected reduction dim to be specified for input.numel() == 0. Specify the reduction dim with the 'dim' argument.
+
+Training completed!

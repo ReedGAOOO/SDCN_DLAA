@@ -17,11 +17,11 @@ from torch.nn import Linear
 from torch_geometric.data import Data
 from torch_geometric.utils import to_edge_index, dense_to_sparse
 from Reference.SDCN_ORIGINAL.utils import load_data, load_graph
-from SDCN_ORIGINAL.evaluation import eva
+from evaluation import eva
 import sys
 import os
 from datetime import datetime
-# ---> 1. 添加 AMP 导入 <---
+# ---> 1. Add AMP imports <---
 from torch.cuda.amp import autocast, GradScaler
 
 # Import SpatialConv from DLAA
@@ -33,7 +33,7 @@ class AE(nn.Module):
     Autoencoder module for SDCN, same as the original implementation
     """
     def __init__(self, n_enc_1, n_enc_2, n_enc_3, n_dec_1, n_dec_2, n_dec_3,
-                 n_input, n_z):
+                n_input, n_z):
         super(AE, self).__init__()
         self.enc_1 = Linear(n_input, n_enc_1)
         self.enc_2 = Linear(n_enc_1, n_enc_2)
@@ -154,26 +154,26 @@ class SDCN_DLAA(nn.Module):
         """
         num_nodes = x.size(0)
 
-        # 重要修复：添加节点数量和特征维度的验证
+        # Important fix: Add validation for node count and feature dimensions
         if num_nodes < 4:
-            raise ValueError(f"节点数量必须大于3，当前为{num_nodes}")
+            raise ValueError(f"Number of nodes must be greater than 3, current: {num_nodes}")
 
-        # 检查x是否为有效特征
+        # Check if x contains valid features
         if not torch.is_floating_point(x) or torch.isnan(x).any():
-            raise ValueError("节点特征包含无效值(NaN或非浮点数)")
+            raise ValueError("Node features contain invalid values (NaN or non-float)")
 
         # Check if we already have precomputed graph structures from initialization
         if self.precomputed_edge_index is not None and self.precomputed_edge_to_edge_index is not None:
-            # 重要修复：验证预计算的边索引不会超出节点范围
+            # Important fix: Validate precomputed edge indices don't exceed node range
             max_node_idx = self.precomputed_edge_index.max().item()
             if max_node_idx >= num_nodes:
-                print(f"警告：预计算的边索引({max_node_idx})超出了当前节点数量({num_nodes})，重新计算中...")
-                # 清空预计算的结果并重新计算
+                print(f"Warning: Precomputed edge indices ({max_node_idx}) exceed current node count ({num_nodes}), recalculating...")
+                # Clear precomputed results and recalculate
                 self.precomputed_edge_index = None
                 self.precomputed_edge_to_edge_index = None
-                # 继续下面的逻辑重新计算
+                # Continue with the logic below to recalculate
             else:
-                # 如果预计算的边索引有效，则使用它们创建数据对象
+                # If precomputed edge indices are valid, use them to create data object
                 data = Data(
                     x=x,
                     edge_index=self.precomputed_edge_index,
@@ -191,22 +191,22 @@ class SDCN_DLAA(nn.Module):
         else:
             adj_id = f"{adj.sum().item()}"
 
-        # 重要修复：在缓存键中加入节点数量和特征维度
+        # Important fix: Include node count and feature dimensions in cache key
         cache_key = f"{adj_id}_{max_edges_per_node}_{num_nodes}_{x.size(1)}"
 
         # Check if we have cached this graph structure
         if cache_key in self.graph_cache:
             cached = self.graph_cache[cache_key]
 
-            # 重要修复：验证缓存的边索引不会超出节点范围
+            # Important fix: Validate cached edge indices don't exceed node range
             max_node_idx = cached['edge_index'].max().item()
             if max_node_idx >= num_nodes:
-                print(f"警告：缓存的边索引({max_node_idx})超出了当前节点数量({num_nodes})，重新计算中...")
-                # 清除无效的缓存项
+                print(f"Warning: Cached edge indices ({max_node_idx}) exceed current node count ({num_nodes}), recalculating...")
+                # Remove invalid cache entry
                 self.graph_cache.pop(cache_key)
-                # 继续下面的逻辑重新计算
+                # Continue with the logic below to recalculate
             else:
-                # 如果缓存的边索引有效，则使用它们创建数据对象
+                # If cached edge indices are valid, use them to create data object
                 data = Data(
                     x=x,
                     edge_index=cached['edge_index'],
@@ -327,7 +327,7 @@ class SDCN_DLAA(nn.Module):
             z: Latent representation
             spatial_shapes: Dictionary of layer shapes
         """
-        # 记录原始节点数量，这很重要
+        # Record original node count, this is important
         original_nodes = x.size(0)
 
         # Get autoencoder outputs
@@ -372,10 +372,10 @@ class SDCN_DLAA(nn.Module):
         # Layer 5 (no activation for final layer)
         data.x = (1 - sigma) * h4 + sigma * z   # data.x.shape = [original_nodes, n_z]
 
-        # 对节点特征进行投影：将每个节点的特征从 n_z 映射到 n_clusters
+        # Project node features: map each node's features from n_z to n_clusters
         projected_features = self.proj5(data.x)   # projected_features.shape = [original_nodes, n_clusters]
 
-        # 构造新的 Data 对象，确保节点数量保持 original_nodes
+        # Construct new Data object, ensuring node count remains original_nodes
         updated_data = Data(
             x=projected_features,
             edge_index=data.edge_index,
@@ -385,7 +385,7 @@ class SDCN_DLAA(nn.Module):
             edge_to_edge_index=data.edge_to_edge_index
         )
 
-        # 正确传递数据给SpatialConv
+        # Correctly pass data to SpatialConv
         node_edge_feat5 = self.spatial_conv5(updated_data)
         h5 = node_edge_feat5[:original_nodes]
         spatial_shapes['Layer 5'] = h5.shape
@@ -664,7 +664,7 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
 class Logger(object):
     def __init__(self, filename="Default.log", terminal_mode="normal"):
         self.terminal = sys.stdout
-        self.log = open(filename, "a", encoding="utf-8")  # 添加UTF-8编码
+        self.log = open(filename, "a", encoding="utf-8")  # Added UTF-8 encoding
         self.terminal_mode = terminal_mode
 
     def write(self, message):
@@ -697,98 +697,98 @@ class Logger(object):
 
 def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     """
-    优化版本的训练函数 - 适用于自定义数据集 (已集成 AMP)
+    Optimized training function - for custom datasets (with AMP integrated)
 
     Args:
-        dataset: 数据集对象，包含特征和标签
-        adj: 邻接矩阵（torch稀疏张量）
-        args: 训练参数
-        edge_attr: 边特征 [num_edges, edge_dim]
+        dataset: Dataset object containing features and labels
+        adj: Adjacency matrix (torch sparse tensor)
+        args: Training parameters
+        edge_attr: Edge features [num_edges, edge_dim]
     """
 
-    # 检查是否提供了边特征，如果没有，创建简单的边特征
+    # Check if edge attributes are provided, if not, create simple edge features
     if edge_attr is None:
-        print("未提供边特征，使用随机初始化的边特征")
+        print("No edge features provided, using randomly initialized edge features")
         num_edges = adj._nnz()
         edge_attr = torch.ones(num_edges, args.edge_dim).to(args.device)
     else:
-        # 确保边特征在正确的设备上
+        # Ensure edge features are on the correct device
         edge_attr = edge_attr.to(args.device)
 
-    # 性能优化：预处理边到边图结构
-    print("性能优化：预计算图结构...")
+    # Performance optimization: Preprocess edge-to-edge graph structure
+    print("Performance optimization: Precomputing graph structures...")
     if adj.is_sparse:
         adj = adj.coalesce()
         edge_index = adj.indices()
     else:
         edge_index, _ = dense_to_sparse(adj)
 
-    # 验证边索引是否有效
+    # Validate edge indices
     num_nodes = dataset.num_nodes
     max_index = edge_index.max().item()
 
     if max_index >= num_nodes:
-        print(f"警告: 边索引中包含超出节点数量范围的值 (最大值: {max_index}, 节点数量: {num_nodes})")
-        print(f"正在过滤无效边...")
+        print(f"Warning: Edge indices contain values exceeding node count range (max: {max_index}, node count: {num_nodes})")
+        print(f"Filtering invalid edges...")
 
         valid_edges_mask = (edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)
         edge_index = edge_index[:, valid_edges_mask]
 
-        # 更新边特征
+        # Update edge features
         if edge_attr is not None:
             edge_attr = edge_attr[valid_edges_mask]
 
         if edge_index.size(1) == 0:
-            print("错误: 过滤后没有有效的边!")
-            # 创建最小有效图
+            print("Error: No valid edges remain after filtering!")
+            # Create minimal valid graph
             edge_index = torch.zeros((2, 1), dtype=torch.long).to(args.device)
             edge_index[0, 0] = 0
-            edge_index[1, 0] = min(1, num_nodes-1)  # 如果只有1个节点则连到自身
+            edge_index[1, 0] = min(1, num_nodes-1)  # Connect to self if only 1 node
 
-            # 更新边特征
+            # Update edge features
             if edge_attr is not None:
                 edge_attr = torch.ones(1, args.edge_dim).to(args.device)
 
-    # 构建边到边连接
-    print("构建边到边连接...")
+    # Build edge-to-edge connections
+    print("Building edge-to-edge connections...")
     num_edges = edge_index.size(1)
 
-    # 构建节点到边的映射
+    # Build mapping from nodes to edges
     node_to_edges = defaultdict(list)
     for i in range(num_edges):
         src, dst = edge_index[0, i].item(), edge_index[1, i].item()
         node_to_edges[src].append(i)
         node_to_edges[dst].append(i)
 
-    # 创建边到边的连接
+    # Create edge-to-edge connections
     edge_to_edge_list = []
     for node, connected_edges in node_to_edges.items():
         if len(connected_edges) > 1:
-            # 超过最大边数限制时进行随机采样
+            # Randomly sample if exceeding max edges per node limit
             if len(connected_edges) > args.max_edges_per_node:
                 sampled_edges = random.sample(connected_edges, args.max_edges_per_node)
             else:
                 sampled_edges = connected_edges
 
-            # 连接共享节点的所有边对
+            # Connect all pairs of edges that share this node
             for i in range(len(sampled_edges)):
                 for j in range(i+1, len(sampled_edges)):
                     edge_i = sampled_edges[i]
                     edge_j = sampled_edges[j]
-                    # 为无向图添加双向连接
+                    # Add both directions for undirected graph
                     edge_to_edge_list.append([edge_i, edge_j])
                     edge_to_edge_list.append([edge_j, edge_i])
 
-    # 转换为张量形式
+    # Convert to tensor form
     if len(edge_to_edge_list) > 0:
         edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
     else:
-        # 如果没有边到边的连接，创建空张量
+        # If no edge-to-edge connections, create empty tensor
         edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
 
-    print(f"预计算完成：节点到节点边数量: {edge_index.shape[1]}, 边到边连接数量: {edge_to_edge_index.shape[1]}")
+    print(f"Precomputation complete: Node-to-node edge count: {edge_index.shape[1]}, Edge-to-edge connection count: {edge_to_edge_index.shape[1]}")
 
-    # 创建使用预计算图结构的模型
+    # Create model using precomputed graph structures
     model = SDCN_DLAA(
         500, 500, 2000, 2000, 500, 500,
         n_input=args.n_input,
@@ -805,53 +805,53 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
 
     print(model)
 
-    # 优化器
+    # Optimizer
     optimizer = Adam(model.parameters(), lr=args.lr)
 
-    # ---> 2. 初始化 GradScaler (仅在 CUDA 可用时) <---
+    # ---> 2. Initialize GradScaler (only when CUDA is available) <---
     scaler = GradScaler(enabled=args.cuda)
 
-    # 将邻接矩阵移动到指定设备
+    # Move adjacency matrix to specified device
     adj = adj.to(args.device)
 
-    # 准备数据
+    # Prepare data
     data = torch.Tensor(dataset.x).to(args.device)
     y = dataset.y
 
-    # 使用预训练的自编码器初始化聚类中心
+    # Initialize cluster centers using pretrained autoencoder
     model.eval()
     with torch.no_grad():
-        # ---> 7. 在 no_grad 内也使用 autocast (可选) <---
+        # ---> 7. Use autocast within no_grad (optional) <---
         with autocast(enabled=args.cuda):
             _, _, _, _, z = model.ae(data)
     model.train()
 
-    # 使用K-means进行初始聚类
+    # Use K-means for initial clustering
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
     # Ensure z is on CPU for KMeans
     y_pred = kmeans.fit_predict(z.data.cpu().numpy())
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
 
-    # 评估初始聚类结果
-    if len(np.unique(y)) > 1:  # 如果有真实标签
+    # Evaluate initial clustering results
+    if len(np.unique(y)) > 1:  # If true labels exist
         eva(y, y_pred, 'pae')
     else:
-        print(f"初始聚类完成。聚类数量: {args.n_clusters}")
+        print(f"Initial clustering completed. Cluster count: {args.n_clusters}")
 
-    # 创建保存结果的列表
+    # Create list to store results
     results = []
-    last_successful_res2 = None # 用于出错时回退
+    last_successful_res2 = None # For fallback in case of errors
 
-    # 训练循环
+    # Training loop
     for epoch in range(60):
-        # 更新当前epoch
+        # Update current epoch
         model.current_epoch = epoch
 
         if epoch % 1 == 0:
             model.eval()
             try:
                 with torch.no_grad():
-                    # ---> 7. 在 no_grad 内也使用 autocast (可选) <---
+                    # ---> 7. Use autocast within no_grad (optional) <---
                     with autocast(enabled=args.cuda):
                         _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
 
@@ -863,80 +863,305 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                 res3 = p.data.cpu().numpy().argmax(1)  # P
                 last_successful_res2 = res2 # Store the latest successful result
 
-                # 评估每轮的聚类指标
-                if len(np.unique(y)) > 1:  # 如果有真实标签
+                # Evaluate clustering metrics each round
+                if len(np.unique(y)) > 1:  # If true labels exist
                     acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
                     acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
                     acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
 
-                    # 保存每轮的聚类结果
+                    # Save clustering results for each round
                     results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
                 else:
-                    # 无标签情况下，只保存聚类结果，不计算评估指标
+                    # Without labels, only save clustering results, don't compute metrics
                     cluster_distribution = np.bincount(res2)
-                    print(f"Epoch {epoch}, 聚类分布: {cluster_distribution}")
-                    results.append([epoch] + [0] * 12)  # 占位填充
+                    print(f"Epoch {epoch}, Cluster distribution: {cluster_distribution}")
+                    results.append([epoch] + [0] * 12)  # Placeholder fill
             except Exception as e:
-                print(f"Epoch {epoch} 评估出错: {str(e)}")
+                print(f"Epoch {epoch} evaluation error: {str(e)}")
                 model.train()
                 continue # Skip to next epoch if evaluation fails
             finally:
                 model.train()
 
-        # 前向传播 (训练)
+        # Forward pass (Training)
         try:
             model.train()
-            optimizer.zero_grad() # 通常在这里清零梯度
+            optimizer.zero_grad() # Typically clear gradients here
 
-            # ---> 3. 使用 autocast 包裹前向传播和损失计算 <---
+            # ---> 3. Wrap forward pass and loss calculation with autocast <---
             with autocast(enabled=args.cuda):
                 x_bar, q, pred, _, _ = model(data, adj, edge_attr)
 
-                # 计算目标分布
-                # 注意: p 的计算依赖 q.data，通常不需要在 autocast 内，
-                # 但如果 target_distribution 内部有复杂操作，放在里面也无妨
+                # Calculate target distribution
+                # Note: p calculation depends on q.data, typically doesn't need to be in autocast,
+                # but if target_distribution has complex operations, it's fine to leave it in
                 p = target_distribution(q.data)
 
-                # 计算损失
+                # Calculate loss
                 kl_loss = F.kl_div(q.log(), p, reduction='batchmean')
                 ce_loss = F.kl_div(pred.log(), p, reduction='batchmean')
                 re_loss = F.mse_loss(x_bar, data)
 
-                # 综合损失
+                # Combined loss
                 loss = 0.1 * kl_loss + 0.01 * ce_loss + re_loss
 
-            # ---> 4. 使用 GradScaler 缩放损失进行反向传播 <---
+            # ---> 4. Scale loss with GradScaler for backward pass <---
             scaler.scale(loss).backward()
 
-            # ---> 5. 使用 GradScaler 更新优化器 (包括梯度反缩放) <---
+            # ---> 5. Update optimizer with GradScaler (including gradient unscaling) <---
             scaler.step(optimizer)
 
-            # ---> 6. 更新 GradScaler 的缩放因子 <---
+            # ---> 6. Update GradScaler's scale factor <---
             scaler.update()
 
-            # 每10个epoch打印一次损失信息
+            # Print loss information every 10 epochs
             if epoch % 10 == 0:
                 print(f"Epoch {epoch}, Loss: {loss.item():.4f}, KL: {kl_loss.item():.4f}, CE: {ce_loss.item():.4f}, RE: {re_loss.item():.4f}")
         except Exception as e:
-            print(f"Epoch {epoch} 训练出错: {str(e)}")
+            print(f"Epoch {epoch} training error: {str(e)}")
             continue
 
-    # 获取最终聚类结果
+    # Get final clustering results
     model.eval()
     try:
         with torch.no_grad():
-            # ---> 7. 在 no_grad 内也使用 autocast (可选) <---
+            # ---> 7. Use autocast within no_grad (optional) <---
             with autocast(enabled=args.cuda):
                 _, _, final_pred, _, _ = model(data, adj, edge_attr)
         final_clusters = final_pred.data.cpu().numpy().argmax(1)
     except Exception as e:
-        print(f"获取最终聚类结果出错: {str(e)}")
-        # 如果出错，使用最后一次成功的聚类结果
+        print(f"Error getting final clustering results: {str(e)}")
+        # If error occurs, use last successful clustering result
         if last_successful_res2 is not None:
             print("Warning: Using last successful evaluation result for final clusters.")
             final_clusters = last_successful_res2
         else:
-            # 如果没有任何成功的聚类结果，返回全0
+            # If no successful clustering results, return all zeros
+            print("Warning: Using zeros for final clusters due to errors.")
+            final_clusters = np.zeros(dataset.num_nodes, dtype=int)
+
+    # Save results
+    print("performance optimize：pre-calculate garph structure...")
+    if adj.is_sparse:
+        adj = adj.coalesce()
+        edge_index = adj.indices()
+    else:
+        edge_index, _ = dense_to_sparse(adj)
+
+    # Validate edge indices
+    num_nodes = dataset.num_nodes
+    max_index = edge_index.max().item()
+
+    if max_index >= num_nodes:
+        print(f"Warning: Edge indices contain values exceeding node count range (max: {max_index}, node count: {num_nodes})")
+        print(f"Filtering invalid edges...")
+
+        valid_edges_mask = (edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)
+        edge_index = edge_index[:, valid_edges_mask]
+
+        # Update edge features
+        if edge_attr is not None:
+            edge_attr = edge_attr[valid_edges_mask]
+
+        if edge_index.size(1) == 0:
+            print("Error: No valid edges remain after filtering!")
+            # Create minimal valid graph
+            edge_index = torch.zeros((2, 1), dtype=torch.long).to(args.device)
+            edge_index[0, 0] = 0
+            edge_index[1, 0] = min(1, num_nodes-1)  # Connect to self if only 1 node
+
+            # Update edge features
+            if edge_attr is not None:
+                edge_attr = torch.ones(1, args.edge_dim).to(args.device)
+
+    # Build edge-to-edge connections
+    print("Building edge-to-edge connections...")
+    num_edges = edge_index.size(1)
+
+    # Build mapping from nodes to edges
+    node_to_edges = defaultdict(list)
+    for i in range(num_edges):
+        src, dst = edge_index[0, i].item(), edge_index[1, i].item()
+        node_to_edges[src].append(i)
+        node_to_edges[dst].append(i)
+
+    # Create edge-to-edge connections
+    edge_to_edge_list = []
+    for node, connected_edges in node_to_edges.items():
+        if len(connected_edges) > 1:
+            # Randomly sample if exceeding max edges per node limit
+            if len(connected_edges) > args.max_edges_per_node:
+                sampled_edges = random.sample(connected_edges, args.max_edges_per_node)
+            else:
+                sampled_edges = connected_edges
+
+            # Connect all pairs of edges that share this node
+            for i in range(len(sampled_edges)):
+                for j in range(i+1, len(sampled_edges)):
+                    edge_i = sampled_edges[i]
+                    edge_j = sampled_edges[j]
+                    # Add both directions for undirected graph
+                    edge_to_edge_list.append([edge_i, edge_j])
+                    edge_to_edge_list.append([edge_j, edge_i])
+
+    # Convert to tensor form
+    if len(edge_to_edge_list) > 0:
+        edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
+    else:
+        # If no edge-to-edge connections, create empty tensor
+        edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
+
+    print(f"Precomputation complete: Node-to-node edge count: {edge_index.shape[1]}, Edge-to-edge connection count: {edge_to_edge_index.shape[1]}")
+
+    # Create model using precomputed graph structures
+    model = SDCN_DLAA(
+        500, 500, 2000, 2000, 500, 500,
+        n_input=args.n_input,
+        n_z=args.n_z,
+        n_clusters=args.n_clusters,
+        v=1.0,
+        dropout=args.dropout,
+        edge_dim=args.edge_dim,
+        heads=args.heads,
+        max_edges_per_node=args.max_edges_per_node,
+        precomputed_edge_index=edge_index,
+        precomputed_edge_to_edge_index=edge_to_edge_index
+    ).to(args.device)
+
+    print(model)
+
+    # Optimizer
+    optimizer = Adam(model.parameters(), lr=args.lr)
+
+    # ---> 2. Initialize GradScaler (only when CUDA is available) <---
+    scaler = GradScaler(enabled=args.cuda)
+
+    # Move adjacency matrix to specified device
+    adj = adj.to(args.device)
+
+    # Prepare data
+    data = torch.Tensor(dataset.x).to(args.device)
+    y = dataset.y
+
+    # Initialize cluster centers using pretrained autoencoder
+    model.eval()
+    with torch.no_grad():
+        # ---> 7. Use autocast within no_grad (optional) <---
+        with autocast(enabled=args.cuda):
+            _, _, _, _, z = model.ae(data)
+    model.train()
+
+    # Use K-means for initial clustering
+    kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
+    # Ensure z is on CPU for KMeans
+    y_pred = kmeans.fit_predict(z.data.cpu().numpy())
+    model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
+
+    # Evaluate initial clustering results
+    if len(np.unique(y)) > 1:  # If true labels exist
+        eva(y, y_pred, 'pae')
+    else:
+        print(f"Initial clustering completed. Cluster count: {args.n_clusters}")
+
+    # Create list to store results
+    results = []
+    last_successful_res2 = None # For fallback in case of errors
+
+    # Training loop
+    for epoch in range(60):
+        # Update current epoch
+        model.current_epoch = epoch
+
+        if epoch % 1 == 0:
+            model.eval()
+            try:
+                with torch.no_grad():
+                    # ---> 7. Use autocast within no_grad (optional) <---
+                    with autocast(enabled=args.cuda):
+                        _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
+
+                tmp_q = tmp_q.data
+                p = target_distribution(tmp_q)
+
+                res1 = tmp_q.cpu().numpy().argmax(1)  # Q
+                res2 = pred.data.cpu().numpy().argmax(1)  # Z
+                res3 = p.data.cpu().numpy().argmax(1)  # P
+                last_successful_res2 = res2 # Store the latest successful result
+
+                # Evaluate clustering metrics each round
+                if len(np.unique(y)) > 1:  # If true labels exist
+                    acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
+                    acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
+                    acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
+
+                    # Save clustering results for each round
+                    results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
+                else:
+                    # Without labels, only save clustering results, don't compute metrics
+                    cluster_distribution = np.bincount(res2
+                    print(f"Epoch {epoch}, Cluster distribution: {cluster_distribution}")
+                    results.append([epoch] + [0] * 12)  # Placeholder fill
+            except Exception as e:
+                print(f"Epoch {epoch} evaluation error: {str(e)}")
+                model.train()
+                continue # Skip to next epoch if evaluation fails
+            finally:
+                model.train()
+
+        # Forward pass (Training)
+        try:
+            model.train()
+            optimizer.zero_grad() # Typically clear gradients here
+
+            # ---> 3. Wrap forward pass and loss calculation with autocast <---
+            with autocast(enabled=args.cuda):
+                x_bar, q, pred, _, _ = model(data, adj, edge_attr)
+
+                # Calculate target distribution
+                # Note: p calculation depends on q.data, typically doesn't need to be in autocast,
+                # but if target_distribution has complex operations, it's fine to leave it in
+                p = target_distribution(q.data)
+
+                # Calculate loss
+                kl_loss = F.kl_div(q.log(), p, reduction='batchmean')
+                ce_loss = F.kl_div(pred.log(), p, reduction='batchmean')
+                re_loss = F.mse_loss(x_bar, data)
+
+                # Combined loss
+                loss = 0.1 * kl_loss + 0.01 * ce_loss + re_loss
+
+            # ---> 4. Scale loss with GradScaler for backward pass <---
+            scaler.scale(loss).backward()
+
+            # ---> 5. Update optimizer with GradScaler (including gradient unscaling) <---
+            scaler.step(optimizer)
+
+            # ---> 6. Update GradScaler's scale factor <---
+            scaler.update()
+
+            # Print loss information every 10 epochs
+            if epoch % 10 == 0:
+                print(f"Epoch {epoch}, Loss: {loss.item():.4f}, KL: {kl_loss.item():.4f}, CE: {ce_loss.item():.4f}, RE: {re_loss.item():.4f}")
+        except Exception as e:
+            print(f"Epoch {epoch} training error: {str(e)}")
+            continue
+
+    # Get final clustering results
+    model.eval()
+    try:
+        with torch.no_grad():
+            # ---> 7. Use autocast within no_grad (optional) <---
+            with autocast(enabled=args.cuda):
+                _, _, final_pred, _, _ = model(data, adj, edge_attr)
+        final_clusters = final_pred.data.cpu().numpy().argmax(1)
+    except Exception as e:
+        print(f"Error getting final clustering results: {str(e)}")
+        # If error occurs, use last successful clustering result
+        if last_successful_res2 is not None:
+            print("Warning: Using last successful evaluation result for final clusters.")
+            final_clusters = last_successful_res2
+        else:
+            # If no successful clustering results, return all zeros
             print("Warning: Using zeros for final clusters due to errors.")
             final_clusters = np.zeros(dataset.num_nodes, dtype=int)
 
@@ -962,11 +1187,11 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         final_clusters_filename = 'sdcn_dlaa_final_cluster_results.csv'
 
     results_df.to_csv(results_filename, index=False)
-    print(f"训练完成。结果已保存到 '{results_filename}'.")
+    print(f"Training complete. Results saved to '{results_filename}'.")
 
-    final_results_df = pd.DataFrame({'节点ID': np.arange(len(final_clusters)), '聚类ID': final_clusters})
+    final_results_df = pd.DataFrame({'NodeID': np.arange(len(final_clusters)), 'ClusterID': final_clusters})
     final_results_df.to_csv(final_clusters_filename, index=False)
-    print(f"最终聚类结果已保存到 '{final_clusters_filename}'.")
+    print(f"Final clustering results saved to '{final_clusters_filename}'.")
 
     return model, results_df, final_clusters
 

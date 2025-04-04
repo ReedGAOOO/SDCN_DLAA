@@ -17,7 +17,7 @@ from torch.nn import Linear
 from torch_geometric.data import Data
 from torch_geometric.utils import to_edge_index, dense_to_sparse
 from Reference.SDCN_ORIGINAL.utils import load_data, load_graph
-from SDCN_ORIGINAL.evaluation import eva
+from evaluation import eva
 print(f"DEBUG: Type of eva right after import: {type(eva)}") # Debug print
 import sys
 import os

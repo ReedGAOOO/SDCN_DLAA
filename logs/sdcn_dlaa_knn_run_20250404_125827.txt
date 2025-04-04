@@ -1,0 +1,6 @@
+Use CUDA: True
+Loading data from: NEWDATA/processed_knn_k15
+Node features path: NEWDATA/processed_knn_k15\node_features.npy
+Binary adj path: NEWDATA/processed_knn_k15\binary_adj.npz
+Edge attr path: NEWDATA/processed_knn_k15\edge_attr.npy
+Error: Node features file not found at NEWDATA/processed_knn_k15\node_features.npy

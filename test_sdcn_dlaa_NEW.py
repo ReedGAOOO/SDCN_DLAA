@@ -13,53 +13,53 @@ import sys
 from collections import defaultdict
 import random
 
-# 创建日志记录器
+# Create logger
 class Logger(object):
     def __init__(self, filename="Default.log", terminal_mode="normal"):
         self.terminal = sys.stdout
-        self.log = open(filename, "a", encoding="utf-8")  # 添加UTF-8编码
+        self.log = open(filename, "a", encoding="utf-8")  # Add UTF-8 encoding
         self.terminal_mode = terminal_mode
 
     def write(self, message):
-        # 写入日志文件
+        # Write to log file
         self.log.write(message)
         
-        # 终端输出
+        # Terminal output
         self.terminal.write(message)
 
     def flush(self):
         self.terminal.flush()
         self.log.flush()
 
-# 自定义数据集类
+# Custom dataset class
 class CustomDataset:
     def __init__(self, node_features_path, edge_attr_path=None, device=None):
         """
-        初始化自定义数据集
+        Initialize custom dataset
         
         Args:
-            node_features_path: 节点特征文件路径
-            edge_attr_path: 边特征文件路径 (可选)
-            device: 设备 (CPU或GPU)
+            node_features_path: Path to node features file
+            edge_attr_path: Path to edge features file (optional)
+            device: Device (CPU or GPU)
         """
         self.device = device
         
-        # 加载节点特征
+        # Load node features
         if node_features_path.endswith('.pt'):
             self.x = torch.load(node_features_path).numpy()
         else:
             self.x = np.load(node_features_path)
             
-        # 获取节点数量和特征维度
+        # Get number of nodes and feature dimensions
         self.num_nodes, self.num_features = self.x.shape
-        print(f"节点特征形状: {self.x.shape}")
+        print(f"Node feature shape: {self.x.shape}")
         
-        # 我们没有标签，使用全0作为初始标签（仅用于训练过程）
-        # 假设有3个聚类类别
+        # We don't have labels, use all zeros as initial labels (only for training process)
+        # Assume 3 cluster categories
         self.num_clusters = 3
         self.y = np.zeros(self.num_nodes, dtype=int)
         
-        # 如果提供了边特征路径，加载边特征
+        # If edge feature path is provided, load edge features
         self.edge_attr = None
         if edge_attr_path:
             if edge_attr_path.endswith('.pt'):
@@ -68,11 +68,11 @@ class CustomDataset:
                 edge_attr_np = np.load(edge_attr_path)
                 self.edge_attr = torch.from_numpy(edge_attr_np).float()
                 
-            # 将边特征移动到指定设备
+            # Move edge features to the specified device
             if self.device is not None:
                 self.edge_attr = self.edge_attr.to(self.device)
                 
-            print(f"边特征形状: {self.edge_attr.shape}")
+            print(f"Edge feature shape: {self.edge_attr.shape}")
             
     def __len__(self):
         return self.num_nodes
@@ -80,16 +80,16 @@ class CustomDataset:
     def __getitem__(self, idx):
         return torch.from_numpy(self.x[idx]), torch.from_numpy(np.array(self.y[idx])), torch.from_numpy(np.array(idx))
 
-# 将scipy稀疏矩阵转换为torch稀疏张量
+# Convert scipy sparse matrix to torch sparse tensor
 def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     """
-    将scipy稀疏矩阵转换为torch稀疏张量
+    Convert scipy sparse matrix to torch sparse tensor
     
     Args:
-        sparse_mx: scipy稀疏矩阵
+        sparse_mx: scipy sparse matrix
         
     Returns:
-        torch稀疏张量
+        torch sparse tensor
     """
     sparse_mx = sparse_mx.tocoo().astype(np.float32)
     indices = torch.from_numpy(
@@ -98,112 +98,112 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse_coo_tensor(indices, values, shape)
 
-# 加载稀疏邻接矩阵
+# Load sparse adjacency matrix
 def load_sparse_adj(path, device=None):
     """
-    加载稀疏邻接矩阵
+    Load sparse adjacency matrix
     
     Args:
-        path: 稀疏邻接矩阵文件路径
-        device: 设备 (CPU或GPU)
+        path: Path to sparse adjacency matrix file
+        device: Device (CPU or GPU)
         
     Returns:
-        torch稀疏张量形式的邻接矩阵
+        Adjacency matrix in torch sparse tensor format
     """
     sparse_adj = sp.load_npz(path)
     adj_tensor = sparse_mx_to_torch_sparse_tensor(sparse_adj)
     
-    # 将张量移动到指定设备
+    # Move tensor to the specified device
     if device is not None:
         adj_tensor = adj_tensor.to(device)
         
     return adj_tensor
 
-# 预处理边到边图关系（性能优化的关键）
+# Precompute edge-to-edge graph relationships (key for performance optimization)
 def precompute_edge_to_edge_graph(adj, max_edges_per_node=10, device=None):
     """
-    预处理边到边图关系，避免在每次前向传播中重新计算
+    Precompute edge-to-edge graph relationships to avoid recalculation in each forward pass
     
     Args:
-        adj: 邻接矩阵（torch稀疏张量）
-        max_edges_per_node: 每个节点考虑的最大边数
-        device: 设备 (CPU或GPU)
+        adj: Adjacency matrix (torch sparse tensor)
+        max_edges_per_node: Maximum number of edges to consider per node
+        device: Device (CPU or GPU)
         
     Returns:
-        edge_index: 节点到节点的边索引 [2, num_edges]
-        edge_to_edge_index: 边到边的连接索引 [2, num_edge_edges]
+        edge_index: Node-to-node edge index [2, num_edges]
+        edge_to_edge_index: Edge-to-edge connection index [2, num_edge_edges]
     """
-    print("预处理边到边图关系（一次性操作）...")
+    print("Preprocessing edge-to-edge graph relationships (one-time operation)...")
     
-    # 转换邻接矩阵为边索引
+    # Convert adjacency matrix to edge index
     if adj.is_sparse:
         adj = adj.coalesce()
         edge_index = adj.indices()
     else:
         edge_index, _ = dense_to_sparse(adj)
     
-    # 移动到指定设备
+    # Move to specified device
     if device is not None:
         edge_index = edge_index.to(device)
     
     num_edges = edge_index.size(1)
     
-    # 构建节点到边的映射
+    # Build node-to-edge mapping
     node_to_edges = defaultdict(list)
     for i in range(num_edges):
         src, dst = edge_index[0, i].item(), edge_index[1, i].item()
         node_to_edges[src].append(i)
         node_to_edges[dst].append(i)
     
-    # 构建边到边的连接
+    # Build edge-to-edge connections
     edge_to_edge_list = []
     for node, connected_edges in node_to_edges.items():
         if len(connected_edges) > 1:
-            # 超过最大边数限制时进行随机采样
+            # Perform random sampling when exceeding the maximum edge limit
             if len(connected_edges) > max_edges_per_node:
                 sampled_edges = random.sample(connected_edges, max_edges_per_node)
             else:
                 sampled_edges = connected_edges
             
-            # 连接共享节点的所有边对
+            # Connect all edge pairs sharing a node
             for i in range(len(sampled_edges)):
                 for j in range(i+1, len(sampled_edges)):
                     edge_i = sampled_edges[i]
                     edge_j = sampled_edges[j]
-                    # 为无向图添加双向连接
+                    # Add bidirectional connections for undirected graph
                     edge_to_edge_list.append([edge_i, edge_j])
                     edge_to_edge_list.append([edge_j, edge_i])
     
-    # 转换为张量形式
+    # Convert to tensor format
     if len(edge_to_edge_list) > 0:
         edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t()
         if device is not None:
             edge_to_edge_index = edge_to_edge_index.to(device)
     else:
-        # 如果没有边到边的连接，创建空张量
+        # If no edge-to-edge connections, create an empty tensor
         edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long)
         if device is not None:
             edge_to_edge_index = edge_to_edge_index.to(device)
     
-    print(f"边到边图构建完成: {edge_to_edge_index.shape[1]} 条边对连接")
+    print(f"Edge-to-edge graph construction complete: {edge_to_edge_index.shape[1]} edge pair connections")
     
     return edge_index, edge_to_edge_index
 
 if __name__ == "__main__":
-    # 创建日志目录（如果不存在）
+    # Create log directory (if it doesn't exist)
     if not os.path.exists('logs'):
         os.makedirs('logs')
     
-    # 创建带时间戳的日志文件
+    # Create log file with timestamp
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     log_filename = f'logs/sdcn_dlaa_fixed_run_{timestamp}.txt'
     
-    # 重定向stdout到控制台和文件
+    # Redirect stdout to console and file
     sys.stdout = Logger(log_filename)
     
-    # 解析命令行参数
+    # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description='使用NEWDATA/processed中处理好的数据训练修复版SDCN_DLAA模型',
+        description='Train the fixed SDCN_DLAA model using processed data from NEWDATA/processed',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument('--lr', type=float, default=1e-3)
@@ -216,46 +216,46 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
-    print("使用CUDA: {}".format(args.cuda))
+    print("Using CUDA: {}".format(args.cuda))
     args.device = torch.device("cuda" if args.cuda else "cpu")
     
-    # 设置文件路径
+    # Set file paths
     node_features_path = 'NEWDATA/processed/node_features.npy'
     binary_adj_path = 'NEWDATA/processed/binary_adj.npz'
     edge_attr_path = 'NEWDATA/processed/edge_attr.npy'
     
-    # 创建数据集，并指定设备
+    # Create dataset and specify device
     dataset = CustomDataset(node_features_path, edge_attr_path, device=args.device)
     
-    # 加载邻接矩阵，并指定设备
+    # Load adjacency matrix and specify device
     adj = load_sparse_adj(binary_adj_path, device=args.device)
     
-    # 设置特征尺寸
+    # Set feature dimensions
     args.n_input = dataset.num_features
     
-    # 加载边特征
+    # Load edge features
     edge_attr = dataset.edge_attr
     
-    # 打印信息
-    print(f"节点数量: {dataset.num_nodes}")
-    print(f"特征维度: {dataset.num_features}")
-    print(f"边特征维度: {args.edge_dim}")
-    print(f"聚类数量: {args.n_clusters}")
+    # Print information
+    print(f"Number of nodes: {dataset.num_nodes}")
+    print(f"Feature dimension: {dataset.num_features}")
+    print(f"Edge feature dimension: {args.edge_dim}")
+    print(f"Number of clusters: {args.n_clusters}")
     
-    # 训练模型
-    print("\n开始训练修复版SDCN_DLAA模型...")
+    # Train the model
+    print("\nStarting training of the fixed SDCN_DLAA model...")
     try:
         model, results, clusters = train_sdcn_dlaa_custom(dataset, adj, args, edge_attr)
         
-        # 分析聚类结果
+        # Analyze clustering results
         cluster_counts = np.bincount(clusters)
-        print("\n聚类分布:")
+        print("\nCluster distribution:")
         for i, count in enumerate(cluster_counts):
-            print(f"聚类 {i}: {count} 个节点 ({count/len(clusters)*100:.2f}%)")
+            print(f"Cluster {i}: {count} nodes ({count/len(clusters)*100:.2f}%)")
     except Exception as e:
-        print(f"训练过程中发生错误: {str(e)}")
-        # 打印完整的异常堆栈跟踪，帮助调试
+        print(f"Error occurred during training: {str(e)}")
+        # Print the full exception stack trace to help debugging
         import traceback
         traceback.print_exc()
     
-    print("\n训练完成！")
+    print("\nTraining complete!")

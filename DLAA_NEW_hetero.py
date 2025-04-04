@@ -1,19 +1,14 @@
-# Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+
 """
-This file implement some layers for S-MAN using PyTorch Geometric.
-Includes HeteroSpatialConv which avoids N+E concatenation.
+This file implements custom PyTorch Geometric layers for graph neural networks,
+specifically focusing on heterogeneous graph processing and spatial attention mechanisms.
+Key components include:
+- GATLayer: Standard Graph Attention Network layer using PyG's GATConv.
+- SGATLayer: Spatial Graph Attention Network layer incorporating edge features.
+- EdgeInitLayer: Computes initial edge features based on connected nodes and distance.
+- HeteroSpatialConv: A heterogeneous spatial graph convolution layer that processes
+  nodes and edges separately, avoiding node+edge feature concatenation and handling
+  node-edge and edge-edge interactions.
 """
 import torch
 import torch.nn as nn
@@ -79,18 +74,18 @@ class GATLayer(nn.Module):
 class SGATLayer(nn.Module):
     """Spatial Graph Attention Network Layer
     
-    在注意力计算中显式考虑边特征。
-    只要在构造时指定 edge_dim=边特征的维度，即可使用 PyG 内置的 GATConv。
+    Explicitly considers edge features in the attention calculation.
+    Uses PyG's built-in GATConv by specifying edge_dim during construction.
     
     Args:
-        in_channels (int): 输入特征维度
-        out_channels (int): 输出特征维度
-        heads (int): 注意力头数
-        dropout (float): Dropout 概率
-        negative_slope (float): LeakyReLU 的负斜率
-        combine (str): 多头结果融合方式：'mean', 'max' or 'dense'
-        activation (callable): 激活函数
-        edge_dim (int): 边特征维度（必填，用于注意力时）
+        in_channels (int): Dimensionality of input features
+        out_channels (int): Dimensionality of output features
+        heads (int): Number of attention heads
+        dropout (float): Dropout probability
+        negative_slope (float): Negative slope for LeakyReLU
+        combine (str): Method to combine multi-head results: 'mean', 'max', or 'dense'
+        activation (callable): Activation function
+        edge_dim (int): Dimensionality of edge features (required for attention)
     """
     def __init__(self, in_channels, out_channels, heads=4, dropout=0.2, 
                  negative_slope=0.2, combine='mean', activation=F.relu, edge_dim=None):
@@ -102,63 +97,63 @@ class SGATLayer(nn.Module):
         self.activation = activation
         self.dropout = dropout
         
-        # 直接用 PyG 的 GATConv 并指定 edge_dim
-        # concat=True 表示输出形状为 [num_nodes, heads * out_channels]
-        # 后续我们再手动对多头做 mean/max/dense
+        # Directly use PyG's GATConv and specify edge_dim
+        # concat=True means the output shape is [num_nodes, heads * out_channels]
+        # We will manually handle mean/max/dense aggregation for multi-head results later
         self.gat_conv = GATConv(
             in_channels,
             out_channels,
             heads=heads,
             dropout=dropout,
             negative_slope=negative_slope,
-            edge_dim=edge_dim,   # 关键：指定边特征维度
+            edge_dim=edge_dim,   # Key: Specify edge feature dimension
             concat=True
         )
         
-        # 如果 combine == 'dense'，再加一层线性把 heads*out_channels -> out_channels
+        # If combine == 'dense', add a linear layer to map heads*out_channels -> out_channels
         if self.combine == 'dense':
             self.dense_combine = nn.Linear(heads * out_channels, out_channels, bias=False)
         
-        # 和之前一样，保留一个 bias
+        # Keep a bias parameter, similar to before
         self.bias = nn.Parameter(torch.zeros(out_channels))
         nn.init.zeros_(self.bias)
 
     def forward(self, x, edge_index, edge_attr=None):
         """
         Args:
-            x (Tensor): 节点特征 [N, in_channels]
-            edge_index (Tensor): [2, E]
-            edge_attr (Tensor, optional): [E, edge_dim]
+            x (Tensor): Node features [N, in_channels]
+            edge_index (Tensor): Graph connectivity [2, E]
+            edge_attr (Tensor, optional): Edge features [E, edge_dim]
         Returns:
-            (Tensor): 更新后的节点特征，形状根据 combine 而定:
-                      - mean/max -> [N, out_channels]
-                      - dense    -> [N, out_channels]
-                      - default  -> [N, heads*out_channels]
+            (Tensor): Updated node features. Shape depends on 'combine':
+                      - 'mean'/'max': [N, out_channels]
+                      - 'dense':      [N, out_channels]
+                      - default:      [N, heads*out_channels]
         """
         if self.training:
             x = F.dropout(x, p=self.dropout)
             if edge_attr is not None:
                 edge_attr = F.dropout(edge_attr, p=self.dropout)
         
-        # 调用 GATConv，传入边特征
+        # Call GATConv, passing edge features
         out = self.gat_conv(x, edge_index, edge_attr)
-        # out 形状: [N, heads*out_channels]
+        # out shape: [N, heads*out_channels]
         
         if self.combine in ['mean', 'max']:
-            # 把多头维度分离出来: [N, heads, out_channels]
+            # Reshape to separate heads: [N, heads, out_channels]
             out = out.view(-1, self.heads, self.out_channels)
             if self.combine == 'mean':
                 out = out.mean(dim=1)  # [N, out_channels]
             else:  # 'max'
                 out, _ = out.max(dim=1)  # [N, out_channels]
         elif self.combine == 'dense':
-            # 先 flatten 多头维度
+            # Apply the dense combination layer (input is already [N, heads*out_channels])
             out = self.dense_combine(out)  # [N, out_channels]
         else:
-            # 默认什么都不做, 保持 [N, heads*out_channels]
+            # Default: do nothing, keep shape [N, heads*out_channels]
             pass
         
-        # 加上 bias 并激活
+        # Add bias and apply activation
         out = out + self.bias
         if self.activation is not None:
             out = self.activation(out)
