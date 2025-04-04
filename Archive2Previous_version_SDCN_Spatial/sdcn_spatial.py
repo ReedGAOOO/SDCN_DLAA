@@ -23,7 +23,7 @@ import os
 from datetime import datetime
 
 # Import SpatialConv from DLAA
-from DLAA import SpatialConv
+from Archive3.DLAA import SpatialConv
 
 
 class AE(nn.Module):

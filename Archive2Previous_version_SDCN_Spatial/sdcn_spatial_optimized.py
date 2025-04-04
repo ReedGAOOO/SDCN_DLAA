@@ -23,7 +23,7 @@ import os
 from datetime import datetime
 
 # Import SpatialConv from DLAA
-from DLAA import SpatialConv
+from Archive3.DLAA import SpatialConv
 
 
 class AE(nn.Module):
@@ -71,18 +71,15 @@ class AE(nn.Module):
         return x_bar, enc_h1, enc_h2, enc_h3, z
 
 
-class SDCN_DLAA(nn.Module):
+class SDCN_Spatial(nn.Module):
     """
-    SDCN_DLAA (Spatial Deep Clustering Network with Deep Learning-based Attentional Aggregation)
-    
-    A performance-enhanced version of SDCN that incorporates spatial graph attention from DLAA
-    with optimized graph structure preprocessing. This model is based on the design principles
-    of the original SMAN architecture, pre-computing graph structures for efficient processing.
+    Optimized SDCN model with SpatialConv layers replacing GNNLayers
+    Performance-enhanced version that pre-computes graph structures
     """
     def __init__(self, n_enc_1, n_enc_2, n_enc_3, n_dec_1, n_dec_2, n_dec_3,
                 n_input, n_z, n_clusters, v=1, dropout=0.2, heads=4, edge_dim=None, 
                 max_edges_per_node=10, precomputed_edge_index=None, precomputed_edge_to_edge_index=None):
-        super(SDCN_DLAA, self).__init__()
+        super(SDCN_Spatial, self).__init__()
         # Initialize epoch tracking variables
         self.current_epoch = 0
         self.last_logged_epoch = -1
@@ -389,9 +386,9 @@ def target_distribution(q):
     return (weight.t() / weight.sum(1)).t()
 
 
-def train_sdcn_dlaa(dataset, args, edge_attr=None):
+def train_sdcn_spatial(dataset, args, edge_attr=None):
     """
-    Train SDCN_DLAA model
+    Train SDCN_Spatial model
     
     Args:
         dataset: Dataset object containing features and labels
@@ -457,7 +454,7 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
         edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
     
     # Create model with precomputed graph structures
-    model = SDCN_DLAA(
+    model = SDCN_Spatial(
         500, 500, 2000, 2000, 500, 500,
         n_input=args.n_input,
         n_z=args.n_z,
@@ -538,14 +535,14 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
     
     # Save results
     results_df = pd.DataFrame(results, columns=['Epoch', 'Acc_Q', 'F1_Q', 'Acc_Z', 'F1_Z', 'Acc_P', 'F1_P'])
-    results_df.to_csv('sdcn_dlaa_training_results.csv', index=False)
+    results_df.to_csv('spatial_training_results.csv', index=False)
     
-    print("Training complete. Results saved to 'sdcn_dlaa_training_results.csv'.")
+    print("Training complete. Results saved to 'spatial_training_results.csv'.")
     
     final_results_df = pd.DataFrame({'Node': np.arange(len(final_clusters)), 'Cluster': final_clusters})
-    final_results_df.to_csv('sdcn_dlaa_final_cluster_results.csv', index=False)
+    final_results_df.to_csv('spatial_final_cluster_results.csv', index=False)
     
-    print("Final clustering results saved to 'sdcn_dlaa_final_cluster_results.csv'.")
+    print("Final clustering results saved to 'spatial_final_cluster_results.csv'.")
     
     return model, results_df
 
@@ -584,9 +581,9 @@ class Logger(object):
         self.log.flush()
 
 
-def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
+def train_sdcn_spatial_custom(dataset, adj, args, edge_attr=None):
     """
-    Optimized custom training function for SDCN_DLAA model
+    Optimized version of the training function for SDCN_Spatial model
     
     Args:
         dataset: Dataset object containing features and labels
@@ -596,7 +593,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     """
     # Check if edge_attr is provided, if not, create simple edge features
     if edge_attr is None:
-        print("未提供边特征，使用随机初始化的边特征")
+        print("No edge features provided, using random initialization")
         num_edges = adj._nnz()
         edge_attr = torch.ones(num_edges, args.edge_dim).to(args.device)
     else:
@@ -604,7 +601,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         edge_attr = edge_attr.to(args.device)
     
     # Precompute graph structures (key optimization)
-    print("预计算图结构...")
+    print("Precomputing graph structures...")
     if adj.is_sparse:
         adj = adj.coalesce()
         edge_index = adj.indices()
@@ -616,14 +613,14 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     max_index = edge_index.max().item()
     
     if max_index >= num_nodes:
-        print(f"警告: 边索引包含超出节点数量范围的索引 ({max_index} >= {num_nodes})")
-        print("正在过滤无效边...")
+        print(f"Warning: Edge index contains indices ({max_index}) that exceed the number of nodes ({num_nodes})")
+        print(f"Filtering edges to only include those with valid node indices...")
         
         valid_edges_mask = (edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)
         edge_index = edge_index[:, valid_edges_mask]
         
         if edge_index.size(1) == 0:
-            print("错误: 过滤后没有有效边!")
+            print("Error: No valid edges remain after filtering!")
             edge_index = torch.zeros((2, 1), dtype=torch.long).to(args.device)
             edge_index[0, 0] = 0
             edge_index[1, 0] = min(1, num_nodes-1)
@@ -631,7 +628,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     num_edges = edge_index.size(1)
     
     # Build edge-to-edge relationships (once, not in every forward pass)
-    print("构建边到边图关系（一次性操作）...")
+    print("Building edge-to-edge graph (one-time operation)...")
     
     # Build mapping from nodes to edges
     node_to_edges = defaultdict(list)
@@ -667,7 +664,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
     
     # Create model with precomputed graph structures
-    model = SDCN_DLAA(
+    model = SDCN_Spatial(
         500, 500, 2000, 2000, 500, 500,
         n_input=args.n_input,
         n_z=args.n_z,
@@ -706,7 +703,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     if len(np.unique(y)) > 1:  # If there are true labels
         eva(y, y_pred, 'pae')
     else:
-        print(f"初始聚类完成。聚类数量: {args.n_clusters}")
+        print(f"Initial clustering complete. Number of clusters: {args.n_clusters}")
     
     # Create a list to store results
     results = []
@@ -739,10 +736,10 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                 else:
                     # Without labels, just track cluster distribution
                     cluster_distribution = np.bincount(res2)
-                    print(f"Epoch {epoch}, 聚类分布: {cluster_distribution}")
+                    print(f"Epoch {epoch}, Cluster distribution: {cluster_distribution}")
                     results.append([epoch] + [0] * 12)  # Placeholder
             except Exception as e:
-                print(f"Epoch {epoch} 评估出错: {str(e)}")
+                print(f"Epoch {epoch} evaluation error: {str(e)}")
                 continue
         
         # Forward pass
@@ -769,7 +766,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
             if epoch % 10 == 0:
                 print(f"Epoch {epoch}, Loss: {loss.item():.4f}, KL: {kl_loss.item():.4f}, CE: {ce_loss.item():.4f}, RE: {re_loss.item():.4f}")
         except Exception as e:
-            print(f"Epoch {epoch} 训练出错: {str(e)}")
+            print(f"Epoch {epoch} training error: {str(e)}")
             continue
     
     # Get final clustering results
@@ -777,7 +774,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         _, _, final_pred, _, _ = model(data, adj, edge_attr)
         final_clusters = final_pred.data.cpu().numpy().argmax(1)
     except Exception as e:
-        print(f"获取最终聚类结果出错: {str(e)}")
+        print(f"Error getting final clustering results: {str(e)}")
         # If error, use last successful clustering result
         if 'res2' in locals():
             final_clusters = res2
@@ -788,14 +785,14 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     # Save results
     column_names = ['Epoch', 'Acc_Q', 'F1_Q', 'NMI_Q', 'ARI_Q', 'Acc_Z', 'F1_Z', 'NMI_Z', 'ARI_Z', 'Acc_P', 'F1_P', 'NMI_P', 'ARI_P']
     results_df = pd.DataFrame(results, columns=column_names)
-    results_df.to_csv('sdcn_dlaa_training_results_custom.csv', index=False)
+    results_df.to_csv('spatial_training_results_custom.csv', index=False)
     
-    print("训练完成。结果已保存到 'sdcn_dlaa_training_results_custom.csv'.")
+    print("Training complete. Results saved to 'spatial_training_results_custom.csv'.")
     
-    final_results_df = pd.DataFrame({'节点ID': np.arange(len(final_clusters)), '聚类ID': final_clusters})
-    final_results_df.to_csv('sdcn_dlaa_final_cluster_results_custom.csv', index=False)
+    final_results_df = pd.DataFrame({'Node ID': np.arange(len(final_clusters)), 'Cluster ID': final_clusters})
+    final_results_df.to_csv('spatial_final_cluster_results_custom.csv', index=False)
     
-    print("最终聚类结果已保存到 'sdcn_dlaa_final_cluster_results_custom.csv'.")
+    print("Final clustering results saved to 'spatial_final_cluster_results_custom.csv'.")
     
     return model, results_df, final_clusters
 
@@ -807,14 +804,14 @@ if __name__ == "__main__":
     
     # Create a log file with timestamp
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_filename = f'logs/sdcn_dlaa_run_{timestamp}.txt'
+    log_filename = f'logs/sdcn_spatial_optimized_run_{timestamp}.txt'
     
     # Redirect stdout to both console and file, with minimal terminal output
     sys.stdout = Logger(log_filename, terminal_mode="minimal")
     
     # Parse arguments
     parser = argparse.ArgumentParser(
-        description='train SDCN_DLAA model',
+        description='train SDCN with optimized SpatialConv',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--name', type=str, default='reut')
     parser.add_argument('--k', type=int, default=3)
@@ -882,4 +879,4 @@ if __name__ == "__main__":
     print(args)
     
     # Train the model
-    model, results = train_sdcn_dlaa(dataset, args, edge_attr)
+    model, results = train_sdcn_spatial(dataset, args, edge_attr)

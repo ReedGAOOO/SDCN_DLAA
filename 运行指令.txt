@@ -1,2 +1,0 @@
-C:\Users\gyj12\.conda\envs\GNN\python.exe test_sdcn_dlaa_fixed.py
-C:\Users\gyj12\.conda\envs\GNN\python.exe test_sdcn_dlaa_NEW.py

@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 import scipy.sparse as sp
-from sdcn_dlaa import SDCN_DLAA, target_distribution, eva, train_sdcn_dlaa_custom
+from Archive3.sdcn_dlaa import SDCN_DLAA, target_distribution, eva, train_sdcn_dlaa_custom
 from sklearn.cluster import KMeans
 import argparse
 import pandas as pd

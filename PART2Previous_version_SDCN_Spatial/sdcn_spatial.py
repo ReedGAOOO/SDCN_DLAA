@@ -23,7 +23,7 @@ import os
 from datetime import datetime
 
 # Import SpatialConv from DLAA
-from DLAA import SpatialConv
+from Archive3.DLAA import SpatialConv
 
 
 class AE(nn.Module):
@@ -73,12 +73,11 @@ class AE(nn.Module):
 
 class SDCN_Spatial(nn.Module):
     """
-    Optimized SDCN model with SpatialConv layers replacing GNNLayers
-    Performance-enhanced version that pre-computes graph structures
+    SDCN model with SpatialConv layers replacing GNNLayers
     """
     def __init__(self, n_enc_1, n_enc_2, n_enc_3, n_dec_1, n_dec_2, n_dec_3,
                 n_input, n_z, n_clusters, v=1, dropout=0.2, heads=4, edge_dim=None, 
-                max_edges_per_node=10, precomputed_edge_index=None, precomputed_edge_to_edge_index=None):
+                max_edges_per_node=10):
         super(SDCN_Spatial, self).__init__()
         # Initialize epoch tracking variables
         self.current_epoch = 0
@@ -92,13 +91,8 @@ class SDCN_Spatial(nn.Module):
         self.dropout = dropout
         self.heads = heads
         self.edge_dim = edge_dim if edge_dim is not None else n_input
-        self.max_edges_per_node = max_edges_per_node
+        self.max_edges_per_node = max_edges_per_node  # 每个节点最大考虑的边数
 
-        # Cache for graph structures - this is the key optimization
-        self.precomputed_edge_index = precomputed_edge_index
-        self.precomputed_edge_to_edge_index = precomputed_edge_to_edge_index
-        self.graph_cache = {}
-        
         # Autoencoder for intra information
         self.ae = AE(
             n_enc_1=n_enc_1,
@@ -109,6 +103,8 @@ class SDCN_Spatial(nn.Module):
             n_dec_3=n_dec_3,
             n_input=n_input,
             n_z=n_z)
+        
+        # No longer needed: spatial embedding layer
         
         # SpatialConv layers replacing GNNLayers
         self.spatial_conv1 = SpatialConv(n_enc_1, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
@@ -135,81 +131,45 @@ class SDCN_Spatial(nn.Module):
 
     def _prepare_pyg_data(self, x, adj, edge_attr, max_edges_per_node=10):
         """
-        Optimized method to prepare PyG Data object from node features and adjacency matrix
-        Caches graph structure to avoid redundant computation
+        Prepare PyG Data object from node features and adjacency matrix
         
         Args:
             x: Node features [num_nodes, feature_dim]
             adj: Adjacency matrix [num_nodes, num_nodes]
             edge_attr: Edge features [num_edges, edge_dim]
-            max_edges_per_node: Maximum number of edges to consider per node
-            
+            max_edges_per_node: Maximum number of edges to consider per node for edge-to-edge connections
         Returns:
             data: PyG Data object
         """
-        num_nodes = x.size(0)
-        
-        # Check if we already have precomputed graph structures from initialization
-        if self.precomputed_edge_index is not None and self.precomputed_edge_to_edge_index is not None:
-            # Create Data object with precomputed graph structures but updated features
-            data = Data(
-                x=x,
-                edge_index=self.precomputed_edge_index,
-                edge_attr=edge_attr,
-                dist_feat=edge_attr,
-                dist_feat_order=edge_attr,
-                edge_to_edge_index=self.precomputed_edge_to_edge_index
-            )
-            return data
-        
-        # Create a cache key based on adjacency matrix properties and parameters
-        # For sparse tensors, use a hash of indices and values
-        if adj.is_sparse:
-            adj_id = f"{adj._indices().sum().item()}_{adj._values().sum().item()}"
-        else:
-            adj_id = f"{adj.sum().item()}"
-            
-        cache_key = f"{adj_id}_{max_edges_per_node}_{num_nodes}"
-        
-        # Check if we have cached this graph structure
-        if cache_key in self.graph_cache:
-            cached = self.graph_cache[cache_key]
-            
-            # Create Data object with cached graph structures but updated features
-            data = Data(
-                x=x,
-                edge_index=cached['edge_index'],
-                edge_attr=edge_attr,
-                dist_feat=edge_attr,
-                dist_feat_order=edge_attr,
-                edge_to_edge_index=cached['edge_to_edge_index']
-            )
-            return data
-            
-        # If not cached, compute the graph structure (first time only)
         # Convert adjacency matrix to edge_index
+        # Check if adj is already a sparse tensor
         if adj.is_sparse:
+            # If it's sparse, directly get indices
             adj = adj.coalesce()
             edge_index = adj.indices()
         else:
             edge_index, _ = dense_to_sparse(adj)
         
-        # Validate edge indices
+        # 验证边索引是否在有效范围内
+        num_nodes = x.size(0)
         max_index = edge_index.max().item()
         
         if max_index >= num_nodes:
             print(f"Warning: Edge index contains indices ({max_index}) that exceed the number of nodes ({num_nodes})")
             print(f"Filtering edges to only include those with valid node indices...")
             
+            # 过滤边，只保留有效的节点索引
             valid_edges_mask = (edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)
             edge_index = edge_index[:, valid_edges_mask]
             
             if edge_index.size(1) == 0:
                 print("Error: No valid edges remain after filtering!")
+                # 创建一个最小有效的边索引以避免错误
                 edge_index = torch.zeros((2, 1), dtype=torch.long).to(x.device)
                 edge_index[0, 0] = 0
-                edge_index[1, 0] = min(1, num_nodes-1)
+                edge_index[1, 0] = min(1, num_nodes-1)  # 将节点0连接到节点1（如果只有1个节点则连接到自身）
         
+        # 更新边数量
         num_edges = edge_index.size(1)
         
         # Process edge features
@@ -220,8 +180,6 @@ class SDCN_Spatial(nn.Module):
             dist_feat = self.initial_edge_proj(dist_feat)
         
         # Create edge-to-edge graph more efficiently
-        print("Building edge-to-edge graph (one-time operation)...")
-        
         # Build a mapping from nodes to their connected edges
         node_to_edges = defaultdict(list)
         for i in range(num_edges):
@@ -231,18 +189,19 @@ class SDCN_Spatial(nn.Module):
         
         # Create edge connections based on shared nodes
         edge_to_edge_list = []
-        
         # For each node, connect all edges that share this node
         for node, connected_edges in node_to_edges.items():
             # Only process if the node connects multiple edges
             if len(connected_edges) > 1:
-                # If node connects too many edges, randomly sample to limit
+                # 如果节点连接的边数超过阈值，则随机采样限制数量
                 if len(connected_edges) > max_edges_per_node:
+                    # 使用随机采样来限制边的数量
+                    import random
                     sampled_edges = random.sample(connected_edges, max_edges_per_node)
                 else:
                     sampled_edges = connected_edges
                 
-                # Connect all pairs of edges that share this node
+                # Connect all pairs of edges that share this node (使用采样后的边列表)
                 for i in range(len(sampled_edges)):
                     for j in range(i+1, len(sampled_edges)):
                         edge_i = sampled_edges[i]
@@ -251,55 +210,30 @@ class SDCN_Spatial(nn.Module):
                         edge_to_edge_list.append([edge_i, edge_j])
                         edge_to_edge_list.append([edge_j, edge_i])
         
-        # Convert to tensor representation
+        # 转换为稀疏张量表示
         if len(edge_to_edge_list) > 0:
             edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(x.device)
         else:
-            # If no edge-to-edge connections, create empty tensor
+            # 如果没有边对边连接，创建一个空的边索引张量
             edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(x.device)
-        
-        # Store in cache for future use
-        self.graph_cache[cache_key] = {
-            'edge_index': edge_index,
-            'edge_to_edge_index': edge_to_edge_index
-        }
         
         # Create PyG Data object
         data = Data(
             x=x,
             edge_index=edge_index,
-            edge_attr=dist_feat,
-            dist_feat=dist_feat,
-            dist_feat_order=dist_feat,
-            edge_to_edge_index=edge_to_edge_index
+            edge_attr=dist_feat,  # Edge features
+            dist_feat=dist_feat,  # Distance features for node-node graph
+            dist_feat_order=dist_feat,  # Distance features for edge-edge graph
+            edge_to_edge_index=edge_to_edge_index  # Edge-to-edge connectivity
         )
-        
-        # Also store as precomputed values for future use
-        self.precomputed_edge_index = edge_index
-        self.precomputed_edge_to_edge_index = edge_to_edge_index
         
         return data
 
     def forward(self, x, adj, edge_attr=None):
-        """
-        Forward pass of the model
-        
-        Args:
-            x: Node features [num_nodes, n_input]
-            adj: Adjacency matrix
-            edge_attr: Edge features [num_edges, edge_dim]
-            
-        Returns:
-            x_bar: Reconstructed features
-            q: Soft assignment
-            predict: Cluster prediction
-            z: Latent representation
-            spatial_shapes: Dictionary of layer shapes
-        """
         # Get autoencoder outputs
         x_bar, tra1, tra2, tra3, z = self.ae(x)
         
-        # Prepare PyG Data object (using cached graph structure if available)
+        # Prepare PyG Data object
         data = self._prepare_pyg_data(x, adj, edge_attr)
         
         # Store shapes for logging
@@ -407,53 +341,7 @@ def train_sdcn_spatial(dataset, args, edge_attr=None):
         print(f"No edge features provided. Creating simple edge features with dimension {args.edge_dim}")
         edge_attr = torch.ones(num_edges, args.edge_dim)
     
-    # Load KNN Graph
-    adj = load_graph(args.name, args.k)
-    adj = adj.to(args.device)
-    
-    # Precompute graph structures for optimization
-    print("Precomputing graph structures...")
-    if adj.is_sparse:
-        adj = adj.coalesce()
-        edge_index = adj.indices()
-    else:
-        edge_index, _ = dense_to_sparse(adj)
-    
-    # Build edge-to-edge graph (once, not in every forward pass)
-    num_edges = edge_index.size(1)
-    
-    # Build mapping from nodes to edges
-    node_to_edges = defaultdict(list)
-    for i in range(num_edges):
-        src, dst = edge_index[0, i].item(), edge_index[1, i].item()
-        node_to_edges[src].append(i)
-        node_to_edges[dst].append(i)
-    
-    # Build edge-to-edge connections
-    print("Building edge-to-edge connections...")
-    edge_to_edge_list = []
-    max_edges_per_node = args.max_edges_per_node if hasattr(args, 'max_edges_per_node') else 10
-    
-    for node, connected_edges in node_to_edges.items():
-        if len(connected_edges) > 1:
-            if len(connected_edges) > max_edges_per_node:
-                sampled_edges = random.sample(connected_edges, max_edges_per_node)
-            else:
-                sampled_edges = connected_edges
-            
-            for i in range(len(sampled_edges)):
-                for j in range(i+1, len(sampled_edges)):
-                    edge_i = sampled_edges[i]
-                    edge_j = sampled_edges[j]
-                    edge_to_edge_list.append([edge_i, edge_j])
-                    edge_to_edge_list.append([edge_j, edge_i])
-    
-    if len(edge_to_edge_list) > 0:
-        edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
-    else:
-        edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
-    
-    # Create model with precomputed graph structures
+    # Create model
     model = SDCN_Spatial(
         500, 500, 2000, 2000, 500, 500,
         n_input=args.n_input,
@@ -463,15 +351,17 @@ def train_sdcn_spatial(dataset, args, edge_attr=None):
         dropout=args.dropout,
         edge_dim=args.edge_dim,
         heads=4,
-        max_edges_per_node=max_edges_per_node,
-        precomputed_edge_index=edge_index,
-        precomputed_edge_to_edge_index=edge_to_edge_index
+        max_edges_per_node=args.max_edges_per_node if hasattr(args, 'max_edges_per_node') else 10
     ).to(args.device)
     
     print(model)
     
     # Optimizer
     optimizer = Adam(model.parameters(), lr=args.lr)
+    
+    # Load KNN Graph
+    adj = load_graph(args.name, args.k)
+    adj = adj.to(args.device)
     
     # Prepare data
     data = torch.Tensor(dataset.x).to(args.device)
@@ -581,222 +471,6 @@ class Logger(object):
         self.log.flush()
 
 
-def train_sdcn_spatial_custom(dataset, adj, args, edge_attr=None):
-    """
-    Optimized version of the training function for SDCN_Spatial model
-    
-    Args:
-        dataset: Dataset object containing features and labels
-        adj: Adjacency matrix
-        args: Arguments for training
-        edge_attr: Edge features [num_edges, edge_dim]
-    """
-    # Check if edge_attr is provided, if not, create simple edge features
-    if edge_attr is None:
-        print("No edge features provided, using random initialization")
-        num_edges = adj._nnz()
-        edge_attr = torch.ones(num_edges, args.edge_dim).to(args.device)
-    else:
-        # Ensure edge features are on the correct device
-        edge_attr = edge_attr.to(args.device)
-    
-    # Precompute graph structures (key optimization)
-    print("Precomputing graph structures...")
-    if adj.is_sparse:
-        adj = adj.coalesce()
-        edge_index = adj.indices()
-    else:
-        edge_index, _ = dense_to_sparse(adj)
-    
-    # Validate edge indices
-    num_nodes = dataset.num_nodes
-    max_index = edge_index.max().item()
-    
-    if max_index >= num_nodes:
-        print(f"Warning: Edge index contains indices ({max_index}) that exceed the number of nodes ({num_nodes})")
-        print(f"Filtering edges to only include those with valid node indices...")
-        
-        valid_edges_mask = (edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)
-        edge_index = edge_index[:, valid_edges_mask]
-        
-        if edge_index.size(1) == 0:
-            print("Error: No valid edges remain after filtering!")
-            edge_index = torch.zeros((2, 1), dtype=torch.long).to(args.device)
-            edge_index[0, 0] = 0
-            edge_index[1, 0] = min(1, num_nodes-1)
-    
-    num_edges = edge_index.size(1)
-    
-    # Build edge-to-edge relationships (once, not in every forward pass)
-    print("Building edge-to-edge graph (one-time operation)...")
-    
-    # Build mapping from nodes to edges
-    node_to_edges = defaultdict(list)
-    for i in range(num_edges):
-        src, dst = edge_index[0, i].item(), edge_index[1, i].item()
-        node_to_edges[src].append(i)
-        node_to_edges[dst].append(i)
-    
-    # Create edge connections based on shared nodes
-    edge_to_edge_list = []
-    for node, connected_edges in node_to_edges.items():
-        if len(connected_edges) > 1:
-            # If node connects too many edges, randomly sample to limit
-            if len(connected_edges) > args.max_edges_per_node:
-                sampled_edges = random.sample(connected_edges, args.max_edges_per_node)
-            else:
-                sampled_edges = connected_edges
-            
-            # Connect all pairs of edges that share this node
-            for i in range(len(sampled_edges)):
-                for j in range(i+1, len(sampled_edges)):
-                    edge_i = sampled_edges[i]
-                    edge_j = sampled_edges[j]
-                    # Add both directions for undirected graph
-                    edge_to_edge_list.append([edge_i, edge_j])
-                    edge_to_edge_list.append([edge_j, edge_i])
-    
-    # Convert to tensor format
-    if len(edge_to_edge_list) > 0:
-        edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
-    else:
-        # If no edge-to-edge connections, create an empty tensor
-        edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
-    
-    # Create model with precomputed graph structures
-    model = SDCN_Spatial(
-        500, 500, 2000, 2000, 500, 500,
-        n_input=args.n_input,
-        n_z=args.n_z,
-        n_clusters=args.n_clusters,
-        v=1.0,
-        dropout=args.dropout,
-        edge_dim=args.edge_dim,
-        heads=args.heads,
-        max_edges_per_node=args.max_edges_per_node,
-        precomputed_edge_index=edge_index,
-        precomputed_edge_to_edge_index=edge_to_edge_index
-    ).to(args.device)
-    
-    print(model)
-    
-    # Optimizer
-    optimizer = Adam(model.parameters(), lr=args.lr)
-    
-    # Move adjacency matrix to the specified device
-    adj = adj.to(args.device)
-    
-    # Prepare data
-    data = torch.Tensor(dataset.x).to(args.device)
-    y = dataset.y
-    
-    # Use pretrained autoencoder to initialize cluster centers
-    with torch.no_grad():
-        _, _, _, _, z = model.ae(data)
-    
-    # Use K-means for initial clustering
-    kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
-    y_pred = kmeans.fit_predict(z.data.cpu().numpy())
-    model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
-    
-    # Evaluate initial clustering results
-    if len(np.unique(y)) > 1:  # If there are true labels
-        eva(y, y_pred, 'pae')
-    else:
-        print(f"Initial clustering complete. Number of clusters: {args.n_clusters}")
-    
-    # Create a list to store results
-    results = []
-    
-    # Training loop
-    for epoch in range(200):
-        # Update current epoch
-        model.current_epoch = epoch
-        
-        if epoch % 1 == 0:
-            # Evaluate model
-            try:
-                _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
-                
-                tmp_q = tmp_q.data
-                p = target_distribution(tmp_q)
-                
-                res1 = tmp_q.cpu().numpy().argmax(1)  # Q
-                res2 = pred.data.cpu().numpy().argmax(1)  # Z
-                res3 = p.data.cpu().numpy().argmax(1)  # P
-                
-                # Evaluate each round's clustering metrics
-                if len(np.unique(y)) > 1:  # If there are true labels
-                    acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
-                    acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
-                    acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
-                    
-                    # Save each round's clustering results
-                    results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
-                else:
-                    # Without labels, just track cluster distribution
-                    cluster_distribution = np.bincount(res2)
-                    print(f"Epoch {epoch}, Cluster distribution: {cluster_distribution}")
-                    results.append([epoch] + [0] * 12)  # Placeholder
-            except Exception as e:
-                print(f"Epoch {epoch} evaluation error: {str(e)}")
-                continue
-        
-        # Forward pass
-        try:
-            x_bar, q, pred, _, _ = model(data, adj, edge_attr)
-            
-            # Calculate target distribution
-            p = target_distribution(q.data)
-            
-            # Calculate loss
-            kl_loss = F.kl_div(q.log(), p, reduction='batchmean')
-            ce_loss = F.kl_div(pred.log(), p, reduction='batchmean')
-            re_loss = F.mse_loss(x_bar, data)
-            
-            # Combined loss with same weights as original SDCN
-            loss = 0.1 * kl_loss + 0.01 * ce_loss + re_loss
-            
-            # Backward pass and optimization
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            
-            # Print loss information every 10 epochs
-            if epoch % 10 == 0:
-                print(f"Epoch {epoch}, Loss: {loss.item():.4f}, KL: {kl_loss.item():.4f}, CE: {ce_loss.item():.4f}, RE: {re_loss.item():.4f}")
-        except Exception as e:
-            print(f"Epoch {epoch} training error: {str(e)}")
-            continue
-    
-    # Get final clustering results
-    try:
-        _, _, final_pred, _, _ = model(data, adj, edge_attr)
-        final_clusters = final_pred.data.cpu().numpy().argmax(1)
-    except Exception as e:
-        print(f"Error getting final clustering results: {str(e)}")
-        # If error, use last successful clustering result
-        if 'res2' in locals():
-            final_clusters = res2
-        else:
-            # If no successful clustering results, return zeros
-            final_clusters = np.zeros(dataset.num_nodes, dtype=int)
-    
-    # Save results
-    column_names = ['Epoch', 'Acc_Q', 'F1_Q', 'NMI_Q', 'ARI_Q', 'Acc_Z', 'F1_Z', 'NMI_Z', 'ARI_Z', 'Acc_P', 'F1_P', 'NMI_P', 'ARI_P']
-    results_df = pd.DataFrame(results, columns=column_names)
-    results_df.to_csv('spatial_training_results_custom.csv', index=False)
-    
-    print("Training complete. Results saved to 'spatial_training_results_custom.csv'.")
-    
-    final_results_df = pd.DataFrame({'Node ID': np.arange(len(final_clusters)), 'Cluster ID': final_clusters})
-    final_results_df.to_csv('spatial_final_cluster_results_custom.csv', index=False)
-    
-    print("Final clustering results saved to 'spatial_final_cluster_results_custom.csv'.")
-    
-    return model, results_df, final_clusters
-
-
 if __name__ == "__main__":
     # Create logs directory if it doesn't exist
     if not os.path.exists('logs'):
@@ -804,14 +478,14 @@ if __name__ == "__main__":
     
     # Create a log file with timestamp
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_filename = f'logs/sdcn_spatial_optimized_run_{timestamp}.txt'
+    log_filename = f'logs/sdcn_spatial_run_{timestamp}.txt'
     
     # Redirect stdout to both console and file, with minimal terminal output
     sys.stdout = Logger(log_filename, terminal_mode="minimal")
     
     # Parse arguments
     parser = argparse.ArgumentParser(
-        description='train SDCN with optimized SpatialConv',
+        description='train SDCN with SpatialConv',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--name', type=str, default='reut')
     parser.add_argument('--k', type=int, default=3)

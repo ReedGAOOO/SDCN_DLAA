@@ -4,7 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 from Reference.SDCN_ORIGINAL.utils import load_data, load_graph
 from sdcn_spatial import train_sdcn_spatial
-from spatial_sdcn_improved import train_sdcn_spatial_improved
+from Archive2Previous_version_SDCN_Spatial.spatial_sdcn_improved import train_sdcn_spatial_improved
 import pandas as pd
 import os
 from datetime import datetime
