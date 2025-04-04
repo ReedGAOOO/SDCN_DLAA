@@ -1,12 +1,12 @@
-## SDCN_DLAA: Structural Deep Clustering Network with Dual-Level Attentive Aggregation Mechanism
+# SDCN_DLAA: Structural Deep Clustering Network with Dual-Level Attentive Aggregation Mechanism
 
 ## INTRODUCTION
 
-# Innovation 1: Graph Self-Supervised Clustering Framework Integrating Deep Edge Information Modeling (sdcn_dlaa_NEW.py)
+### Innovation 1: Graph Self-Supervised Clustering Framework Integrating Deep Edge Information Modeling (sdcn_dlaa_NEW.py)
 1. This project innovatively introduces a dual-level graph aggregation mechanism (inspired by SMAN's SpatialConv concept) into the graph self-supervised clustering framework (SDCN). This mechanism achieves deep modeling and dynamic utilization of edge features through explicit, iterative information passing between nodes↔edges and edges↔edges. This significantly differs from mainstream GNN layers (like GATConv/GCNConv in PyG) which typically handle edge information statically (e.g., only for attention calculation or simple concatenation).
 2. This deep edge modeling enables the model to more accurately capture complex inter-node relationships defined by connection strength, type, or attributes, leading to more scientific node clustering that better aligns with the underlying graph structure. The framework is particularly suitable for application scenarios where edge information carries rich semantics, such as geospatial network analysis (e.g., trajectory point clustering, considering road grades, travel times), social network mining (analyzing user communities, considering relationship types, intimacy), and molecular property prediction (considering chemical bond types, bond energies).
 
-# Innovation 2: Implementation and Application of Dual-Level Aggregation under the PyTorch Geometric Framework (DLAA_NEW.py)
+### Innovation 2: Implementation and Application of Dual-Level Aggregation under the PyTorch Geometric Framework (DLAA_NEW.py)
 This project implements the dual-level graph aggregation mechanism (core idea from the SMAN model) completely and efficiently within the PyTorch Geometric (PyG) framework for the first time. Adaptations and optimizations (e.g., memory optimization, parallelization improvements) have been made for PyG's data representation and message passing features (custom message passing). This provides an important implementation foundation and application example for applying such interactive node-edge joint modeling techniques within the mainstream PyG ecosystem, especially validating its effectiveness in self-supervised clustering tasks.
 
 This project is still experimental and currently in the parameter tuning phase to address unstable learning rates during training. However, the feasibility of the SDCN_DLAA framework has been theoretically demonstrated (see engineering note for details: https://docs.google.com/document/d/1qZmEbDUiWt8VqjI-uQMnlMk5Skk1pxMWrIq58-LcI8I/edit?usp=sharing). Furthermore, current runs on `test_sdcn_dlaa_NEW_sparse.py` indicate its ability to incorporate EDGE FEATURES into NODE CLUSTERING and capture meaningful information.
