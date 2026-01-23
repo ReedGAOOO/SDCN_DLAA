@@ -1,0 +1,1537 @@
+Use CUDA: True
+Loading data from: NEWDATA/processed_knn_k10
+Node features path: NEWDATA/processed_knn_k10/node_features.npy
+Binary adj path: NEWDATA/processed_knn_k10/binary_adj.npz
+Edge attr path: NEWDATA/processed_knn_k10/edge_attr.npy
+Node features shape: (543, 3)
+Edge features shape: torch.Size([6694, 10])
+Number of nodes: 543
+Feature dimensions: 3
+Edge feature dimensions: 10
+Number of clusters: 3
+
+Starting training for SDCN_DLAA model with KNN data...
+Performance optimization: Precomputing graph structure...
+Building edge-to-edge connections...
+Precomputation complete: node-to-node edges: 6694, edge-to-edge connections: 48870
+SDCN_DLAA(
+  (ae): AE(
+    (enc_1): Linear(in_features=3, out_features=500, bias=True)
+    (enc_2): Linear(in_features=500, out_features=500, bias=True)
+    (enc_3): Linear(in_features=500, out_features=2000, bias=True)
+    (z_layer): Linear(in_features=2000, out_features=10, bias=True)
+    (dec_1): Linear(in_features=10, out_features=2000, bias=True)
+    (dec_2): Linear(in_features=2000, out_features=500, bias=True)
+    (dec_3): Linear(in_features=500, out_features=500, bias=True)
+    (x_bar_layer): Linear(in_features=500, out_features=3, bias=True)
+  )
+  (spatial_conv1): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+  )
+  (spatial_conv2): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=500, bias=True)
+    (edge_fc): Linear(in_features=1500, out_features=500, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(500, 500, heads=1)
+    )
+  )
+  (spatial_conv3): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=2000, bias=True)
+    (edge_fc): Linear(in_features=6000, out_features=2000, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(2000, 2000, heads=1)
+    )
+  )
+  (spatial_conv4): SpatialConv(
+    (edge_fc): Linear(in_features=30, out_features=10, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(10, 10, heads=1)
+    )
+  )
+  (spatial_conv5): SpatialConv(
+    (edge_dim_proj): Linear(in_features=10, out_features=3, bias=True)
+    (edge_fc): Linear(in_features=9, out_features=3, bias=True)
+    (ee_gat): GATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+    (en_gat): SGATLayer(
+      (gat_conv): GATConv(3, 3, heads=1)
+    )
+  )
+  (proj1): Linear(in_features=3, out_features=500, bias=True)
+  (proj2): Linear(in_features=500, out_features=500, bias=True)
+  (proj3): Linear(in_features=500, out_features=2000, bias=True)
+  (proj4): Linear(in_features=2000, out_features=10, bias=True)
+  (proj5): Linear(in_features=10, out_features=3, bias=True)
+  (initial_edge_proj): Linear(in_features=10, out_features=10, bias=True)
+)
+Initial clustering complete. Number of clusters: 3
+Epoch 0, Cluster distribution: [542   0   1]
+
+Epoch 0
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 0, Loss: inf, KL: 0.0605, CE: inf, RE: 32840.2812
+Epoch 1, Cluster distribution: [543]
+
+Epoch 1
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 2, Cluster distribution: [543]
+
+Epoch 2
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 3, Cluster distribution: [543]
+
+Epoch 3
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 4, Cluster distribution: [543]
+
+Epoch 4
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 5, Cluster distribution: [543]
+
+Epoch 5
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 6, Cluster distribution: [543]
+
+Epoch 6
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 7, Cluster distribution: [543]
+
+Epoch 7
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 8, Cluster distribution: [543]
+
+Epoch 8
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 9, Cluster distribution: [543]
+
+Epoch 9
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 10, Cluster distribution: [543]
+
+Epoch 10
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 10, Loss: nan, KL: nan, CE: nan, RE: nan
+Epoch 11, Cluster distribution: [543]
+
+Epoch 11
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 12, Cluster distribution: [543]
+
+Epoch 12
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 13, Cluster distribution: [543]
+
+Epoch 13
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 14, Cluster distribution: [543]
+
+Epoch 14
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 15, Cluster distribution: [543]
+
+Epoch 15
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 16, Cluster distribution: [543]
+
+Epoch 16
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 17, Cluster distribution: [543]
+
+Epoch 17
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 18, Cluster distribution: [543]
+
+Epoch 18
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 19, Cluster distribution: [543]
+
+Epoch 19
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 20, Cluster distribution: [543]
+
+Epoch 20
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 20, Loss: nan, KL: nan, CE: nan, RE: nan
+Epoch 21, Cluster distribution: [543]
+
+Epoch 21
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 22, Cluster distribution: [543]
+
+Epoch 22
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 23, Cluster distribution: [543]
+
+Epoch 23
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 24, Cluster distribution: [543]
+
+Epoch 24
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 25, Cluster distribution: [543]
+
+Epoch 25
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 26, Cluster distribution: [543]
+
+Epoch 26
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 27, Cluster distribution: [543]
+
+Epoch 27
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 28, Cluster distribution: [543]
+
+Epoch 28
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 29, Cluster distribution: [543]
+
+Epoch 29
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 30, Cluster distribution: [543]
+
+Epoch 30
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 30, Loss: nan, KL: nan, CE: nan, RE: nan
+Epoch 31, Cluster distribution: [543]
+
+Epoch 31
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 32, Cluster distribution: [543]
+
+Epoch 32
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 33, Cluster distribution: [543]
+
+Epoch 33
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 34, Cluster distribution: [543]
+
+Epoch 34
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 35, Cluster distribution: [543]
+
+Epoch 35
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 36, Cluster distribution: [543]
+
+Epoch 36
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 37, Cluster distribution: [543]
+
+Epoch 37
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 38, Cluster distribution: [543]
+
+Epoch 38
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 39, Cluster distribution: [543]
+
+Epoch 39
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 40, Cluster distribution: [543]
+
+Epoch 40
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 40, Loss: nan, KL: nan, CE: nan, RE: nan
+Epoch 41, Cluster distribution: [543]
+
+Epoch 41
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 42, Cluster distribution: [543]
+
+Epoch 42
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 43, Cluster distribution: [543]
+
+Epoch 43
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 44, Cluster distribution: [543]
+
+Epoch 44
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 45, Cluster distribution: [543]
+
+Epoch 45
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 46, Cluster distribution: [543]
+
+Epoch 46
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 47, Cluster distribution: [543]
+
+Epoch 47
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 48, Cluster distribution: [543]
+
+Epoch 48
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 49, Cluster distribution: [543]
+
+Epoch 49
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 50, Cluster distribution: [543]
+
+Epoch 50
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 50, Loss: nan, KL: nan, CE: nan, RE: nan
+Epoch 51, Cluster distribution: [543]
+
+Epoch 51
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 52, Cluster distribution: [543]
+
+Epoch 52
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 53, Cluster distribution: [543]
+
+Epoch 53
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 54, Cluster distribution: [543]
+
+Epoch 54
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 55, Cluster distribution: [543]
+
+Epoch 55
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 56, Cluster distribution: [543]
+
+Epoch 56
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 57, Cluster distribution: [543]
+
+Epoch 57
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 58, Cluster distribution: [543]
+
+Epoch 58
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Epoch 59, Cluster distribution: [543]
+
+Epoch 59
+==================================================
+
+Autoencoder Architecture:
+------------------------------
+Encoder Layer 1: torch.Size([543, 500])
+Encoder Layer 2: torch.Size([543, 500])
+Encoder Layer 3: torch.Size([543, 2000])
+Latent Space: torch.Size([543, 10])
+Decoder Layer 1: torch.Size([543, 2000])
+Decoder Layer 2: torch.Size([543, 500])
+Decoder Layer 3: torch.Size([543, 500])
+Output Layer: torch.Size([543, 3])
+
+Spatial Architecture:
+------------------------------
+Layer 1: torch.Size([543, 500])
+Layer 2: torch.Size([543, 500])
+Layer 3: torch.Size([543, 2000])
+Layer 4: torch.Size([543, 10])
+Layer 5: torch.Size([543, 3])
+
+Training completed. Results saved to 'sdcn_dlaa_training_results.csv'.
+Final clustering results saved to 'sdcn_dlaa_final_cluster_results.csv'.
+
+Cluster distribution:
+Cluster 0: 543 nodes (100.00%)
+
+Training completed!
