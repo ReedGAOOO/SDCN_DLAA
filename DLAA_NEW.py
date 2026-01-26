@@ -11,6 +11,7 @@ Key components include:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 from torch_geometric.nn import GATConv
 from torch_geometric.utils import softmax
 
@@ -157,7 +158,7 @@ class SGATLayer(nn.Module):
             out = self.activation(out)
         return out
 
-class SpatialConv(nn.Module):
+class SpatialConvOriginal(nn.Module):
     """Spatial Graph Convolution Layer
     
     This layer implements the function of the spatial graph convolution layer for molecular graph.
@@ -169,7 +170,7 @@ class SpatialConv(nn.Module):
         heads (int): Number of attention heads
     """
     def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4):
-        super(SpatialConv, self).__init__()
+        super().__init__()
         self.hidden_size = hidden_size
         self.edge_dim = edge_dim if edge_dim is not None else hidden_size
         
@@ -215,54 +216,186 @@ class SpatialConv(nn.Module):
         # Extract data components
         x = data.x  # Node features
         edge_index = data.edge_index  # Node-to-node connectivity
-        edge_attr = data.edge_attr  # Edge features
         dist_feat = data.dist_feat  # Distance features for node-node graph
         dist_feat_order = data.dist_feat_order  # Distance features for edge-edge graph
         edge_to_edge_index = data.edge_to_edge_index  # Edge-to-edge connectivity
-        
+
         num_nodes = x.shape[0]
-        
+
         # Step 1: Update edge features
         # Get source and target node indices
         srcs, dsts = edge_index[0], edge_index[1]
-        
+
         # Aggregate node features to update edge features
         # Project edge features if dimensions don't match
         if self.edge_dim_proj is not None and dist_feat_order.shape[1] != self.hidden_size:
             dist_feat_order = self.edge_dim_proj(dist_feat_order)
-            
+
         src_feat = x[srcs]
         dst_feat = x[dsts]
         feat_h = torch.cat([src_feat, dst_feat, dist_feat_order], dim=1)
         edge_feat = F.relu(self.edge_fc(feat_h))
-        
+
         # Concatenate node and edge features
         node_edge_feat = torch.cat([x, edge_feat], dim=0)
-        
+
         # Update edge features using edge-to-edge graph
         node_edge_feat = self.ee_gat(node_edge_feat, edge_to_edge_index)
-        
+
         # Step 2: Update node features
         # Extract updated edge features
         updated_edge_feat = node_edge_feat[num_nodes:]
-        
+
         # Project edge features for node-edge graph if needed
         if self.edge_dim_proj is not None and dist_feat.shape[1] != self.hidden_size:
             dist_feat = self.edge_dim_proj(dist_feat)
-            
+
         updated_node_feat = node_edge_feat[:num_nodes]
-        
+
         # Concatenate updated node and edge features
         node_edge_feat = torch.cat([updated_node_feat, updated_edge_feat], dim=0)
-        
+
         # Update node features using edge-to-node graph
         node_edge_feat = self.en_gat(node_edge_feat, edge_index, dist_feat)
-        
+
         # Extract final node features and edge features
         final_node_feat = node_edge_feat[:num_nodes]
         final_edge_feat = node_edge_feat[num_nodes:]
-        
+
         # Concatenate final node and edge features
-        final_node_edge_feat = torch.cat([final_node_feat, final_edge_feat], dim=0)
-        
-        return final_node_edge_feat
+        return torch.cat([final_node_feat, final_edge_feat], dim=0)
+
+
+class SpatialConvSmallFix(nn.Module):
+    """
+    A minimal-change SpatialConv variant:
+    - Keeps the original (node+edge concatenation) edge-edge update flow.
+    - Ensures dist_feat actually participates in node attention via `edge_dim`.
+    - Avoids passing edge rows through node update to prevent washing edge features.
+    """
+    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.edge_dim = edge_dim if edge_dim is not None else hidden_size
+
+        self.edge_dim_proj = None
+        if self.edge_dim != hidden_size:
+            self.edge_dim_proj = nn.Linear(self.edge_dim, hidden_size)
+
+        # edge init: [x_src, x_dst, dist_feat_order] -> edge_feat
+        self.edge_fc = nn.Linear(hidden_size * 3, hidden_size)
+
+        self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout)
+
+        # Ensure dist_feat participates in attention
+        self.en_gat = SGATLayer(
+            hidden_size,
+            hidden_size,
+            heads=heads,
+            dropout=dropout,
+            combine='mean',
+            edge_dim=hidden_size,
+        )
+
+    def forward(self, data):
+        x = data.x
+        edge_index = data.edge_index
+        dist_feat = data.dist_feat
+        dist_feat_order = data.dist_feat_order
+        edge_to_edge_index = data.edge_to_edge_index
+
+        num_nodes = x.size(0)
+
+        # ---- Step 1: edge init (same as original) ----
+        srcs, dsts = edge_index[0], edge_index[1]
+
+        if self.edge_dim_proj is not None and dist_feat_order.size(1) != self.hidden_size:
+            dist_feat_order = self.edge_dim_proj(dist_feat_order)  # -> [E, H]
+
+        src_feat = x[srcs]
+        dst_feat = x[dsts]
+        feat_h = torch.cat([src_feat, dst_feat, dist_feat_order], dim=1)  # [E, 3H]
+        edge_feat = F.relu(self.edge_fc(feat_h))  # [E, H]
+
+        # ---- Step 2: edge-to-edge update (keep original info flow) ----
+        node_edge_feat = torch.cat([x, edge_feat], dim=0)  # [(N+E), H]
+        node_edge_feat = self.ee_gat(node_edge_feat, edge_to_edge_index)
+
+        updated_node_feat = node_edge_feat[:num_nodes]   # [(N), H]
+        updated_edge_feat = node_edge_feat[num_nodes:]   # [(E), H]
+
+        # ---- Step 3: node update using dist_feat (keep original info flow) ----
+        if self.edge_dim_proj is not None and dist_feat.size(1) != self.hidden_size:
+            dist_feat = self.edge_dim_proj(dist_feat)  # -> [E, H]
+
+        # Only update nodes; keep edge features from Step 2.
+        final_node_feat = self.en_gat(updated_node_feat, edge_index, dist_feat)  # [N, H]
+
+        return torch.cat([final_node_feat, updated_edge_feat], dim=0)  # [(N+E), H]
+
+
+class SpatialConvEdgeOnly(nn.Module):
+    """
+    Edge-centric SpatialConv variant:
+    - Computes edge embeddings from (src, dst, dist_feat_order).
+    - Updates edges via edge-edge graph (ee_gat) on edges only.
+    - Updates nodes via SGATLayer using the updated edge embeddings as `edge_attr`.
+    """
+    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.edge_dim = edge_dim if edge_dim is not None else hidden_size
+
+        self.edge_dim_proj = None
+        if self.edge_dim != hidden_size:
+            self.edge_dim_proj = nn.Linear(self.edge_dim, hidden_size)
+
+        self.edge_fc = nn.Linear(hidden_size * 3, hidden_size)
+
+        self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout)
+
+        self.en_gat = SGATLayer(
+            hidden_size,
+            hidden_size,
+            heads=heads,
+            dropout=dropout,
+            combine='mean',
+            edge_dim=hidden_size,
+        )
+
+    def forward(self, data):
+        x = data.x  # [N, H]
+        edge_index = data.edge_index  # [2, E]
+        dist_feat_order = data.dist_feat_order  # [E, edge_dim]
+        edge_to_edge_index = data.edge_to_edge_index  # [2, M] (edge indices)
+
+        num_edges = edge_index.size(1)
+
+        # Step 1: Initialize edge features from node features and raw distance features.
+        srcs, dsts = edge_index[0], edge_index[1]
+
+        if self.edge_dim_proj is not None and dist_feat_order.shape[1] != self.hidden_size:
+            dist_feat_order = self.edge_dim_proj(dist_feat_order)
+
+        src_feat = x[srcs]
+        dst_feat = x[dsts]
+        feat_h = torch.cat([src_feat, dst_feat, dist_feat_order], dim=1)
+        edge_feat_0 = F.relu(self.edge_fc(feat_h))  # [E, H]
+
+        # Step 2: Update edge features with edge-to-edge interactions (operate on edges only).
+        edge_feat_1 = self.ee_gat(edge_feat_0, edge_to_edge_index)  # [E, H]
+
+        # Step 3: Update node features with node-to-node graph, incorporating updated edge features as attention inputs.
+        node_feat_1 = self.en_gat(x, edge_index, edge_feat_1)  # [N, H]
+
+        # Keep the original return contract: concatenate node and edge features.
+        return torch.cat([node_feat_1, edge_feat_1], dim=0)
+
+
+_SPATIALCONV_VARIANT = os.getenv("SPATIALCONV_VARIANT", "edge_only").strip().lower()
+if _SPATIALCONV_VARIANT in {"orig", "original", "legacy"}:
+    SpatialConv = SpatialConvOriginal
+elif _SPATIALCONV_VARIANT in {"small", "smallfix", "small_fix", "minimal"}:
+    SpatialConv = SpatialConvSmallFix
+else:
+    SpatialConv = SpatialConvEdgeOnly

@@ -440,6 +440,16 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
         args: Arguments for training
         edge_attr: Edge features [num_edges, edge_dim]
     """
+
+    # Optional reproducibility (mainly for experiments/debugging).
+    seed_env = os.getenv("SDCN_SEED")
+    seed = int(seed_env) if seed_env is not None and seed_env.strip() != "" else None
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
     
     # Check if edge_attr is provided, if not, create simple edge features
     if edge_attr is None:
@@ -529,7 +539,10 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
         _, _, _, _, z = model.ae(data)
     model.train() # Switch back to train mode
 
-    kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
+    kmeans_kwargs = {"n_clusters": args.n_clusters, "n_init": 20}
+    if seed is not None:
+        kmeans_kwargs["random_state"] = seed
+    kmeans = KMeans(**kmeans_kwargs)
     y_pred = kmeans.fit_predict(z.data.cpu().numpy())
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
     # Check if y has enough classes for evaluation metrics
@@ -597,9 +610,15 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
             # Calculate target distribution
             p = target_distribution(q.data)
             
-            # Calculate loss
-            kl_loss = F.kl_div(q.log(), p, reduction='batchmean')
-            ce_loss = F.kl_div(pred.log(), p, reduction='batchmean')
+            # Calculate loss (numerically stable: avoid log(0) in KL computations)
+            eps = 1e-10
+            q_safe = torch.clamp(q, min=eps)
+            q_safe = q_safe / q_safe.sum(dim=1, keepdim=True)
+            pred_safe = torch.clamp(pred, min=eps)
+            pred_safe = pred_safe / pred_safe.sum(dim=1, keepdim=True)
+
+            kl_loss = F.kl_div(q_safe.log(), p, reduction='batchmean')
+            ce_loss = F.kl_div(pred_safe.log(), p, reduction='batchmean')
             re_loss = F.mse_loss(x_bar, data)
             
             # Combined loss with the same weights as original SDCN
@@ -702,6 +721,16 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         args: Training parameters
         edge_attr: Edge features [num_edges, edge_dim]
     """
+
+    # Optional reproducibility (mainly for experiments/debugging).
+    seed_env = os.getenv("SDCN_SEED")
+    seed = int(seed_env) if seed_env is not None and seed_env.strip() != "" else None
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
     
     # Check if edge features are provided, if not create simple edge features
     if edge_attr is None:
@@ -816,7 +845,10 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
 
 
     # Perform initial clustering using K-means
-    kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
+    kmeans_kwargs = {"n_clusters": args.n_clusters, "n_init": 20}
+    if seed is not None:
+        kmeans_kwargs["random_state"] = seed
+    kmeans = KMeans(**kmeans_kwargs)
     # Ensure z is on CPU for KMeans
     y_pred = kmeans.fit_predict(z.data.cpu().numpy())
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
@@ -878,8 +910,15 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
 
             p = target_distribution(q.data)
 
-            kl_loss = F.kl_div(q.log(), p, reduction='batchmean')
-            ce_loss = F.kl_div(pred.log(), p, reduction='batchmean')
+            # Numerical stability: avoid log(0) in KL computations
+            eps = 1e-10
+            q_safe = torch.clamp(q, min=eps)
+            q_safe = q_safe / q_safe.sum(dim=1, keepdim=True)
+            pred_safe = torch.clamp(pred, min=eps)
+            pred_safe = pred_safe / pred_safe.sum(dim=1, keepdim=True)
+
+            kl_loss = F.kl_div(q_safe.log(), p, reduction='batchmean')
+            ce_loss = F.kl_div(pred_safe.log(), p, reduction='batchmean')
             re_loss = F.mse_loss(x_bar, data)
  
             loss = 1.0 * kl_loss + 0.1 * ce_loss + re_loss

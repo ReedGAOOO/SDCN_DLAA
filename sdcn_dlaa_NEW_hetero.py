@@ -613,8 +613,15 @@ def train_sdcn_dlaa(dataset, adj, args, edge_attr=None): # Added adj parameter
 
             p = target_distribution(q.data)
             
-            kl_loss = F.kl_div(q.log(), p, reduction='batchmean')
-            ce_loss = F.kl_div(pred.log(), p, reduction='batchmean') # Use GNN prediction 'pred'
+            # Numerical stability: avoid log(0) in KL computations
+            eps = 1e-10
+            q_safe = torch.clamp(q, min=eps)
+            q_safe = q_safe / q_safe.sum(dim=1, keepdim=True)
+            pred_safe = torch.clamp(pred, min=eps)
+            pred_safe = pred_safe / pred_safe.sum(dim=1, keepdim=True)
+
+            kl_loss = F.kl_div(q_safe.log(), p, reduction='batchmean')
+            ce_loss = F.kl_div(pred_safe.log(), p, reduction='batchmean') # Use GNN prediction 'pred'
             re_loss = F.mse_loss(x_bar, data)
             
             # Combined loss
