@@ -87,4 +87,18 @@ python tools/compare_spatialconv_variants.py \
   --heads 1
 ```
 
+模拟数据套件（多数据集 + 传统 baseline 对比）：
+
+```bash
+python tools/generate_synthetic_suite.py --output_root /tmp/sdcn_dlaa_synth_suite --seed 0
+python tools/benchmark_synthetic_suite.py \
+  --suite_dir /tmp/sdcn_dlaa_synth_suite \
+  --out_dir /tmp/sdcn_dlaa_synth_results \
+  --seeds 0,1,2 \
+  --epochs 30 \
+  --variants v2edge_single_layer,v3edge_cross_layers \
+  --baselines kmeans_x,spectral_adj_binary,spectral_edge_distance \
+  --heads 1
+```
+
 示例结果表与更详细的说明见 `readme_zh_full.md`。

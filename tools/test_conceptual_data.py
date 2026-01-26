@@ -52,7 +52,7 @@ def main() -> None:
     parser.add_argument("--n_z", type=int, default=10)
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--heads", type=int, default=1)
-    parser.add_argument("--edge_dim", type=int, default=10)
+    parser.add_argument("--edge_dim", type=int, default=None, help="If omitted, inferred from edge_attr.npy")
     parser.add_argument("--max_edges_per_node", type=int, default=10)
     parser.add_argument("--cpu", action="store_true")
     parser.add_argument("--summary_json", type=str, default="summary.json")
@@ -65,6 +65,9 @@ def main() -> None:
 
     if args.n_clusters is None:
         args.n_clusters = int(np.unique(y).size)
+
+    if args.edge_dim is None:
+        args.edge_dim = int(edge_attr_np.shape[1])
 
     dataset = NumpyDataset(x=x, y=y)
 
@@ -86,6 +89,7 @@ def main() -> None:
         "data_dir": os.path.abspath(args.data_dir),
         "n_clusters": int(args.n_clusters),
         "n_nodes": int(dataset.num_nodes),
+        "edge_dim": int(args.edge_dim),
         "metrics": {
             "acc": float(final_acc),
             "f1": float(final_f1),
@@ -105,4 +109,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
