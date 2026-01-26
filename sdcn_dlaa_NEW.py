@@ -556,7 +556,9 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
     results = []
     
     # Training loop
-    for epoch in range(60):
+    epochs_env = os.getenv("SDCN_EPOCHS")
+    num_epochs = int(epochs_env) if epochs_env is not None and epochs_env.strip() != "" else 60
+    for epoch in range(num_epochs):
         # Update the current epoch
         model.current_epoch = epoch
         
@@ -861,7 +863,9 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
 
     results = []
 
-    for epoch in range(60):
+    epochs_env = os.getenv("SDCN_EPOCHS")
+    num_epochs = int(epochs_env) if epochs_env is not None and epochs_env.strip() != "" else 60
+    for epoch in range(num_epochs):
         model.current_epoch = epoch
         
         if epoch % 1 == 0:

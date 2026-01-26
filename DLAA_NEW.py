@@ -158,7 +158,7 @@ class SGATLayer(nn.Module):
             out = self.activation(out)
         return out
 
-class SpatialConvOriginal(nn.Module):
+class SpatialConvV1Original(nn.Module):
     """Spatial Graph Convolution Layer
     
     This layer implements the function of the spatial graph convolution layer for molecular graph.
@@ -266,7 +266,7 @@ class SpatialConvOriginal(nn.Module):
         return torch.cat([final_node_feat, final_edge_feat], dim=0)
 
 
-class SpatialConvSmallFix(nn.Module):
+class SpatialConvV2EdgeSingleLayer(nn.Module):
     """
     A minimal-change SpatialConv variant:
     - Keeps the original (node+edge concatenation) edge-edge update flow.
@@ -334,7 +334,7 @@ class SpatialConvSmallFix(nn.Module):
         return torch.cat([final_node_feat, updated_edge_feat], dim=0)  # [(N+E), H]
 
 
-class SpatialConvEdgeOnly(nn.Module):
+class SpatialConvV3EdgeCrossLayers(nn.Module):
     """
     Edge-centric SpatialConv variant:
     - Computes edge embeddings from (src, dst, dist_feat_order).
@@ -392,10 +392,43 @@ class SpatialConvEdgeOnly(nn.Module):
         return torch.cat([node_feat_1, edge_feat_1], dim=0)
 
 
-_SPATIALCONV_VARIANT = os.getenv("SPATIALCONV_VARIANT", "edge_only").strip().lower()
-if _SPATIALCONV_VARIANT in {"orig", "original", "legacy"}:
-    SpatialConv = SpatialConvOriginal
-elif _SPATIALCONV_VARIANT in {"small", "smallfix", "small_fix", "minimal"}:
-    SpatialConv = SpatialConvSmallFix
+_DEFAULT_SPATIALCONV_VARIANT = "v2edge_single_layer"
+SPATIALCONV_VARIANT_SELECTED = os.getenv("SPATIALCONV_VARIANT", _DEFAULT_SPATIALCONV_VARIANT).strip().lower()
+
+if SPATIALCONV_VARIANT_SELECTED in {
+    "v1",
+    "v1original",
+    "v1_original",
+    "orig",
+    "original",
+    "legacy",
+}:
+    SpatialConv = SpatialConvV1Original
+elif SPATIALCONV_VARIANT_SELECTED in {
+    "v2",
+    "v2edge_single_layer",
+    "v2_edge_single_layer",
+    "edge_single_layer",
+    "single_layer",
+    "small",
+    "smallfix",
+    "small_fix",
+    "minimal",
+}:
+    SpatialConv = SpatialConvV2EdgeSingleLayer
+elif SPATIALCONV_VARIANT_SELECTED in {
+    "v3",
+    "v3edge_cross_layers",
+    "v3_edge_cross_layers",
+    "edge_cross_layers",
+    "cross_layers",
+    "edge_only",
+    "edgeonly",
+    "edge",
+}:
+    SpatialConv = SpatialConvV3EdgeCrossLayers
 else:
-    SpatialConv = SpatialConvEdgeOnly
+    raise ValueError(
+        f"Unknown SPATIALCONV_VARIANT={SPATIALCONV_VARIANT_SELECTED!r}. "
+        f"Use one of: v1original, v2edge_single_layer, v3edge_cross_layers."
+    )
