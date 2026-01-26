@@ -6,6 +6,12 @@ For the full documentation, see:
 - `readme_full.md` (EN)
 - `readme_zh_full.md` (中文)
 
+## Highlights (Simplified Innovation)
+
+- **Deep edge-aware clustering (SDCN + DLAA)**: dual-level aggregation (node↔edge, edge↔edge) so edge semantics can influence node clustering.
+- **Variant-friendly SpatialConv**: `v1original`, `v2edge_single_layer` (default), `v3edge_cross_layers` via `SPATIALCONV_VARIANT` for ablation/verification.
+- **Experiment tooling**: `SDCN_SEED` / `SDCN_EPOCHS` and `tools/` scripts for conceptual/synthetic comparison.
+
 ## Repo Structure
 
 - `sdcn_dlaa_NEW.py`: main training + evaluation entry (SDCN-style self-supervised clustering).
@@ -82,4 +88,3 @@ python tools/compare_spatialconv_variants.py \
 ```
 
 Example result tables and deeper explanations live in `readme_full.md`.
-

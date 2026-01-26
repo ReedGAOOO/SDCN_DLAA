@@ -6,6 +6,12 @@ SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 
 - `readme_zh_full.md`（中文）
 - `readme_full.md`（EN）
 
+## 项目亮点（创新点简述）
+
+- **边信息融入聚类（SDCN + DLAA）**：通过双层聚合（节点↔边、边↔边）让边语义影响节点表示与聚类。
+- **可切换的 SpatialConv 版本**：`v1original`、`v2edge_single_layer`（默认）、`v3edge_cross_layers`，用 `SPATIALCONV_VARIANT` 方便做消融/对比。
+- **实验辅助工具**：`SDCN_SEED` / `SDCN_EPOCHS` + `tools/` 的概念/合成数据对比脚本。
+
 ## 目录结构
 
 - `sdcn_dlaa_NEW.py`: 主训练/评估入口（SDCN 风格自监督聚类）。
