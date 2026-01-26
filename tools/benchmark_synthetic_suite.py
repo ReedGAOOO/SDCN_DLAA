@@ -103,6 +103,7 @@ def main() -> None:
 
             cmd = [
                 sys.executable,
+                "-B",
                 str(BASELINE_SCRIPT),
                 "--data_dir",
                 str(data_dir),
@@ -150,6 +151,7 @@ def main() -> None:
 
                 cmd = [
                     sys.executable,
+                    "-B",
                     str(MODEL_TEST_SCRIPT),
                     "--data_dir",
                     str(data_dir),
@@ -204,4 +206,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

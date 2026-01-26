@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 import argparse
+import json
 import random
 import numpy as np
 import pandas as pd
@@ -118,7 +119,7 @@ class SDCN_DLAA(nn.Module):
         self.spatial_conv2 = SpatialConv(n_enc_2, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
         self.spatial_conv3 = SpatialConv(n_enc_3, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
         self.spatial_conv4 = SpatialConv(n_z, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
-        self.spatial_conv5 = SpatialConv(n_clusters, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
+        self.spatial_conv5 = SpatialConv(n_clusters, edge_dim=self.edge_dim, dropout=dropout, heads=heads, out_activation=F.leaky_relu)
         
         # Projection layers to match dimensions between layers
         self.proj1 = nn.Linear(n_input, n_enc_1)
@@ -337,7 +338,9 @@ class SDCN_DLAA(nn.Module):
         spatial_shapes = {}
         
         # Apply SpatialConv layers with fusion of AE features
-        sigma = 0.5  # Fusion coefficient (same as original SDCN)
+        sigma_env = os.getenv("SDCN_SIGMA")
+        sigma = float(sigma_env) if sigma_env is not None and sigma_env.strip() != "" else 0.5
+        sigma = max(0.0, min(1.0, sigma))
         
         # Layer 1: Process input features
         data.x = F.relu(self.proj1(x))
@@ -409,8 +412,30 @@ class SDCN_DLAA(nn.Module):
             print()
             self.last_logged_epoch = self.current_epoch
         
-        # Calculate soft assignment (q) using Student's t-distribution
-        q = 1.0 / (1.0 + torch.sum(torch.pow(z.unsqueeze(1) - self.cluster_layer, 2), 2) / self.v)
+        # Calculate soft assignment (q) using Student's t-distribution.
+        # Default (SDCN original): use AE latent z. For edge-driven tasks, you may want to
+        # use graph-aware embeddings (h4 / fused embedding) via SDCN_Q_SOURCE.
+        q_source = os.getenv("SDCN_Q_SOURCE", "z").strip().lower()
+        if q_source in {"z", "ae", "latent"}:
+            q_input = z
+        elif q_source in {"h4", "graph", "gnn", "spatial"}:
+            q_input = h4
+        elif q_source in {"fused", "mix", "datax", "x"}:
+            q_input = data.x  # [(1-sigma)*h4 + sigma*z] with shape [N, n_z]
+        else:
+            raise ValueError(f"Unknown SDCN_Q_SOURCE={q_source!r}. Use one of: z, h4, fused.")
+
+        # Expose the q-input embedding for initialization/diagnostics (no graph retained).
+        self._last_q_input = q_input.detach()
+
+        if q_input.size(1) != self.cluster_layer.size(1):
+            raise ValueError(
+                f"q_input dim mismatch: q_input.shape={tuple(q_input.shape)} vs "
+                f"cluster_layer.shape={tuple(self.cluster_layer.shape)}. "
+                f"Check n_z and SDCN_Q_SOURCE={q_source!r}."
+            )
+
+        q = 1.0 / (1.0 + torch.sum(torch.pow(q_input.unsqueeze(1) - self.cluster_layer, 2), 2) / self.v)
         q = q.pow((self.v + 1.0) / 2.0)
         q = (q.t() / torch.sum(q, 1)).t()
         
@@ -814,10 +839,21 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
         
     print(f"Precomputation complete: node-to-node edges: {edge_index.shape[1]}, edge-to-edge connections: {edge_to_edge_index.shape[1]}")
+
+    # Optional AE hidden size override for small-graph stability experiments.
+    # Format: "500,500,2000" (n_enc_1,n_enc_2,n_enc_3); decoder dims are mirrored.
+    enc_dims = [500, 500, 2000]
+    enc_dims_env = os.getenv("SDCN_ENC_DIMS", "").strip()
+    if enc_dims_env:
+        parts = [p.strip() for p in enc_dims_env.split(",") if p.strip() != ""]
+        if len(parts) != 3:
+            raise ValueError(f"SDCN_ENC_DIMS must have 3 ints like '256,256,512', got: {enc_dims_env!r}")
+        enc_dims = [int(p) for p in parts]
+    dec_dims = [enc_dims[2], enc_dims[1], enc_dims[0]]
     
     # Create model using precomputed graph structure
     model = SDCN_DLAA(
-        500, 500, 2000, 2000, 500, 500,
+        enc_dims[0], enc_dims[1], enc_dims[2], dec_dims[0], dec_dims[1], dec_dims[2],
         n_input=args.n_input,
         n_z=args.n_z,
         n_clusters=args.n_clusters,
@@ -839,20 +875,48 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     data = torch.Tensor(dataset.x).to(args.device)
     y = dataset.y
 
+    # Optional: pretrain AE on reconstruction loss (for custom datasets without pretrained weights).
+    pretrain_epochs_env = os.getenv("SDCN_PRETRAIN_EPOCHS", "").strip()
+    pretrain_epochs = int(pretrain_epochs_env) if pretrain_epochs_env else 0
+    if pretrain_epochs > 0:
+        pretrain_lr_env = os.getenv("SDCN_PRETRAIN_LR", "").strip()
+        pretrain_lr = float(pretrain_lr_env) if pretrain_lr_env else float(args.lr)
+        pretrain_log_every_env = os.getenv("SDCN_PRETRAIN_LOG_EVERY", "").strip()
+        pretrain_log_every = int(pretrain_log_every_env) if pretrain_log_every_env else 50
+
+        print(f"AE pretraining: epochs={pretrain_epochs}, lr={pretrain_lr:g}")
+        ae_optim = Adam(model.ae.parameters(), lr=pretrain_lr)
+        model.ae.train()
+        for ep in range(pretrain_epochs):
+            ae_optim.zero_grad()
+            x_bar, _, _, _, _ = model.ae(data)
+            loss_ae = F.mse_loss(x_bar, data)
+            loss_ae.backward()
+            ae_optim.step()
+            if pretrain_log_every > 0 and (ep % pretrain_log_every == 0 or ep == pretrain_epochs - 1):
+                print(f"[AE pretrain] ep={ep:04d} mse={loss_ae.item():.6f}")
+
     # ---> Use no_grad here too for initialization inference <---
-    model.eval() # Set model to eval mode for initialization inference
+    q_source = os.getenv("SDCN_Q_SOURCE", "z").strip().lower()
+    model.eval()  # Set model to eval mode for initialization inference
     with torch.no_grad():
-        _, _, _, _, z = model.ae(data)
-    model.train() # Switch back to train mode
+        if q_source in {"z", "ae", "latent"}:
+            _, _, _, _, z = model.ae(data)
+            q_embed = z
+        else:
+            # Run a forward pass to populate model._last_q_input (h4 / fused embedding).
+            model(data, adj, edge_attr)
+            q_embed = getattr(model, "_last_q_input", None)
+            if q_embed is None:
+                raise RuntimeError("Expected model._last_q_input to be set in forward() when using non-z SDCN_Q_SOURCE")
+    model.train()  # Switch back to train mode
 
-
-    # Perform initial clustering using K-means
+    # Perform initial clustering using K-means (on the embedding used to compute q).
     kmeans_kwargs = {"n_clusters": args.n_clusters, "n_init": 20}
     if seed is not None:
         kmeans_kwargs["random_state"] = seed
     kmeans = KMeans(**kmeans_kwargs)
-    # Ensure z is on CPU for KMeans
-    y_pred = kmeans.fit_predict(z.data.cpu().numpy())
+    y_pred = kmeans.fit_predict(q_embed.data.cpu().numpy())
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
 
     # Evaluate initial clustering results
@@ -865,6 +929,42 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
 
     epochs_env = os.getenv("SDCN_EPOCHS")
     num_epochs = int(epochs_env) if epochs_env is not None and epochs_env.strip() != "" else 60
+
+    # Optional per-epoch trace for stability/interpretability diagnostics (JSONL).
+    trace_jsonl = getattr(args, "trace_jsonl", "") if args is not None else ""
+    trace_env = os.getenv("SDCN_TRACE_JSONL", "")
+    trace_path = (trace_jsonl or trace_env).strip()
+    trace_f = None
+    if trace_path:
+        trace_f = open(trace_path, "w", encoding="utf-8")
+
+    def _prob_stats(prob: torch.Tensor, eps: float = 1e-10) -> dict:
+        p = torch.clamp(prob, min=eps)
+        p = p / p.sum(dim=1, keepdim=True)
+        ent = -(p * p.log()).sum(dim=1).mean()
+        maxp = p.max(dim=1).values.mean()
+        return {"entropy": float(ent.item()), "max_prob_mean": float(maxp.item())}
+
+    def _cluster_dist(assign: np.ndarray, n_clusters: int) -> dict[int, int]:
+        counts = np.bincount(assign.astype(np.int64), minlength=int(n_clusters))
+        return {int(i): int(counts[i]) for i in range(int(n_clusters))}
+
+    def _collapse_flag(dist: dict[int, int], n_nodes: int, n_clusters: int) -> bool:
+        if n_nodes <= 0:
+            return False
+        counts = np.asarray(list(dist.values()), dtype=np.int64)
+        if counts.size == 0:
+            return True
+        effective_k = int((counts > 0).sum())
+        max_frac = float(counts.max() / max(n_nodes, 1))
+        return effective_k < int(n_clusters) or max_frac >= 0.90
+
+    def _trace_write(record: dict) -> None:
+        if trace_f is None:
+            return
+        trace_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        trace_f.flush()
+
     for epoch in range(num_epochs):
         model.current_epoch = epoch
         
@@ -885,17 +985,66 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                 res3 = p.data.cpu().numpy().argmax(1)  # P
                 last_successful_res2 = res2 # Store the latest successful result
 
+                # ---- Stability diagnostics (always available) ----
+                q_stats = _prob_stats(tmp_q)
+                p_stats = _prob_stats(p)
+                pred_stats = _prob_stats(pred)
+
+                # KL(P||Q) / KL(P||Pred) on eval outputs (same direction as training loss).
+                eps = 1e-10
+                q_safe = torch.clamp(tmp_q, min=eps)
+                q_safe = q_safe / q_safe.sum(dim=1, keepdim=True)
+                p_safe = torch.clamp(p, min=eps)
+                p_safe = p_safe / p_safe.sum(dim=1, keepdim=True)
+                pred_safe = torch.clamp(pred, min=eps)
+                pred_safe = pred_safe / pred_safe.sum(dim=1, keepdim=True)
+
+                kl_p_q = float(F.kl_div(q_safe.log(), p_safe, reduction="batchmean").item())
+                kl_p_pred = float(F.kl_div(pred_safe.log(), p_safe, reduction="batchmean").item())
+
+                dist_q = _cluster_dist(res1, args.n_clusters)
+                dist_pred = _cluster_dist(res2, args.n_clusters)
+                dist_p = _cluster_dist(res3, args.n_clusters)
+
+                collapse_q = _collapse_flag(dist_q, n_nodes=int(dataset.num_nodes), n_clusters=int(args.n_clusters))
+                collapse_pred = _collapse_flag(dist_pred, n_nodes=int(dataset.num_nodes), n_clusters=int(args.n_clusters))
+                collapse_p = _collapse_flag(dist_p, n_nodes=int(dataset.num_nodes), n_clusters=int(args.n_clusters))
+
+                trace_record = {
+                    "epoch": int(epoch),
+                    "n_nodes": int(dataset.num_nodes),
+                    "n_clusters": int(args.n_clusters),
+                    "q": {**q_stats},
+                    "p": {**p_stats},
+                    "pred": {**pred_stats},
+                    "kl_p_q": kl_p_q,
+                    "kl_p_pred": kl_p_pred,
+                    "hard_q": dist_q,
+                    "hard_pred": dist_pred,
+                    "hard_p": dist_p,
+                    "collapse_q": bool(collapse_q),
+                    "collapse_pred": bool(collapse_pred),
+                    "collapse_p": bool(collapse_p),
+                }
+
                 if len(np.unique(y)) > 1: 
                     acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
                     acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
                     acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
 
                     results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
+                    trace_record["metrics"] = {
+                        "q": {"acc": float(acc1), "f1": float(f1_1), "nmi": float(nmi1), "ari": float(ari1)},
+                        "pred": {"acc": float(acc2), "f1": float(f1_2), "nmi": float(nmi2), "ari": float(ari2)},
+                        "p": {"acc": float(acc3), "f1": float(f1_3), "nmi": float(nmi3), "ari": float(ari3)},
+                    }
                 else:
                     # Without labels, only save clustering results without computing evaluation metrics
                     cluster_distribution = np.bincount(res2)
                     print(f"Epoch {epoch}, Cluster distribution: {cluster_distribution}")
                     results.append([epoch] + [0] * 12)  # Placeholder padding
+
+                _trace_write(trace_record)
             except Exception as e:
                 print(f"Epoch {epoch} Evaluation error: {str(e)}")
                  # ---> Ensure model returns to train mode even if eval fails <---
@@ -925,7 +1074,13 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
             ce_loss = F.kl_div(pred_safe.log(), p, reduction='batchmean')
             re_loss = F.mse_loss(x_bar, data)
  
-            loss = 1.0 * kl_loss + 0.1 * ce_loss + re_loss
+            kl_w_env = os.getenv("SDCN_KL_WEIGHT", "").strip()
+            ce_w_env = os.getenv("SDCN_CE_WEIGHT", "").strip()
+            re_w_env = os.getenv("SDCN_RE_WEIGHT", "").strip()
+            kl_w = float(kl_w_env) if kl_w_env else 1.0
+            ce_w = float(ce_w_env) if ce_w_env else 0.1
+            re_w = float(re_w_env) if re_w_env else 1.0
+            loss = kl_w * kl_loss + ce_w * ce_loss + re_w * re_loss
  
             optimizer.zero_grad()
             loss.backward()
@@ -936,6 +1091,9 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         except Exception as e:
             print(f"Epoch {epoch} Training error: {str(e)}")
             continue
+
+    if trace_f is not None:
+        trace_f.close()
     
     # ---> Use model.eval() and no_grad() for final inference <---
     model.eval()

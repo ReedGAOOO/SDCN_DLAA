@@ -10,6 +10,7 @@ For the full documentation, see:
 
 - **Deep edge-aware clustering (SDCN + DLAA)**: dual-level aggregation (node↔edge, edge↔edge) so edge semantics can influence node clustering.
 - **Variant-friendly SpatialConv**: `v1original`, `v2edge_single_layer` (default), `v3edge_cross_layers` via `SPATIALCONV_VARIANT` for ablation/verification.
+- **Edge message injection (optional)**: set `SDCN_EDGE_MESSAGE=1` to let `edge_attr` affect node updates as message content (not just attention weights), helpful when node features are weak.
 - **Experiment tooling**: `SDCN_SEED` / `SDCN_EPOCHS` and `tools/` scripts for conceptual/synthetic comparison.
 
 ## Repo Structure
@@ -59,6 +60,7 @@ Select at import-time via env var (default: `v2edge_single_layer`):
 export SPATIALCONV_VARIANT=v2edge_single_layer  # v1original | v2edge_single_layer | v3edge_cross_layers
 export SDCN_SEED=0                              # optional: reproducible runs
 export SDCN_EPOCHS=30                           # optional: override epochs
+export SDCN_EDGE_MESSAGE=1                      # optional: edge_attr as message content
 python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
 

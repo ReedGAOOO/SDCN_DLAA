@@ -43,6 +43,84 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx: sp.spmatrix) -> torch.Tensor:
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse_coo_tensor(indices, values, shape)
 
+def _pool_edge_attr_to_nodes_mean(adj_sp: sp.spmatrix, edge_attr: np.ndarray, n_nodes: int) -> np.ndarray:
+    adj = adj_sp.tocoo()
+    if edge_attr.shape[0] != adj.nnz:
+        raise ValueError(f"edge_attr rows ({edge_attr.shape[0]}) != adj.nnz ({adj.nnz})")
+    edge_dim = int(edge_attr.shape[1])
+
+    rows = adj.row.astype(np.int64, copy=False)
+    cols = adj.col.astype(np.int64, copy=False)
+
+    node_sum = np.zeros((n_nodes, edge_dim), dtype=np.float32)
+    node_cnt = np.zeros((n_nodes,), dtype=np.int64)
+
+    # Aggregate to both endpoints (undirected-style pooling).
+    np.add.at(node_sum, rows, edge_attr)
+    np.add.at(node_cnt, rows, 1)
+    np.add.at(node_sum, cols, edge_attr)
+    np.add.at(node_cnt, cols, 1)
+
+    denom = np.maximum(node_cnt, 1).astype(np.float32).reshape(-1, 1)
+    return (node_sum / denom).astype(np.float32)
+
+def _apply_edge_ablation(edge_attr: np.ndarray, mode: str, seed: int) -> np.ndarray:
+    mode = (mode or "none").strip().lower()
+    if mode in {"none", "off", "no", ""}:
+        return edge_attr
+
+    rng = np.random.default_rng(seed)
+
+    if mode in {"distance_only", "dist_only", "dist"}:
+        if edge_attr.shape[1] <= 1:
+            return edge_attr
+        out = edge_attr.copy()
+        out[:, 1:] = 0.0
+        return out
+
+    if mode in {"drop_to_distance", "drop_distance", "drop_dist"}:
+        return edge_attr[:, :1].copy()
+
+    if mode in {"shuffle_rows", "shuffle", "permute_edges"}:
+        perm = rng.permutation(edge_attr.shape[0])
+        return edge_attr[perm].copy()
+
+    if mode in {"zeros", "zero"}:
+        return np.zeros_like(edge_attr)
+
+    raise SystemExit(
+        f"Unknown --edge_ablation={mode!r}. "
+        "Use one of: none, distance_only, drop_to_distance, shuffle_rows, zeros."
+    )
+
+def _normalize_edge_attr(edge_attr: np.ndarray, mode: str, clip: float | None) -> np.ndarray:
+    mode = (mode or "none").strip().lower()
+    if mode in {"none", "off", "no", ""}:
+        return edge_attr
+
+    if mode in {"zscore", "z", "standardize"}:
+        mean = edge_attr.mean(axis=0, keepdims=True)
+        std = edge_attr.std(axis=0, keepdims=True)
+        std = np.where(std < 1e-6, 1.0, std)
+        return ((edge_attr - mean) / std).astype(np.float32)
+
+    if mode in {"zscore_clip", "z_clip", "standardize_clip"}:
+        mean = edge_attr.mean(axis=0, keepdims=True)
+        std = edge_attr.std(axis=0, keepdims=True)
+        std = np.where(std < 1e-6, 1.0, std)
+        out = (edge_attr - mean) / std
+        if clip is not None and float(clip) > 0:
+            out = np.clip(out, -float(clip), float(clip))
+        return out.astype(np.float32)
+
+    if mode in {"minmax", "mm"}:
+        mn = edge_attr.min(axis=0, keepdims=True)
+        mx = edge_attr.max(axis=0, keepdims=True)
+        denom = np.where((mx - mn) < 1e-6, 1.0, (mx - mn))
+        return ((edge_attr - mn) / denom).astype(np.float32)
+
+    raise SystemExit(f"Unknown --edge_attr_norm={mode!r}. Use one of: none, zscore, zscore_clip, minmax.")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -53,9 +131,34 @@ def main() -> None:
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--heads", type=int, default=1)
     parser.add_argument("--edge_dim", type=int, default=None, help="If omitted, inferred from edge_attr.npy")
+    parser.add_argument(
+        "--node_edge_pool",
+        type=str,
+        default="none",
+        help="Optional edge->node feature pooling: none | mean_concat | mean_replace",
+    )
+    parser.add_argument(
+        "--edge_ablation",
+        type=str,
+        default="none",
+        help="Optional edge feature ablation: none | distance_only | drop_to_distance | shuffle_rows | zeros",
+    )
+    parser.add_argument(
+        "--edge_attr_norm",
+        type=str,
+        default="none",
+        help="Edge feature normalization: none | zscore | zscore_clip | minmax",
+    )
+    parser.add_argument(
+        "--edge_attr_clip",
+        type=float,
+        default=5.0,
+        help="Clip threshold used by zscore_clip (applied after z-score).",
+    )
     parser.add_argument("--max_edges_per_node", type=int, default=10)
     parser.add_argument("--cpu", action="store_true")
     parser.add_argument("--summary_json", type=str, default="summary.json")
+    parser.add_argument("--trace_jsonl", type=str, default="", help="Optional per-epoch trace output path (JSONL).")
     args = parser.parse_args()
 
     x = np.load(os.path.join(args.data_dir, "node_features.npy")).astype(np.float32)
@@ -66,8 +169,29 @@ def main() -> None:
     if args.n_clusters is None:
         args.n_clusters = int(np.unique(y).size)
 
+    # Optional edge ablations / normalization (seeded from SDCN_SEED for reproducibility).
+    seed_env = os.getenv("SDCN_SEED")
+    ablation_seed = int(seed_env) if seed_env is not None and seed_env.strip() != "" else 0
+    edge_attr_np = _apply_edge_ablation(edge_attr_np, args.edge_ablation, seed=ablation_seed)
+    edge_attr_np = _normalize_edge_attr(edge_attr_np, args.edge_attr_norm, clip=args.edge_attr_clip)
+
+    # Optional node feature augmentation from edge attributes (to help AE/q capture edge-only signal).
+    pool_mode = (args.node_edge_pool or "none").strip().lower()
+    if pool_mode not in {"none", "mean_concat", "mean_replace"}:
+        raise SystemExit(f"Unknown --node_edge_pool={pool_mode!r}. Use one of: none, mean_concat, mean_replace.")
+
+    if pool_mode != "none":
+        pooled = _pool_edge_attr_to_nodes_mean(adj_sp, edge_attr_np, n_nodes=int(x.shape[0]))
+        if pool_mode == "mean_replace":
+            x = pooled
+        else:
+            x = np.concatenate([x, pooled], axis=1).astype(np.float32)
+
     if args.edge_dim is None:
         args.edge_dim = int(edge_attr_np.shape[1])
+    else:
+        if int(args.edge_dim) != int(edge_attr_np.shape[1]):
+            raise SystemExit(f"--edge_dim={args.edge_dim} mismatches edge_attr shape {edge_attr_np.shape}")
 
     dataset = NumpyDataset(x=x, y=y)
 
@@ -87,9 +211,31 @@ def main() -> None:
 
     summary = {
         "data_dir": os.path.abspath(args.data_dir),
+        "spatialconv_variant": os.getenv("SPATIALCONV_VARIANT", "").strip(),
+        "sdcn_sigma": os.getenv("SDCN_SIGMA", "").strip(),
+        "sdcn_q_source": os.getenv("SDCN_Q_SOURCE", "").strip(),
+        "sdcn_enc_dims": os.getenv("SDCN_ENC_DIMS", "").strip(),
+        "sdcn_pretrain_epochs": os.getenv("SDCN_PRETRAIN_EPOCHS", "").strip(),
+        "sdcn_pretrain_lr": os.getenv("SDCN_PRETRAIN_LR", "").strip(),
+        "hparams": {
+            "lr": float(args.lr),
+            "dropout": float(args.dropout),
+            "heads": int(args.heads),
+            "n_z": int(args.n_z),
+            "max_edges_per_node": int(args.max_edges_per_node),
+            "node_edge_pool": str(args.node_edge_pool),
+            "edge_ablation": str(args.edge_ablation),
+            "edge_attr_norm": str(args.edge_attr_norm),
+            "edge_attr_clip": float(args.edge_attr_clip),
+        },
         "n_clusters": int(args.n_clusters),
         "n_nodes": int(dataset.num_nodes),
         "edge_dim": int(args.edge_dim),
+        "edge_ablation": str(args.edge_ablation),
+        "edge_ablation_seed": int(ablation_seed),
+        "edge_attr_norm": str(args.edge_attr_norm),
+        "edge_attr_clip": float(args.edge_attr_clip),
+        "trace_jsonl": os.path.abspath(args.trace_jsonl) if args.trace_jsonl.strip() else "",
         "metrics": {
             "acc": float(final_acc),
             "f1": float(final_f1),

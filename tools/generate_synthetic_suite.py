@@ -381,6 +381,71 @@ def _make_edge_attr_rich_multirelation(
     return edge_attr.astype(np.float32), extra
 
 
+def _make_edge_attr_rich_semantic_only(
+    rng: np.random.Generator,
+    coords: np.ndarray,
+    rows: np.ndarray,
+    cols: np.ndarray,
+    labels: np.ndarray,
+    edge_dim: int,
+) -> tuple[np.ndarray, dict]:
+    """
+    Rich edge features where *distance is not predictive*, but semantic channels are.
+
+    Intended to stress-test edge-aware models against distance-based baselines:
+    - Labels are decoupled from geometry.
+    - Graph is built from KNN in coordinate space.
+    - Edge attributes carry semantic signals correlated with true labels.
+
+    Channels (starting):
+    - dist_norm (still present, but not label-predictive by design)
+    - same_cluster (0/1)
+    - relation type one-hot (n_clusters) for within-cluster edges; random for cross-cluster edges
+    - strength (noisy, higher when same_cluster)
+    Remaining dims are noise.
+    """
+    n_clusters = int(np.unique(labels).size)
+
+    d = _pairwise_dist_for_edges(coords, rows, cols)
+    d_norm = _minmax(d)
+
+    same = (labels[rows] == labels[cols]).astype(np.float32)
+
+    # For within-cluster edges: relation_type = cluster id; for cross: random type.
+    rel = np.zeros(rows.shape[0], dtype=np.int64)
+    for i in range(rows.shape[0]):
+        if same[i] > 0.5:
+            rel[i] = int(labels[rows[i]])
+        else:
+            rel[i] = int(rng.integers(low=0, high=max(n_clusters, 1)))
+    rel_onehot = np.eye(n_clusters, dtype=np.float32)[rel] if n_clusters > 0 else np.zeros((rows.shape[0], 0), dtype=np.float32)
+
+    strength = (0.6 * same + 0.4 * rng.random(size=rows.shape[0]).astype(np.float32)).astype(np.float32)
+
+    base_mat = np.concatenate(
+        [
+            d_norm.reshape(-1, 1).astype(np.float32),
+            same.reshape(-1, 1),
+            rel_onehot.astype(np.float32),
+            strength.reshape(-1, 1),
+        ],
+        axis=1,
+    )
+
+    if edge_dim <= base_mat.shape[1]:
+        edge_attr = base_mat[:, :edge_dim].astype(np.float32)
+    else:
+        edge_attr = np.zeros((rows.shape[0], edge_dim), dtype=np.float32)
+        edge_attr[:, : base_mat.shape[1]] = base_mat
+        edge_attr[:, base_mat.shape[1] :] = rng.normal(loc=0.0, scale=0.05, size=(rows.shape[0], edge_dim - base_mat.shape[1])).astype(np.float32)
+
+    extra = {
+        "n_clusters": n_clusters,
+        "same_edge_frac": float(same.mean()) if same.size else 0.0,
+    }
+    return edge_attr.astype(np.float32), extra
+
+
 def _save_dataset(
     output_dir: str,
     *,
@@ -500,6 +565,24 @@ def _preset_rich_multirelation(seed: int) -> tuple[np.ndarray, np.ndarray, np.nd
     return coords, labels, x, {"points_per_cluster": points_per, "note": "multi-relation rich edge attrs"}
 
 
+def _preset_rich_edge_semantic_only(seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    """
+    Labels are decoupled from geometry; edge_attr contains semantic signal.
+    """
+    rng = np.random.default_rng(seed)
+    n_clusters = 3
+    points_per = 60
+
+    labels = np.repeat(np.arange(n_clusters, dtype=np.int64), points_per)
+    labels = labels[rng.permutation(labels.shape[0])]
+
+    # Single cloud: coords not predictive of labels.
+    coords = rng.normal(loc=0.0, scale=1.0, size=(labels.shape[0], 2)).astype(np.float32)
+
+    # Node features are weak/uninformative.
+    x = _make_node_features(rng, labels, coords, feature_dim=6, cluster_bias=0.0, coord_proj_scale=0.0, noise_scale=1.0)
+    return coords, labels, x, {"points_per_cluster": points_per, "note": "geometry uninformative; edge_attr carries semantic signal"}
+
 PresetFn = Callable[[int], tuple[np.ndarray, np.ndarray, np.ndarray, dict]]
 
 
@@ -512,6 +595,7 @@ PRESETS: dict[str, dict] = {
     "rich_edge_profiles": {"category": "rich_edge", "fn": _preset_rich_edge_profiles, "edge_dim": 16, "knn_k": 10},
     "rich_geo_temporal": {"category": "rich_edge", "fn": _preset_rich_geo_temporal, "edge_dim": 12, "knn_k": 10},
     "rich_multirelation": {"category": "rich_edge", "fn": _preset_rich_multirelation, "edge_dim": 20, "knn_k": 10},
+    "rich_edge_semantic_only": {"category": "rich_edge", "fn": _preset_rich_edge_semantic_only, "edge_dim": 16, "knn_k": 10},
 }
 
 
@@ -581,6 +665,9 @@ def main() -> None:
             elif name == "rich_multirelation":
                 edge_attr, extra_edge = _make_edge_attr_rich_multirelation(rng, coords, rows, cols, labels, edge_dim=edge_dim)
                 extra = {**extra, **extra_edge, "edge_attr": "multi_relation"}
+            elif name == "rich_edge_semantic_only":
+                edge_attr, extra_edge = _make_edge_attr_rich_semantic_only(rng, coords, rows, cols, labels, edge_dim=edge_dim)
+                extra = {**extra, **extra_edge, "edge_attr": "semantic_only"}
             else:
                 edge_attr = _make_edge_attr_rich_profiles(rng, coords, rows, cols, labels, edge_dim=edge_dim)
                 extra = {**extra, "edge_attr": "profiles_plus_noise"}

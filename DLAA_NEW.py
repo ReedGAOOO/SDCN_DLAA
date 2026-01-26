@@ -16,6 +16,9 @@ from torch_geometric.nn import GATConv
 from torch_geometric.utils import softmax
 
 
+_UNSET = object()
+
+
 class GATLayer(nn.Module):
     """Graph Attention Network Layer
     
@@ -86,8 +89,18 @@ class SGATLayer(nn.Module):
         activation (callable): Activation function
         edge_dim (int): Dimensionality of edge features (required for attention)
     """
-    def __init__(self, in_channels, out_channels, heads=4, dropout=0.2, 
-                 negative_slope=0.2, combine='mean', activation=F.relu, edge_dim=None):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        heads=4,
+        dropout=0.2,
+        negative_slope=0.2,
+        combine='mean',
+        activation=F.relu,
+        edge_dim=None,
+        edge_message: bool | None = None,
+    ):
         super(SGATLayer, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -95,6 +108,9 @@ class SGATLayer(nn.Module):
         self.combine = combine
         self.activation = activation
         self.dropout = dropout
+        if edge_message is None:
+            edge_message = os.getenv("SDCN_EDGE_MESSAGE", "").strip().lower() in {"1", "true", "yes", "y", "on"}
+        self.edge_message = bool(edge_message)
         
         # Directly use PyG's GATConv and specify edge_dim
         # concat=True means the output shape is [num_nodes, heads * out_channels]
@@ -108,6 +124,16 @@ class SGATLayer(nn.Module):
             edge_dim=edge_dim,   # Key: Specify edge feature dimension
             concat=True
         )
+
+        self.edge_msg_lin = None
+        self.edge_msg_scale = None
+        if self.edge_message:
+            if edge_dim is None:
+                raise ValueError("edge_message=True requires edge_dim to be set")
+            if self.combine not in {"mean", "max", "dense"}:
+                raise ValueError(f"edge_message=True currently supports combine in {{mean,max,dense}}, got: {self.combine!r}")
+            self.edge_msg_lin = nn.Linear(int(edge_dim), out_channels, bias=False)
+            self.edge_msg_scale = nn.Parameter(torch.tensor(1.0))
         
         # If combine == 'dense', add a linear layer to map heads*out_channels -> out_channels
         if self.combine == 'dense':
@@ -151,6 +177,19 @@ class SGATLayer(nn.Module):
         else:
             # Default: do nothing, keep shape [N, heads*out_channels]
             pass
+
+        if self.edge_message and edge_attr is not None:
+            if self.edge_msg_lin is None or self.edge_msg_scale is None:
+                raise RuntimeError("edge_message is enabled but edge_msg_lin/edge_msg_scale is not initialized")
+            dst = edge_index[1]
+            edge_msg = self.edge_msg_lin(edge_attr)  # [E, out_channels]
+            node_sum = torch.zeros((x.size(0), self.out_channels), device=x.device, dtype=edge_msg.dtype)
+            node_sum.index_add_(0, dst, edge_msg)
+            node_cnt = torch.zeros((x.size(0), 1), device=x.device, dtype=edge_msg.dtype)
+            ones = torch.ones((edge_msg.size(0), 1), device=x.device, dtype=edge_msg.dtype)
+            node_cnt.index_add_(0, dst, ones)
+            node_mean = node_sum / node_cnt.clamp(min=1.0)
+            out = out + self.edge_msg_scale * node_mean
         
         # Add bias and apply activation
         out = out + self.bias
@@ -169,10 +208,11 @@ class SpatialConvV1Original(nn.Module):
         dropout (float): Dropout probability
         heads (int): Number of attention heads
     """
-    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4):
+    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4, activation=F.relu, out_activation=_UNSET):
         super().__init__()
         self.hidden_size = hidden_size
         self.edge_dim = edge_dim if edge_dim is not None else hidden_size
+        out_activation = activation if out_activation is _UNSET else out_activation
         
         # Add edge dimension projection if needed
         self.edge_dim_proj = None
@@ -188,7 +228,8 @@ class SpatialConvV1Original(nn.Module):
             hidden_size, 
             hidden_size, 
             heads=heads, 
-            dropout=dropout
+            dropout=dropout,
+            activation=activation,
         )
         
         self.en_gat = SGATLayer(
@@ -196,7 +237,9 @@ class SpatialConvV1Original(nn.Module):
             hidden_size, 
             heads=heads, 
             dropout=dropout,
-            combine='mean'
+            combine='mean',
+            edge_dim=hidden_size,
+            activation=out_activation,
         )
         
     def forward(self, data):
@@ -273,10 +316,11 @@ class SpatialConvV2EdgeSingleLayer(nn.Module):
     - Ensures dist_feat actually participates in node attention via `edge_dim`.
     - Avoids passing edge rows through node update to prevent washing edge features.
     """
-    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4):
+    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4, activation=F.relu, out_activation=_UNSET):
         super().__init__()
         self.hidden_size = hidden_size
         self.edge_dim = edge_dim if edge_dim is not None else hidden_size
+        out_activation = activation if out_activation is _UNSET else out_activation
 
         self.edge_dim_proj = None
         if self.edge_dim != hidden_size:
@@ -285,7 +329,7 @@ class SpatialConvV2EdgeSingleLayer(nn.Module):
         # edge init: [x_src, x_dst, dist_feat_order] -> edge_feat
         self.edge_fc = nn.Linear(hidden_size * 3, hidden_size)
 
-        self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout)
+        self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout, activation=activation)
 
         # Ensure dist_feat participates in attention
         self.en_gat = SGATLayer(
@@ -295,6 +339,7 @@ class SpatialConvV2EdgeSingleLayer(nn.Module):
             dropout=dropout,
             combine='mean',
             edge_dim=hidden_size,
+            activation=out_activation,
         )
 
     def forward(self, data):
@@ -341,10 +386,11 @@ class SpatialConvV3EdgeCrossLayers(nn.Module):
     - Updates edges via edge-edge graph (ee_gat) on edges only.
     - Updates nodes via SGATLayer using the updated edge embeddings as `edge_attr`.
     """
-    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4):
+    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4, activation=F.relu, out_activation=_UNSET):
         super().__init__()
         self.hidden_size = hidden_size
         self.edge_dim = edge_dim if edge_dim is not None else hidden_size
+        out_activation = activation if out_activation is _UNSET else out_activation
 
         self.edge_dim_proj = None
         if self.edge_dim != hidden_size:
@@ -352,7 +398,7 @@ class SpatialConvV3EdgeCrossLayers(nn.Module):
 
         self.edge_fc = nn.Linear(hidden_size * 3, hidden_size)
 
-        self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout)
+        self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout, activation=activation)
 
         self.en_gat = SGATLayer(
             hidden_size,
@@ -361,6 +407,7 @@ class SpatialConvV3EdgeCrossLayers(nn.Module):
             dropout=dropout,
             combine='mean',
             edge_dim=hidden_size,
+            activation=out_activation,
         )
 
     def forward(self, data):

@@ -56,6 +56,7 @@ def main() -> None:
 
             cmd = [
                 sys.executable,
+                "-B",
                 str(TEST_SCRIPT),
                 "--data_dir",
                 os.path.abspath(args.data_dir),
@@ -96,4 +97,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
