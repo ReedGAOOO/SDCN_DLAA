@@ -84,12 +84,13 @@ def _weighted_adj_from_edge_distance(adj: sp.csr_matrix, edge_attr: np.ndarray, 
     Build a weighted adjacency by transforming edge_attr[:,0] (treated as distance-like).
     Weight = exp(-gamma * dist_norm).
     """
-    adj = adj.tocsr()
-    rows, cols = adj.nonzero()
-    if edge_attr.shape[0] != rows.shape[0]:
+    adj_coo = adj.tocoo()
+    rows = adj_coo.row
+    cols = adj_coo.col
+    if edge_attr.shape[0] != adj_coo.nnz:
         raise ValueError(
             f"edge_attr row count mismatch: edge_attr has {edge_attr.shape[0]}, "
-            f"but adjacency has {rows.shape[0]} nonzeros"
+            f"but adjacency has {adj_coo.nnz} nonzeros"
         )
     dist = edge_attr[:, 0].astype(np.float32).reshape(-1)
     dist_norm = _minmax(dist)
@@ -154,4 +155,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
