@@ -129,6 +129,60 @@
 脚本将加载指定目录中的数据，训练模型，并在日志文件（位于 `logs/` 目录下，文件名包含时间戳和方法名）和控制台中输出训练过程和聚类结果。
 
 
+## SpatialConv 版本 (v1/v2/v3)
+
+本仓库提供三种 `SpatialConv` 实现用于消融/验证。版本在 `DLAA_NEW.py` 中通过环境变量在 import 时选择（默认：`v2edge_single_layer`）。
+
+### 运行方式
+
+```bash
+# 选择 SpatialConv 版本（默认：v2edge_single_layer）
+export SPATIALCONV_VARIANT=v2edge_single_layer
+
+# 可选：复现实验 / 缩短实验时间
+export SDCN_SEED=0
+export SDCN_EPOCHS=30
+
+python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
+```
+
+### 结构差异
+
+*   **v1original**: 旧版信息流。先做 edge init，再在拼接后的 `[nodes; edges]` 上做 edge-edge 更新，并把拼接后的张量一起送入 node update。由于 `SGATLayer` 未显式设置 `edge_dim`，在 PyG 的 `GATConv` 中 `dist_feat` 可能不会真正参与注意力（基线对照）。
+*   **v2edge_single_layer**: 小改动修复。保留旧版 edge init + edge-edge 更新的信息流，但为 `SGATLayer` 明确 `edge_dim` 以确保 `dist_feat` 参与注意力；node update 时只更新节点部分，避免 edge 行在 node-node 图里变成“孤立点”被洗掉。边信息主要通过当前层的 `dist_feat` 影响节点聚合。
+*   **v3edge_cross_layers**: 跨层边信息流。先在 edge 图上更新 edge embedding，再将更新后的 edge embedding 作为 `edge_attr` 参与 node attention，使 edge-edge 上下文影响节点表示，并随层堆叠向更深层传播。
+
+### 概念数据对比（Synthetic）
+
+*   **数据生成**: `tools/generate_conceptual_data.py`
+*   **对比脚本**: `tools/compare_spatialconv_variants.py`（每个 variant/seed 以子进程方式单独运行，产出每次的 `summary.json` + `run.log`，以及总体 `aggregate.json`）
+
+```bash
+python tools/generate_conceptual_data.py --output_dir /tmp/sdcn_dlaa_concept_data --seed 0
+python tools/compare_spatialconv_variants.py \
+  --data_dir /tmp/sdcn_dlaa_concept_data \
+  --out_dir /tmp/sdcn_dlaa_variant_compare \
+  --seeds 0,1,2 \
+  --epochs 30 \
+  --variants v1original,v2edge_single_layer,v3edge_cross_layers \
+  --heads 1
+```
+
+**示例结果**（dataset seed=0, epochs=30, heads=1, max_edges_per_node=10）：
+
+| variant | seed | acc | nmi | ari | f1 | cluster_distribution |
+|---|---:|---:|---:|---:|---:|---|
+| v1original | 0 | 0.3444 | 0.0210 | -0.0001 | 0.1899 | {0:1, 1:1, 2:178} |
+| v1original | 1 | 0.3444 | 0.0210 | -0.0001 | 0.1899 | {0:178, 1:1, 2:1} |
+| v1original | 2 | 0.3667 | 0.0094 | -0.0042 | 0.3004 | {0:83, 1:96, 2:1} |
+| v2edge_single_layer | 0 | 0.3944 | 0.0355 | 0.0064 | 0.3066 | {0:150, 1:2, 2:28} |
+| v2edge_single_layer | 1 | 0.3500 | 0.0111 | -0.0011 | 0.2246 | {0:1, 1:167, 2:12} |
+| v2edge_single_layer | 2 | 0.3778 | 0.0285 | 0.0047 | 0.2733 | {0:154, 1:25, 2:1} |
+| v3edge_cross_layers | 0 | 0.3444 | 0.0210 | -0.0001 | 0.1899 | {0:178, 1:1, 2:1} |
+| v3edge_cross_layers | 1 | 0.3444 | 0.0210 | -0.0001 | 0.1899 | {0:178, 1:1, 2:1} |
+| v3edge_cross_layers | 2 | 0.5556 | 0.2195 | 0.1993 | 0.5254 | {0:51, 1:36, 2:93} |
+
+
 ## EXP TEST CODE
 
 本部分介绍用于实验性测试和分析的代码变体，主要用于解决使用稠密图作为输入时导致的OOM问题。

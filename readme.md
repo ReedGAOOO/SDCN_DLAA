@@ -129,6 +129,59 @@ Run the corresponding test script via the command line. Both scripts accept a ke
 
 The script will load data from the specified directory, train the model, and output the training process and clustering results to a log file (located in the `logs/` directory, filename includes timestamp and method name) and the console.
 
+## SpatialConv Variants (v1/v2/v3)
+
+This repo provides three `SpatialConv` implementations for ablation/verification. The active version is selected at import-time via an environment variable in `DLAA_NEW.py`.
+
+### How to Run
+
+```bash
+# Select SpatialConv version (default: v2edge_single_layer)
+export SPATIALCONV_VARIANT=v2edge_single_layer
+
+# Optional: make runs reproducible / faster for experiments
+export SDCN_SEED=0
+export SDCN_EPOCHS=30
+
+python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
+```
+
+### Structural Differences
+
+*   **v1original**: Legacy info flow. Performs edge init + edge-edge update on the concatenated `[nodes; edges]` tensor and feeds the concatenated tensor into node update. `SGATLayer` is constructed without `edge_dim`, so `dist_feat` may not actually participate in `GATConv` attention in PyG (baseline / for comparison).
+*   **v2edge_single_layer**: Minimal fix. Keeps the legacy edge init + edge-edge update flow, but sets `edge_dim` so `dist_feat` is used in attention, and only updates **nodes** in the node update step (avoids washing edge rows). Edge information influences node aggregation mainly via `dist_feat` in the current layer.
+*   **v3edge_cross_layers**: Edge-aware node update. Updates edge embeddings on the edge graph and uses the updated edge embeddings as `edge_attr` in node attention, so edge-edge context influences node embeddings; the effect then propagates across layers via the node representations.
+
+### Conceptual Benchmark (Synthetic)
+
+*   **Dataset generator**: `tools/generate_conceptual_data.py`
+*   **Comparison runner**: `tools/compare_spatialconv_variants.py` (runs each variant in an isolated subprocess and writes `summary.json` + `run.log` per run, plus `aggregate.json`)
+
+```bash
+python tools/generate_conceptual_data.py --output_dir /tmp/sdcn_dlaa_concept_data --seed 0
+python tools/compare_spatialconv_variants.py \
+  --data_dir /tmp/sdcn_dlaa_concept_data \
+  --out_dir /tmp/sdcn_dlaa_variant_compare \
+  --seeds 0,1,2 \
+  --epochs 30 \
+  --variants v1original,v2edge_single_layer,v3edge_cross_layers \
+  --heads 1
+```
+
+**Example results** (dataset seed=0, epochs=30, heads=1, max_edges_per_node=10):
+
+| variant | seed | acc | nmi | ari | f1 | cluster_distribution |
+|---|---:|---:|---:|---:|---:|---|
+| v1original | 0 | 0.3444 | 0.0210 | -0.0001 | 0.1899 | {0:1, 1:1, 2:178} |
+| v1original | 1 | 0.3444 | 0.0210 | -0.0001 | 0.1899 | {0:178, 1:1, 2:1} |
+| v1original | 2 | 0.3667 | 0.0094 | -0.0042 | 0.3004 | {0:83, 1:96, 2:1} |
+| v2edge_single_layer | 0 | 0.3944 | 0.0355 | 0.0064 | 0.3066 | {0:150, 1:2, 2:28} |
+| v2edge_single_layer | 1 | 0.3500 | 0.0111 | -0.0011 | 0.2246 | {0:1, 1:167, 2:12} |
+| v2edge_single_layer | 2 | 0.3778 | 0.0285 | 0.0047 | 0.2733 | {0:154, 1:25, 2:1} |
+| v3edge_cross_layers | 0 | 0.3444 | 0.0210 | -0.0001 | 0.1899 | {0:178, 1:1, 2:1} |
+| v3edge_cross_layers | 1 | 0.3444 | 0.0210 | -0.0001 | 0.1899 | {0:178, 1:1, 2:1} |
+| v3edge_cross_layers | 2 | 0.5556 | 0.2195 | 0.1993 | 0.5254 | {0:51, 1:36, 2:93} |
+
 
 ## EXPERIMENTAL TEST CODE
 
