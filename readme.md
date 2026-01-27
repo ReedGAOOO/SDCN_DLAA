@@ -9,7 +9,7 @@ For the full documentation, see:
 ## Highlights (Simplified Innovation)
 
 - **Deep edge-aware clustering (SDCN + DLAA)**: dual-level aggregation (node↔edge, edge↔edge) so edge semantics can influence node clustering.
-- **Variant-friendly SpatialConv**: `v1original`, `v2edge_single_layer` (default), `v3edge_cross_layers`, `v4edge_pool_fusion` via `SPATIALCONV_VARIANT` for ablation/verification.
+- **Variant-friendly SpatialConv**: `v1original`, `v2edge_single_layer` (default), `v3edge_cross_layers`, `v4edge_pool_fusion`, `v5edge_pool_residual` via `SPATIALCONV_VARIANT` for ablation/verification.
 - **Edge message injection (optional)**: set `SDCN_EDGE_MESSAGE=1` to let `edge_attr` affect node updates as message content (not just attention weights), helpful when node features are weak.
 - **Experiment tooling**: `SDCN_SEED` / `SDCN_EPOCHS` and `tools/` scripts for conceptual/synthetic comparison.
 
@@ -57,7 +57,7 @@ Common knobs:
 Select at import-time via env var (default: `v2edge_single_layer`):
 
 ```bash
-export SPATIALCONV_VARIANT=v2edge_single_layer  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion
+export SPATIALCONV_VARIANT=v2edge_single_layer  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual
 export SDCN_FINAL_ASSIGN=pred                 # pred | q | p (choose which head to output as final clusters)
 export SDCN_SEED=0                              # optional: reproducible runs
 export SDCN_EPOCHS=30                           # optional: override epochs
@@ -86,7 +86,7 @@ python tools/compare_spatialconv_variants.py \
   --out_dir /tmp/sdcn_dlaa_variant_compare \
   --seeds 0,1,2 \
   --epochs 30 \
-  --variants v1original,v2edge_single_layer,v3edge_cross_layers,v4edge_pool_fusion \
+  --variants v1original,v2edge_single_layer,v3edge_cross_layers,v4edge_pool_fusion,v5edge_pool_residual \
   --heads 1
 ```
 
