@@ -9,9 +9,18 @@ SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 
 ## 项目亮点（创新点简述）
 
 - **边信息融入聚类（SDCN + DLAA）**：通过双层聚合（节点↔边、边↔边）让边语义影响节点表示与聚类。
-- **可切换的 SpatialConv 版本**：`v1original`、`v2edge_single_layer`（默认）、`v3edge_cross_layers`、`v4edge_pool_fusion`、`v5edge_pool_residual`，用 `SPATIALCONV_VARIANT` 方便做消融/对比。
+- **可切换的 SpatialConv 版本**：`v1original`、`v2edge_single_layer`、`v3edge_cross_layers`、`v4edge_pool_fusion`、`v5edge_pool_residual`（默认），用 `SPATIALCONV_VARIANT` 方便做消融/对比。
 - **可选 edge message 注入**：设置 `SDCN_EDGE_MESSAGE=1`，让 `edge_attr` 以“消息内容”参与节点更新（不仅是调注意力权重），适合 node_features 很弱的场景。
 - **实验辅助工具**：`SDCN_SEED` / `SDCN_EPOCHS` + `tools/` 的概念/合成数据对比脚本。
+
+## 推荐默认配置（截至 2026-01-27）
+
+- 默认版本：**`v5edge_pool_residual`**（在 edge 语义主导的合成数据上可稳定超过强 baseline，详见 `reports/realistic_synthetic_ablation_zh.md`）。
+- 对“边信息驱动聚类”的常用组合：
+  - `SDCN_Q_SOURCE=h4`
+  - `SDCN_EDGE_MESSAGE=1`
+  - `SDCN_FINAL_ASSIGN=p`
+  - profile 类边特征建议加 `--edge_attr_norm zscore_clip`（在 `tools/test_conceptual_data.py` / `tools/sweep_stability.py` 中设置）
 
 ## 目录结构
 
@@ -54,11 +63,12 @@ python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
 
 ## SpatialConv 三个版本（v1/v2/v3）
 
-通过环境变量在 import 时选择（默认：`v2edge_single_layer`）：
+通过环境变量在 import 时选择（默认：`v5edge_pool_residual`）：
 
 ```bash
-export SPATIALCONV_VARIANT=v2edge_single_layer  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual
-export SDCN_FINAL_ASSIGN=pred                 # pred | q | p（选择最终聚类输出来自哪个头）
+export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual
+export SDCN_Q_SOURCE=h4                          # z | h4 | fused
+export SDCN_FINAL_ASSIGN=p                       # pred | q | p（选择最终聚类输出来自哪个头）
 export SDCN_SEED=0                              # 可选：复现实验
 export SDCN_EPOCHS=30                           # 可选：覆盖训练轮数
 export SDCN_EDGE_MESSAGE=1                      # 可选：edge_attr 作为消息内容注入
@@ -69,6 +79,8 @@ python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --h
 - `v1original`: 旧版基线。
 - `v2edge_single_layer`: 小改动修复（保证边特征进注意力，避免 edge 行被“洗掉”）。
 - `v3edge_cross_layers`: 将更新后的 edge embedding 作为 `edge_attr` 参与 node attention。
+- `v4edge_pool_fusion`: 在 v3 基础上加入显式的 edge→node pooling residual（带门控）。
+- `v5edge_pool_residual`: 延续 v2 思路（node attention 用 raw edge），同时加入 edge→node pooling residual；在 edge 语义主导任务上更鲁棒。
 
 ## 其他运行方式
 

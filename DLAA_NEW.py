@@ -688,7 +688,7 @@ class SpatialConvV5EdgePoolResidual(nn.Module):
         return torch.cat([node_out, edge_feat_1], dim=0)
 
 
-_DEFAULT_SPATIALCONV_VARIANT = "v2edge_single_layer"
+_DEFAULT_SPATIALCONV_VARIANT = "v5edge_pool_residual"
 SPATIALCONV_VARIANT_SELECTED = os.getenv("SPATIALCONV_VARIANT", _DEFAULT_SPATIALCONV_VARIANT).strip().lower()
 
 if SPATIALCONV_VARIANT_SELECTED in {
