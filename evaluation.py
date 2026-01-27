@@ -7,60 +7,42 @@ from sklearn import metrics
 
 
 def cluster_acc(y_true, y_pred):
-    y_true = y_true - np.min(y_true)
+    """
+    Clustering accuracy via optimal assignment (Hungarian).
 
-    l1 = list(set(y_true))
-    numclass1 = len(l1)
+    Unlike the original implementation, this is robust to a mismatch between the number of
+    unique labels in y_true vs y_pred (e.g., collapse to fewer clusters).
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    if y_true.size == 0:
+        return 0.0, 0.0
+    if y_true.shape[0] != y_pred.shape[0]:
+        raise ValueError(f"y_true and y_pred size mismatch: {y_true.shape} vs {y_pred.shape}")
 
-    l2 = list(set(y_pred))
-    numclass2 = len(l2)
+    # Relabel to contiguous ids starting at 0 for a compact confusion matrix.
+    _, y_true_ids = np.unique(y_true, return_inverse=True)
+    _, y_pred_ids = np.unique(y_pred, return_inverse=True)
 
-    ind = 0
-    if numclass1 != numclass2:
-        for i in l1:
-            if i in l2:
-                pass
-            else:
-                y_pred[ind] = i
-                ind += 1
+    n_true = int(y_true_ids.max()) + 1
+    n_pred = int(y_pred_ids.max()) + 1
+    dim = int(max(n_true, n_pred))
 
-    l2 = list(set(y_pred))
-    numclass2 = len(l2)
+    w = np.zeros((dim, dim), dtype=np.int64)
+    for i in range(y_true_ids.size):
+        w[y_pred_ids[i], y_true_ids[i]] += 1
 
-    if numclass1 != numclass2:
-        print('error')
-        return
+    # Maximize agreement => minimize (max - w).
+    row_ind, col_ind = linear(w.max() - w)
+    mapping = {int(r): int(c) for r, c in zip(row_ind, col_ind) if int(r) < n_pred and int(c) < n_true}
 
-    cost = np.zeros((numclass1, numclass2), dtype=int)
-    for i, c1 in enumerate(l1):
-        mps = [i1 for i1, e1 in enumerate(y_true) if e1 == c1]
-        for j, c2 in enumerate(l2):
-            mps_d = [i1 for i1 in mps if y_pred[i1] == c2]
-            cost[i][j] = len(mps_d)
+    mapped = np.zeros_like(y_pred_ids)
+    for r in range(n_pred):
+        mapped[y_pred_ids == r] = mapping.get(r, 0)
 
-    # match two clustering results by Munkres algorithm
-    m = Munkres()
-    cost = cost.__neg__().tolist()
-    indexes = m.compute(cost)
-
-    # get the match results
-    new_predict = np.zeros(len(y_pred))
-    for i, c in enumerate(l1):
-        # correponding label in l2:
-        c2 = l2[indexes[i][1]]
-
-        # ai is the index with label==c2 in the pred_label list
-        ai = [ind for ind, elm in enumerate(y_pred) if elm == c2]
-        new_predict[ai] = c
-
-    acc = metrics.accuracy_score(y_true, new_predict)
-    f1_macro = metrics.f1_score(y_true, new_predict, average='macro')
-    precision_macro = metrics.precision_score(y_true, new_predict, average='macro')
-    recall_macro = metrics.recall_score(y_true, new_predict, average='macro')
-    f1_micro = metrics.f1_score(y_true, new_predict, average='micro')
-    precision_micro = metrics.precision_score(y_true, new_predict, average='micro')
-    recall_micro = metrics.recall_score(y_true, new_predict, average='micro')
-    return acc, f1_macro
+    acc = metrics.accuracy_score(y_true_ids, mapped)
+    f1_macro = metrics.f1_score(y_true_ids, mapped, average='macro')
+    return float(acc), float(f1_macro)
 
 
 def eva(y_true, y_pred, epoch=0):

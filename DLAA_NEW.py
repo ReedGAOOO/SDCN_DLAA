@@ -439,6 +439,109 @@ class SpatialConvV3EdgeCrossLayers(nn.Module):
         return torch.cat([node_feat_1, edge_feat_1], dim=0)
 
 
+class SpatialConvV4EdgePoolFusion(nn.Module):
+    """
+    Edge-pool fusion SpatialConv variant:
+    - Treats raw edge features as a first-class signal (similar to strong pooling baselines).
+    - Updates edges via edge-edge graph (ee_gat) on edges only.
+    - Updates nodes via SGAT attention with updated edge embeddings.
+    - Adds an explicit edge->node mean-pooling residual (gated) to ensure edge semantics
+      can directly shape node embeddings for clustering.
+    """
+
+    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4, activation=F.relu, out_activation=_UNSET):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.edge_dim = edge_dim if edge_dim is not None else hidden_size
+        self.out_activation = activation if out_activation is _UNSET else out_activation
+
+        self.edge_dim_proj = None
+        if self.edge_dim != hidden_size:
+            self.edge_dim_proj = nn.Linear(self.edge_dim, hidden_size)
+            # Stable init: pad/truncate identity so raw edge channels survive early training.
+            with torch.no_grad():
+                self.edge_dim_proj.weight.zero_()
+                self.edge_dim_proj.bias.zero_()
+                m = min(int(self.edge_dim), int(hidden_size))
+                self.edge_dim_proj.weight[:m, :m].copy_(torch.eye(m, device=self.edge_dim_proj.weight.device))
+
+        # Edge init: combine raw edge features with optional node-pair context.
+        self.edge_from_dist = nn.Linear(hidden_size, hidden_size)
+        self.edge_from_nodes = nn.Linear(hidden_size * 2, hidden_size)
+
+        self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout, activation=activation)
+
+        # Node update (no activation here; apply once after fusion for stability).
+        self.en_gat = SGATLayer(
+            hidden_size,
+            hidden_size,
+            heads=heads,
+            dropout=dropout,
+            combine="mean",
+            edge_dim=hidden_size,
+            activation=None,
+        )
+
+        self.pool_proj = nn.Linear(hidden_size, hidden_size)
+        self.pool_gate = nn.Linear(hidden_size * 2, hidden_size)
+
+        # Initialize pool projection close to identity so pooling has a strong, stable path.
+        nn.init.eye_(self.pool_proj.weight)
+        nn.init.zeros_(self.pool_proj.bias)
+
+    @staticmethod
+    def _pool_edges_to_nodes_mean(edge_feat: torch.Tensor, edge_index: torch.Tensor, num_nodes: int) -> torch.Tensor:
+        src = edge_index[0]
+        dst = edge_index[1]
+        node_sum = torch.zeros((num_nodes, edge_feat.size(1)), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_cnt = torch.zeros((num_nodes, 1), device=edge_feat.device, dtype=edge_feat.dtype)
+
+        node_sum.index_add_(0, src, edge_feat)
+        node_sum.index_add_(0, dst, edge_feat)
+
+        ones = torch.ones((edge_feat.size(0), 1), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_cnt.index_add_(0, src, ones)
+        node_cnt.index_add_(0, dst, ones)
+
+        return node_sum / node_cnt.clamp(min=1.0)
+
+    def forward(self, data):
+        x = data.x  # [N, H]
+        edge_index = data.edge_index  # [2, E]
+        dist_feat_order = data.dist_feat_order  # [E, edge_dim]
+        edge_to_edge_index = data.edge_to_edge_index  # [2, M]
+
+        num_nodes = x.size(0)
+        srcs, dsts = edge_index[0], edge_index[1]
+
+        if self.edge_dim_proj is not None and dist_feat_order.size(1) != self.hidden_size:
+            dist_feat_order = self.edge_dim_proj(dist_feat_order)  # -> [E, H]
+
+        # Raw edge signal (baseline-style) and optional node-pair context.
+        edge_dist = self.edge_from_dist(dist_feat_order)
+        edge_nodes = self.edge_from_nodes(torch.cat([x[srcs], x[dsts]], dim=1))
+        edge_feat_0 = F.relu(edge_dist + edge_nodes)  # [E, H]
+
+        # Edge-to-edge update (edges only).
+        edge_feat_1 = self.ee_gat(edge_feat_0, edge_to_edge_index)  # [E, H]
+
+        # Node update via attention with edge embeddings.
+        node_att = self.en_gat(x, edge_index, edge_feat_1)  # [N, H]
+
+        # Explicit edge->node pooling residual (mean over incident edges).
+        pooled_raw = self._pool_edges_to_nodes_mean(dist_feat_order, edge_index, num_nodes=num_nodes)  # [N, H]
+        pooled_upd = self._pool_edges_to_nodes_mean(edge_feat_1, edge_index, num_nodes=num_nodes)  # [N, H]
+        pooled = pooled_raw + pooled_upd
+
+        gate = torch.sigmoid(self.pool_gate(torch.cat([node_att, pooled], dim=1)))
+        node_out = node_att + gate * self.pool_proj(pooled)
+
+        if self.out_activation is not None:
+            node_out = self.out_activation(node_out)
+
+        return torch.cat([node_out, edge_feat_1], dim=0)
+
+
 _DEFAULT_SPATIALCONV_VARIANT = "v2edge_single_layer"
 SPATIALCONV_VARIANT_SELECTED = os.getenv("SPATIALCONV_VARIANT", _DEFAULT_SPATIALCONV_VARIANT).strip().lower()
 
@@ -474,8 +577,18 @@ elif SPATIALCONV_VARIANT_SELECTED in {
     "edge",
 }:
     SpatialConv = SpatialConvV3EdgeCrossLayers
+elif SPATIALCONV_VARIANT_SELECTED in {
+    "v4",
+    "v4edge_pool_fusion",
+    "v4_edge_pool_fusion",
+    "edge_pool_fusion",
+    "pool_fusion",
+    "edge_pool",
+    "pool",
+}:
+    SpatialConv = SpatialConvV4EdgePoolFusion
 else:
     raise ValueError(
         f"Unknown SPATIALCONV_VARIANT={SPATIALCONV_VARIANT_SELECTED!r}. "
-        f"Use one of: v1original, v2edge_single_layer, v3edge_cross_layers."
+        f"Use one of: v1original, v2edge_single_layer, v3edge_cross_layers, v4edge_pool_fusion."
     )

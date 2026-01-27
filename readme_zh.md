@@ -9,7 +9,7 @@ SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 
 ## 项目亮点（创新点简述）
 
 - **边信息融入聚类（SDCN + DLAA）**：通过双层聚合（节点↔边、边↔边）让边语义影响节点表示与聚类。
-- **可切换的 SpatialConv 版本**：`v1original`、`v2edge_single_layer`（默认）、`v3edge_cross_layers`，用 `SPATIALCONV_VARIANT` 方便做消融/对比。
+- **可切换的 SpatialConv 版本**：`v1original`、`v2edge_single_layer`（默认）、`v3edge_cross_layers`、`v4edge_pool_fusion`，用 `SPATIALCONV_VARIANT` 方便做消融/对比。
 - **可选 edge message 注入**：设置 `SDCN_EDGE_MESSAGE=1`，让 `edge_attr` 以“消息内容”参与节点更新（不仅是调注意力权重），适合 node_features 很弱的场景。
 - **实验辅助工具**：`SDCN_SEED` / `SDCN_EPOCHS` + `tools/` 的概念/合成数据对比脚本。
 
@@ -57,7 +57,8 @@ python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
 通过环境变量在 import 时选择（默认：`v2edge_single_layer`）：
 
 ```bash
-export SPATIALCONV_VARIANT=v2edge_single_layer  # v1original | v2edge_single_layer | v3edge_cross_layers
+export SPATIALCONV_VARIANT=v2edge_single_layer  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion
+export SDCN_FINAL_ASSIGN=pred                 # pred | q | p（选择最终聚类输出来自哪个头）
 export SDCN_SEED=0                              # 可选：复现实验
 export SDCN_EPOCHS=30                           # 可选：覆盖训练轮数
 export SDCN_EDGE_MESSAGE=1                      # 可选：edge_attr 作为消息内容注入
@@ -85,7 +86,7 @@ python tools/compare_spatialconv_variants.py \
   --out_dir /tmp/sdcn_dlaa_variant_compare \
   --seeds 0,1,2 \
   --epochs 30 \
-  --variants v1original,v2edge_single_layer,v3edge_cross_layers \
+  --variants v1original,v2edge_single_layer,v3edge_cross_layers,v4edge_pool_fusion \
   --heads 1
 ```
 

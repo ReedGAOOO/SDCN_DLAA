@@ -73,6 +73,35 @@ def _make_knn_edges(coords: np.ndarray, k: int, rng: np.random.Generator) -> tup
     return rows, cols
 
 
+def _make_random_k_edges(num_nodes: int, k: int, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Build an undirected random-k graph by sampling k neighbors per node.
+    Returns directed edges (both directions) in a stable sorted order.
+    """
+    n = int(num_nodes)
+    if n <= 1:
+        return np.zeros((0,), dtype=np.int64), np.zeros((0,), dtype=np.int64)
+    k = int(max(0, min(int(k), n - 1)))
+    if k <= 0:
+        return np.zeros((0,), dtype=np.int64), np.zeros((0,), dtype=np.int64)
+
+    edges: set[tuple[int, int]] = set()
+    all_nodes = np.arange(n, dtype=np.int64)
+    for i in range(n):
+        candidates = all_nodes[all_nodes != i]
+        if candidates.size == 0:
+            continue
+        nbrs = rng.choice(candidates, size=min(k, int(candidates.size)), replace=False)
+        for j in nbrs.tolist():
+            edges.add((i, int(j)))
+            edges.add((int(j), i))
+
+    rows_cols = sorted(edges)
+    rows = np.fromiter((rc[0] for rc in rows_cols), dtype=np.int64, count=len(rows_cols))
+    cols = np.fromiter((rc[1] for rc in rows_cols), dtype=np.int64, count=len(rows_cols))
+    return rows, cols
+
+
 def _add_random_edges(
     rows: np.ndarray,
     cols: np.ndarray,
@@ -446,6 +475,60 @@ def _make_edge_attr_rich_semantic_only(
     return edge_attr.astype(np.float32), extra
 
 
+def _make_edge_attr_rich_semantic_only_nonknn(
+    rng: np.random.Generator,
+    rows: np.ndarray,
+    cols: np.ndarray,
+    labels: np.ndarray,
+    edge_dim: int,
+) -> tuple[np.ndarray, dict]:
+    """
+    Semantic-only edge attributes for non-KNN graphs.
+
+    NOTE: edge_attr[:,0] is intentionally uninformative random noise so that
+    `spectral_edge_distance` (which only uses edge_attr[:,0]) cannot exploit it.
+    """
+    n_clusters = int(np.unique(labels).size)
+    same = (labels[rows] == labels[cols]).astype(np.float32)
+
+    noise0 = rng.random(size=rows.shape[0]).astype(np.float32)
+
+    rel = np.zeros(rows.shape[0], dtype=np.int64)
+    for i in range(rows.shape[0]):
+        if same[i] > 0.5:
+            rel[i] = int(labels[rows[i]])
+        else:
+            rel[i] = int(rng.integers(low=0, high=max(n_clusters, 1)))
+    rel_onehot = np.eye(n_clusters, dtype=np.float32)[rel] if n_clusters > 0 else np.zeros((rows.shape[0], 0), dtype=np.float32)
+
+    strength = (0.75 * same + 0.25 * rng.random(size=rows.shape[0]).astype(np.float32)).astype(np.float32)
+
+    base_mat = np.concatenate(
+        [
+            noise0.reshape(-1, 1),
+            same.reshape(-1, 1),
+            rel_onehot.astype(np.float32),
+            strength.reshape(-1, 1),
+        ],
+        axis=1,
+    ).astype(np.float32)
+
+    if edge_dim <= base_mat.shape[1]:
+        edge_attr = base_mat[:, :edge_dim].astype(np.float32)
+    else:
+        edge_attr = np.zeros((rows.shape[0], edge_dim), dtype=np.float32)
+        edge_attr[:, : base_mat.shape[1]] = base_mat
+        edge_attr[:, base_mat.shape[1] :] = rng.normal(loc=0.0, scale=0.05, size=(rows.shape[0], edge_dim - base_mat.shape[1])).astype(np.float32)
+
+    extra = {
+        "n_clusters": n_clusters,
+        "same_edge_frac": float(same.mean()) if same.size else 0.0,
+        "edge_attr": "semantic_only_nonknn",
+        "edge_attr_note": "edge_attr[:,0] is random noise; semantics live in later channels",
+    }
+    return edge_attr.astype(np.float32), extra
+
+
 def _save_dataset(
     output_dir: str,
     *,
@@ -596,6 +679,13 @@ PRESETS: dict[str, dict] = {
     "rich_geo_temporal": {"category": "rich_edge", "fn": _preset_rich_geo_temporal, "edge_dim": 12, "knn_k": 10},
     "rich_multirelation": {"category": "rich_edge", "fn": _preset_rich_multirelation, "edge_dim": 20, "knn_k": 10},
     "rich_edge_semantic_only": {"category": "rich_edge", "fn": _preset_rich_edge_semantic_only, "edge_dim": 16, "knn_k": 10},
+    "rich_edge_semantic_only_nonknn": {
+        "category": "rich_edge",
+        "fn": _preset_rich_edge_semantic_only,
+        "edge_dim": 16,
+        "knn_k": 10,  # used as random-k for this preset
+        "graph_type": "random_k",
+    },
 }
 
 
@@ -637,13 +727,18 @@ def main() -> None:
         fn: PresetFn = spec["fn"]
         edge_dim = int(spec["edge_dim"])
         knn_k = int(spec["knn_k"])
+        graph_type = str(spec.get("graph_type", "knn")).strip().lower()
 
         coords, labels, x, extra = fn(args.seed)
 
         # Stable per-dataset RNG (independent of Python's hash randomization).
         name_hash = int(zlib.crc32(name.encode("utf-8")) & 0xFFFFFFFF)
         rng = np.random.default_rng(int(args.seed) * 1_000_003 + name_hash)
-        rows, cols = _make_knn_edges(coords, k=knn_k, rng=rng)
+        if graph_type in {"random_k", "rand_k", "randomk"}:
+            rows, cols = _make_random_k_edges(int(coords.shape[0]), k=knn_k, rng=rng)
+            extra = {**extra, "graph": f"random_k(k={knn_k})"}
+        else:
+            rows, cols = _make_knn_edges(coords, k=knn_k, rng=rng)
 
         if category == "rich_edge":
             rows, cols = _add_random_edges(
@@ -668,6 +763,9 @@ def main() -> None:
             elif name == "rich_edge_semantic_only":
                 edge_attr, extra_edge = _make_edge_attr_rich_semantic_only(rng, coords, rows, cols, labels, edge_dim=edge_dim)
                 extra = {**extra, **extra_edge, "edge_attr": "semantic_only"}
+            elif name == "rich_edge_semantic_only_nonknn":
+                edge_attr, extra_edge = _make_edge_attr_rich_semantic_only_nonknn(rng, rows, cols, labels, edge_dim=edge_dim)
+                extra = {**extra, **extra_edge}
             else:
                 edge_attr = _make_edge_attr_rich_profiles(rng, coords, rows, cols, labels, edge_dim=edge_dim)
                 extra = {**extra, "edge_attr": "profiles_plus_noise"}

@@ -49,6 +49,44 @@ def _parse_float_list(value: str) -> list[float]:
 def _parse_str_list(value: str) -> list[str]:
     return [p.strip() for p in value.split(",") if p.strip() != ""]
 
+def _parse_optional_str_list(value: str) -> list[str | None]:
+    value = (value or "").strip()
+    if not value:
+        return [None]
+    return [p.strip() for p in value.split(",") if p.strip() != ""]
+
+def _parse_optional_int_list(value: str) -> list[int | None]:
+    value = (value or "").strip()
+    if not value:
+        return [None]
+    parts = [p.strip() for p in value.split(",") if p.strip() != ""]
+    out: list[int | None] = []
+    for p in parts:
+        out.append(int(p))
+    return out
+
+
+def _parse_optional_bool_list(value: str) -> list[bool | None]:
+    value = (value or "").strip()
+    if not value:
+        return [None]
+    out: list[bool | None] = []
+    for raw in [p.strip().lower() for p in value.split(",") if p.strip() != ""]:
+        if raw in {"1", "true", "yes", "y", "on"}:
+            out.append(True)
+        elif raw in {"0", "false", "no", "n", "off"}:
+            out.append(False)
+        else:
+            raise SystemExit(f"Invalid --edge_messages item: {raw!r}. Use 0/1 or true/false.")
+    return out
+
+
+def _parse_optional_float_list(value: str) -> list[float | None]:
+    value = (value or "").strip()
+    if not value:
+        return [None]
+    return [float(p.strip()) for p in value.split(",") if p.strip() != ""]
+
 
 def _parse_enc_dims_list(value: str) -> list[str]:
     """
@@ -192,8 +230,41 @@ def main() -> None:
     parser.add_argument("--heads", type=str, default="1")
     parser.add_argument("--n_z", type=str, default="10")
     parser.add_argument("--sigmas", type=str, default="", help="Optional comma-separated SDCN_SIGMA values (env override).")
+    parser.add_argument("--q_sources", type=str, default="", help="Optional comma-separated SDCN_Q_SOURCE values (z|h4|fused).")
+    parser.add_argument(
+        "--edge_messages",
+        type=str,
+        default="",
+        help="Optional comma-separated 0/1 (or true/false) to set SDCN_EDGE_MESSAGE.",
+    )
     parser.add_argument("--enc_dims_list", type=str, default="", help="Optional AE encoder dims list: '256,256,256;500,500,512'.")
+    parser.add_argument("--kl_weights", type=str, default="", help="Optional comma-separated SDCN_KL_WEIGHT overrides.")
+    parser.add_argument("--ce_weights", type=str, default="", help="Optional comma-separated SDCN_CE_WEIGHT overrides.")
+    parser.add_argument("--re_weights", type=str, default="", help="Optional comma-separated SDCN_RE_WEIGHT overrides.")
+    parser.add_argument("--ce_warmups", type=str, default="", help="Optional comma-separated SDCN_CE_WARMUP_EPOCHS overrides.")
+    parser.add_argument("--p_smoothings", type=str, default="", help="Optional comma-separated SDCN_P_SMOOTHING values.")
+    parser.add_argument("--pred_mi_weights", type=str, default="", help="Optional comma-separated SDCN_PRED_MI_WEIGHT values.")
+    parser.add_argument("--q_mi_weights", type=str, default="", help="Optional comma-separated SDCN_Q_MI_WEIGHT values.")
+    parser.add_argument("--q_balance_weights", type=str, default="", help="Optional comma-separated SDCN_Q_BALANCE_WEIGHT values.")
+    parser.add_argument("--pred_balance_weights", type=str, default="", help="Optional comma-separated SDCN_PRED_BALANCE_WEIGHT values.")
+    parser.add_argument("--q_entropy_weights", type=str, default="", help="Optional comma-separated SDCN_Q_ENTROPY_WEIGHT values.")
+    parser.add_argument("--pred_entropy_weights", type=str, default="", help="Optional comma-separated SDCN_PRED_ENTROPY_WEIGHT values.")
+    parser.add_argument(
+        "--node_edge_pools",
+        type=str,
+        default="none",
+        help="Comma-separated list for --node_edge_pool (none|mean_concat|mean_replace).",
+    )
+    parser.add_argument("--edge_ablation", type=str, default="none", help="Edge feature ablation passed to test script.")
+    parser.add_argument(
+        "--edge_attr_norms",
+        type=str,
+        default="none",
+        help="Comma-separated list for --edge_attr_norm (none|zscore|zscore_clip|minmax).",
+    )
+    parser.add_argument("--edge_attr_clip", type=float, default=5.0, help="Clip used by zscore_clip.")
     parser.add_argument("--max_edges_per_node", type=int, default=10)
+    parser.add_argument("--final_assign", type=str, default="pred", help="Final clustering source: pred|q|p (sets SDCN_FINAL_ASSIGN).")
     parser.add_argument("--cpu", action="store_true")
     args = parser.parse_args()
 
@@ -209,18 +280,119 @@ def main() -> None:
     heads_list = _parse_int_list(args.heads)
     n_z_list = _parse_int_list(args.n_z)
     sigmas = _parse_float_list(args.sigmas) if args.sigmas.strip() else [None]
+    q_sources = _parse_optional_str_list(args.q_sources)
+    edge_messages = _parse_optional_bool_list(args.edge_messages)
     enc_dims_list = _parse_enc_dims_list(args.enc_dims_list)
+    kl_weights = _parse_optional_float_list(args.kl_weights)
+    ce_weights = _parse_optional_float_list(args.ce_weights)
+    re_weights = _parse_optional_float_list(args.re_weights)
+    ce_warmups = _parse_optional_int_list(args.ce_warmups)
+    p_smoothings = _parse_optional_float_list(args.p_smoothings)
+    pred_mi_weights = _parse_optional_float_list(args.pred_mi_weights)
+    q_mi_weights = _parse_optional_float_list(args.q_mi_weights)
+    q_balance_weights = _parse_optional_float_list(args.q_balance_weights)
+    pred_balance_weights = _parse_optional_float_list(args.pred_balance_weights)
+    q_entropy_weights = _parse_optional_float_list(args.q_entropy_weights)
+    pred_entropy_weights = _parse_optional_float_list(args.pred_entropy_weights)
+    node_edge_pools = _parse_str_list(args.node_edge_pools) if args.node_edge_pools.strip() else ["none"]
+    edge_attr_norms = _parse_str_list(args.edge_attr_norms) if args.edge_attr_norms.strip() else ["none"]
+    edge_ablation = (args.edge_ablation or "none").strip()
+    final_assign = (args.final_assign or "pred").strip().lower()
+    if final_assign not in {"pred", "q", "p"}:
+        raise SystemExit(f"Unknown --final_assign={final_assign!r}. Use one of: pred, q, p.")
 
     all_runs: list[dict] = []
 
-    for variant, seed, epochs, lr, dropout, heads, n_z, sigma, enc_dims in product(
-        variants, seeds, epochs_list, lrs, dropouts, heads_list, n_z_list, sigmas, enc_dims_list
+    for (
+        variant,
+        seed,
+        epochs,
+        lr,
+        dropout,
+        heads,
+        n_z,
+        sigma,
+        q_source,
+        edge_message,
+        kl_w,
+        ce_w,
+        re_w,
+        ce_warmup,
+        p_smoothing,
+        pred_mi_w,
+        q_mi_w,
+        q_bal_w,
+        pred_bal_w,
+        q_ent_w,
+        pred_ent_w,
+        pool_mode,
+        edge_norm,
+        enc_dims,
+    ) in product(
+        variants,
+        seeds,
+        epochs_list,
+        lrs,
+        dropouts,
+        heads_list,
+        n_z_list,
+        sigmas,
+        q_sources,
+        edge_messages,
+        kl_weights,
+        ce_weights,
+        re_weights,
+        ce_warmups,
+        p_smoothings,
+        pred_mi_weights,
+        q_mi_weights,
+        q_balance_weights,
+        pred_balance_weights,
+        q_entropy_weights,
+        pred_entropy_weights,
+        node_edge_pools,
+        edge_attr_norms,
+        enc_dims_list,
     ):
         run_name = f"seed{seed}_ep{epochs}_lr{lr:g}_do{dropout:g}_h{heads}_nz{n_z}"
         if sigma is not None:
             run_name += f"_sigma{sigma:g}"
+        if q_source is not None:
+            run_name += f"_q{q_source}"
+        if edge_message is not None:
+            run_name += f"_em{1 if edge_message else 0}"
+        if kl_w is not None:
+            run_name += f"_kl{kl_w:g}"
+        if ce_w is not None:
+            run_name += f"_ce{ce_w:g}"
+        if re_w is not None:
+            run_name += f"_re{re_w:g}"
+        if ce_warmup is not None:
+            run_name += f"_cw{int(ce_warmup)}"
+        if p_smoothing is not None:
+            run_name += f"_ps{p_smoothing:g}"
+        if pred_mi_w is not None:
+            run_name += f"_pmi{pred_mi_w:g}"
+        if q_mi_w is not None:
+            run_name += f"_qmi{q_mi_w:g}"
+        if q_bal_w is not None:
+            run_name += f"_qbal{q_bal_w:g}"
+        if pred_bal_w is not None:
+            run_name += f"_pbal{pred_bal_w:g}"
+        if q_ent_w is not None:
+            run_name += f"_qent{q_ent_w:g}"
+        if pred_ent_w is not None:
+            run_name += f"_pent{pred_ent_w:g}"
+        if pool_mode and pool_mode != "none":
+            run_name += f"_pool{pool_mode}"
+        if edge_ablation and edge_ablation != "none":
+            run_name += f"_abl{edge_ablation}"
+        if edge_norm and edge_norm != "none":
+            run_name += f"_norm{edge_norm}"
         if enc_dims:
             run_name += f"_enc{enc_dims.replace(',', '-')}"
+        if final_assign != "pred":
+            run_name += f"_final{final_assign}"
 
         run_dir = out_dir / data_dir.name / variant / run_name
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -230,10 +402,63 @@ def main() -> None:
         env["SPATIALCONV_VARIANT"] = variant
         env["SDCN_SEED"] = str(seed)
         env["SDCN_EPOCHS"] = str(epochs)
+        env["SDCN_FINAL_ASSIGN"] = final_assign
         if sigma is not None:
             env["SDCN_SIGMA"] = str(sigma)
         else:
             env.pop("SDCN_SIGMA", None)
+        if q_source is not None:
+            env["SDCN_Q_SOURCE"] = str(q_source)
+        else:
+            env.pop("SDCN_Q_SOURCE", None)
+        if edge_message is not None:
+            env["SDCN_EDGE_MESSAGE"] = "1" if edge_message else "0"
+        else:
+            env.pop("SDCN_EDGE_MESSAGE", None)
+        if kl_w is not None:
+            env["SDCN_KL_WEIGHT"] = str(kl_w)
+        else:
+            env.pop("SDCN_KL_WEIGHT", None)
+        if ce_w is not None:
+            env["SDCN_CE_WEIGHT"] = str(ce_w)
+        else:
+            env.pop("SDCN_CE_WEIGHT", None)
+        if re_w is not None:
+            env["SDCN_RE_WEIGHT"] = str(re_w)
+        else:
+            env.pop("SDCN_RE_WEIGHT", None)
+        if ce_warmup is not None:
+            env["SDCN_CE_WARMUP_EPOCHS"] = str(int(ce_warmup))
+        else:
+            env.pop("SDCN_CE_WARMUP_EPOCHS", None)
+        if p_smoothing is not None:
+            env["SDCN_P_SMOOTHING"] = str(float(p_smoothing))
+        else:
+            env.pop("SDCN_P_SMOOTHING", None)
+        if pred_mi_w is not None:
+            env["SDCN_PRED_MI_WEIGHT"] = str(float(pred_mi_w))
+        else:
+            env.pop("SDCN_PRED_MI_WEIGHT", None)
+        if q_mi_w is not None:
+            env["SDCN_Q_MI_WEIGHT"] = str(float(q_mi_w))
+        else:
+            env.pop("SDCN_Q_MI_WEIGHT", None)
+        if q_bal_w is not None:
+            env["SDCN_Q_BALANCE_WEIGHT"] = str(float(q_bal_w))
+        else:
+            env.pop("SDCN_Q_BALANCE_WEIGHT", None)
+        if pred_bal_w is not None:
+            env["SDCN_PRED_BALANCE_WEIGHT"] = str(float(pred_bal_w))
+        else:
+            env.pop("SDCN_PRED_BALANCE_WEIGHT", None)
+        if q_ent_w is not None:
+            env["SDCN_Q_ENTROPY_WEIGHT"] = str(float(q_ent_w))
+        else:
+            env.pop("SDCN_Q_ENTROPY_WEIGHT", None)
+        if pred_ent_w is not None:
+            env["SDCN_PRED_ENTROPY_WEIGHT"] = str(float(pred_ent_w))
+        else:
+            env.pop("SDCN_PRED_ENTROPY_WEIGHT", None)
         if enc_dims:
             env["SDCN_ENC_DIMS"] = enc_dims
         else:
@@ -253,6 +478,14 @@ def main() -> None:
             str(heads),
             "--n_z",
             str(n_z),
+            "--node_edge_pool",
+            str(pool_mode),
+            "--edge_ablation",
+            str(edge_ablation),
+            "--edge_attr_norm",
+            str(edge_norm),
+            "--edge_attr_clip",
+            str(args.edge_attr_clip),
             "--max_edges_per_node",
             str(args.max_edges_per_node),
             "--summary_json",
@@ -268,7 +501,22 @@ def main() -> None:
             log_f.write(f"$ {' '.join(cmd)}\n")
             log_f.write(
                 f"SPATIALCONV_VARIANT={variant} SDCN_SEED={seed} SDCN_EPOCHS={epochs} "
-                f"SDCN_SIGMA={(sigma if sigma is not None else '')} SDCN_ENC_DIMS={enc_dims}\n\n"
+                f"SDCN_SIGMA={(sigma if sigma is not None else '')} "
+                f"SDCN_Q_SOURCE={(q_source if q_source is not None else '')} "
+                f"SDCN_EDGE_MESSAGE={(edge_message if edge_message is not None else '')} "
+                f"SDCN_KL_WEIGHT={(kl_w if kl_w is not None else '')} "
+                f"SDCN_CE_WEIGHT={(ce_w if ce_w is not None else '')} "
+                f"SDCN_RE_WEIGHT={(re_w if re_w is not None else '')} "
+                f"SDCN_CE_WARMUP_EPOCHS={(ce_warmup if ce_warmup is not None else '')} "
+                f"SDCN_P_SMOOTHING={(p_smoothing if p_smoothing is not None else '')} "
+                f"SDCN_PRED_MI_WEIGHT={(pred_mi_w if pred_mi_w is not None else '')} "
+                f"SDCN_Q_MI_WEIGHT={(q_mi_w if q_mi_w is not None else '')} "
+                f"SDCN_Q_BALANCE_WEIGHT={(q_bal_w if q_bal_w is not None else '')} "
+                f"SDCN_PRED_BALANCE_WEIGHT={(pred_bal_w if pred_bal_w is not None else '')} "
+                f"SDCN_Q_ENTROPY_WEIGHT={(q_ent_w if q_ent_w is not None else '')} "
+                f"SDCN_PRED_ENTROPY_WEIGHT={(pred_ent_w if pred_ent_w is not None else '')} "
+                f"SDCN_ENC_DIMS={enc_dims}\n"
+                f"node_edge_pool={pool_mode} edge_ablation={edge_ablation} edge_attr_norm={edge_norm} edge_attr_clip={args.edge_attr_clip}\n\n"
             )
             log_f.flush()
             subprocess.run(cmd, cwd=str(run_dir), env=env, stdout=log_f, stderr=subprocess.STDOUT, check=True)
@@ -297,7 +545,25 @@ def main() -> None:
                 "heads": int(heads),
                 "n_z": int(n_z),
                 "sigma": None if sigma is None else float(sigma),
+                "q_source": q_source,
+                "edge_message": None if edge_message is None else bool(edge_message),
+                "kl_weight": None if kl_w is None else float(kl_w),
+                "ce_weight": None if ce_w is None else float(ce_w),
+                "re_weight": None if re_w is None else float(re_w),
+                "ce_warmup_epochs": None if ce_warmup is None else int(ce_warmup),
+                "p_smoothing": None if p_smoothing is None else float(p_smoothing),
+                "pred_mi_weight": None if pred_mi_w is None else float(pred_mi_w),
+                "q_mi_weight": None if q_mi_w is None else float(q_mi_w),
+                "q_balance_weight": None if q_bal_w is None else float(q_bal_w),
+                "pred_balance_weight": None if pred_bal_w is None else float(pred_bal_w),
+                "q_entropy_weight": None if q_ent_w is None else float(q_ent_w),
+                "pred_entropy_weight": None if pred_ent_w is None else float(pred_ent_w),
+                "node_edge_pool": str(pool_mode),
+                "edge_ablation": str(edge_ablation),
+                "edge_attr_norm": str(edge_norm),
+                "edge_attr_clip": float(args.edge_attr_clip),
                 "enc_dims": enc_dims,
+                "final_assign": str(final_assign),
                 "metrics": summary.get("metrics"),
                 "cluster_distribution": cluster_dist,
                 "collapse_final": collapse_final,
@@ -314,7 +580,9 @@ def main() -> None:
         f1 = m.get("f1")
         print(
             f"{data_dir.name}, {variant}, seed={seed}, ep={epochs}, lr={lr:g}, do={dropout:g}, heads={heads}, nz={n_z}, "
-            f"sigma={(sigma if sigma is not None else 'default')}, enc_dims={(enc_dims if enc_dims else 'default')}: "
+            f"sigma={(sigma if sigma is not None else 'default')}, q={(q_source if q_source is not None else 'default')}, "
+            f"edge_msg={(edge_message if edge_message is not None else 'default')}, pool={pool_mode}, norm={edge_norm}, "
+            f"enc_dims={(enc_dims if enc_dims else 'default')}: "
             f"acc={acc:.4f} nmi={nmi:.4f} ari={ari:.4f} f1={f1:.4f} collapse_final={collapse_final}"
         )
 

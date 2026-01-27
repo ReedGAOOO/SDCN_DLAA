@@ -94,6 +94,42 @@
 
 补充：`rich_edge_profiles` 的 edge_attr 中包含 `1/(dist+1e-3)` 这类极端尺度通道（最大可到 ~1e3）。当把 edge_attr 池化进节点特征（`--node_edge_pool mean_concat`）时，会导致 AE 重构的 MSE 量级显著增大、训练更不稳。为方便做“尺度公平”的对照，在 `tools/test_conceptual_data.py` 增加了 `--edge_attr_norm`（`none|zscore|zscore_clip|minmax`）用于可控归一化。
 
+### 进一步实验：`SDCN_Q_SOURCE` 对塌缩的影响（更“可定位”的机制验证）
+
+核心假设：**塌缩不只是“模型弱”，还可能来自 SDCN 的自训练目标与信息源不一致**。
+
+- `q/p` 的目标来自 `q_input`（`SDCN_Q_SOURCE` 控制：`z`/`h4`/`fused`），而 `pred` 的预测来自最终图分支输出（`h5`）。
+- 当任务是 **edge 主导**（节点特征与距离几乎无信号）时，若 `q_input=z`（纯 AE latent）无法承载 edge 语义，则 `p` 会对训练产生“错误牵引”，使 `pred` 更容易退化到“常数输出 + 单簇 argmax”的稳定坏解。
+
+在两个代表性数据集上用小网格验证该现象（均为 `v2edge_single_layer`，`epochs=30`，`seeds=0/1/2`，`lr=5e-4`，`dropout=0`，`heads=1`，`n_z=10`，`SDCN_PRETRAIN_EPOCHS=200`，并使用 `--node_edge_pool mean_concat`）：
+
+**A) `rich_edge_semantic_only`（距离无效、语义边有效）**
+
+| q_source | edge_message | mean acc | collapse_rate |
+|---|---:|---:|---:|
+| z | 0 | 0.3444 | 1.00 |
+| h4 | 0 | 0.3537 | 0.67 |
+| fused | 0 | 0.3500 | 1.00 |
+| z | 1 | 0.4315 | 0.33 |
+| **h4** | **1** | **0.4185** | **0.00** |
+| fused | 1 | 0.3870 | 0.33 |
+
+结论：**开启 `SDCN_EDGE_MESSAGE=1` 是必要条件**；同时把 `SDCN_Q_SOURCE` 从 `z` 改为 **`h4`** 能显著降低塌缩（3 个 seed 全部不塌）。
+
+**B) `rich_edge_profiles`（包含极端尺度通道；此处固定 `--edge_attr_norm zscore_clip`）**
+
+| q_source | edge_message | mean acc | collapse_rate |
+|---|---:|---:|---:|
+| z | 1 | 0.3944 | 0.33 |
+| **h4** | **1** | **0.4333** | **0.00** |
+| fused | 1 | 0.3889 | 0.33 |
+
+补充验证（同配置下，仅切换 `edge_message`，固定 `q_source=h4`）：
+- `edge_message=0`：mean acc 0.3889，collapse_rate 0.67
+- `edge_message=1`：mean acc 0.4333，collapse_rate 0.00
+
+解释：`h4` 更接近“图/边驱动”的表示空间，`p` 的目标与 `pred` 的信息源更一致，自训练不再强迫模型去拟合一个与图分支无关的 `p`，因此更稳定。
+
 ## 对“为什么 baseline 更强 / 为什么 v3 优势不明显”的综合解释
 
 结合上述信号诊断 + 消融现象，主要有两类原因：
@@ -110,6 +146,96 @@
 - v1/v2/v3 vs baselines：`python tools/benchmark_synthetic_suite.py --suite_dir /tmp/suite_semantic_test --out_dir /tmp/sdcn_semantic_only_bench --epochs 60 --seeds 0,1,2 --variants v1original,v2edge_single_layer,v3edge_cross_layers`
 - sigma 扫描：`python tools/sweep_sigma.py --data_dir /tmp/suite_semantic_test/rich_edge_semantic_only --out_dir /tmp/sigma_sweep_semantic_only --sigmas 0,0.25,0.5,0.75,1 --seeds 0,1,2 --epochs 60 --variants v1original,v2edge_single_layer,v3edge_cross_layers`
 - edge 消融：`python tools/test_conceptual_data.py --data_dir <DATASET_DIR> --edge_ablation none|distance_only|shuffle_rows|zeros`
+
+## Suite 全量复跑：h4 推荐组合 + 稳定性策略（抑制塌缩）
+
+为了把“塌缩”从现象变成可操作的工程问题，我们把 suite 全量跑法固化在 `tools/benchmark_synthetic_suite.py`：
+- `--recommended_h4`：统一设置 `SDCN_Q_SOURCE=h4`，并按数据类别自动设置 `SDCN_EDGE_MESSAGE`（`distance_1d` 默认 0，`rich_edge*` 默认 1）
+- `--recommended_auto`：按数据集自动选择 `SDCN_Q_SOURCE`（目前启发式：`distance_1d` 若 `K<=2` 用 `z`，否则用 `h4`；`rich_edge*` 用 `h4`）
+- `--edge_message_policy auto|on|off`：当启用 recommended 组合时，控制 `SDCN_EDGE_MESSAGE` 的策略
+  - 经验上：`v2edge_single_layer` 在 rich_edge 更受益于 `edge_message=1`（把 edge_attr 作为**消息内容**注入节点）
+  - 但 `v3edge_cross_layers` 的 `edge_attr` 已经是“更新后的 edge embedding”，再额外注入 `edge_message` 在多数设置下容易过平滑并提升塌缩率；因此当前 `auto` 策略下 **v3 默认强制 `SDCN_EDGE_MESSAGE=0`**
+    - 注意：在 `rich_multirelation` 这类“边语义更强、节点特征更弱”的任务里，如果再配合 `--node_edge_pool mean_replace`（把 edge_attr 池化进节点输入）与小 AE（`SDCN_ENC_DIMS=256,256,512`），`edge_message=1` 反而能显著降低单簇塌缩并提升分数（见下文“定点排查”）。
+- `rich_edge_profiles` 自动加 `--edge_attr_norm zscore_clip`（避免极端尺度通道干扰）
+- 新增 `--strategy_rich_only`：把稳定性策略只应用在 `rich_edge` 数据集（可避免在 distance_1d 上“过正则”）
+
+同时实现了三类“机制性抑制塌缩”的训练策略（均通过环境变量控制，默认关闭，不影响旧实验复现）：
+- `SDCN_CE_WARMUP_EPOCHS`：CE loss 权重 warmup
+- `SDCN_P_SMOOTHING`：把 target distribution `p` 向 uniform 做 label-smoothing（降低早期极端尖锐的自训练牵引）
+- `SDCN_PRED_MI_WEIGHT`：对 `pred` 加 mutual-information 正则（鼓励“整体均衡 + 单样本更自信”，直接抑制“pred 全部近均匀 → argmax 单簇”的坏解）
+- `SDCN_Q_MI_WEIGHT`：对 `q` 做同样的 MI 正则（用于抑制“q 退化到近均匀 → hard argmax 单簇”的坏解；在部分 rich_edge 上对 v2 有帮助）
+
+另外修复了一个会导致 suite 跑批中途崩溃的问题：`evaluation.py` 的 `cluster_acc` 现在对“预测簇数≠真实簇数”（典型塌缩场景）也能稳定返回 acc/f1，不再直接 `return None`。
+
+### suite_seed0（`/tmp/sdcn_dlaa_suite_seed0`）对照
+
+产物：
+- 基线（h4rec）：`reports/synthetic_benchmark_report_zh_h4rec.md`
+- strategy1（p_smooth=0.1 + ce_warmup=10 + mi=0.1）：`reports/synthetic_benchmark_report_zh_h4rec_strategy1.md`
+- 消融：`reports/synthetic_benchmark_report_zh_h4rec_strategy2.md`（p_smooth+warmup）、`reports/synthetic_benchmark_report_zh_h4rec_strategy3.md`（MI-only）
+
+结论（重点看 collapse_rate 变化）：
+- **strategy1 明显降低 v2 在 `dist_two_moons / rich_edge_profiles / rich_geo_temporal / rich_multirelation` 的塌缩率**，同时把 `rich_multirelation` 的 v3 塌缩率从 0.67 降到 0.33。
+- 消融结果显示：**MI（strategy3）对多个数据集提升很明显**；而 **p_smooth + warmup（strategy2）更偏向改善 `dist_two_moons` 这类容易“一簇吞噬”的场景**；两者组合通常更稳。
+- v3 在 `rich_edge_profiles` 仍顽固塌缩（需要进一步从 v3 的 edge→node 信息利用方式/超参入手）。
+
+### suite_seed1（`/tmp/sdcn_dlaa_suite_seed1`）复核
+
+产物：
+- 基线（h4rec）：`reports/synthetic_benchmark_report_zh_h4rec_suite_seed1.md`
+- strategy1（全量应用）：`reports/synthetic_benchmark_report_zh_h4rec_strategy1_suite_seed1.md`
+- strategy1_richonly（只对 rich_edge 应用）：`reports/synthetic_benchmark_report_zh_h4rec_strategy1_richonly_suite_seed1.md`
+
+结论：
+- 在 suite_seed1 上，strategy1 仍能降低 `rich_edge_profiles / rich_geo_temporal / rich_multirelation` 中 v2 的塌缩率，但对部分 `distance_1d` 数据集存在“过正则”风险。
+- 因此更推荐实际跑批时使用 `--strategy_rich_only`，把稳定性策略先限定在 `rich_edge` 任务上（符合“按数据决定”的思路），再逐步把策略扩展到 `distance_1d` 并做更细的参数扫。
+
+### 更新：`recommended_auto + pretrain=200 + strategyA(richonly) + v3 edge_message=off`
+
+为了把“按数据/按版本决定开关”也纳入可复现实验，我们又跑了一组更贴近“实际推荐跑法”的组合：
+- `SDCN_PRETRAIN_EPOCHS=200`（自监督聚类对初始化很敏感；不预训练时整体明显更差）
+- `--recommended_auto`（二分类 distance 数据用 `q_source=z` 更稳；rich_edge 用 `h4` 更一致）
+- `strategyA`（仅 rich_edge 生效）：`SDCN_P_SMOOTHING=0.1`、`SDCN_CE_WARMUP_EPOCHS=10`、`SDCN_PRED_MI_WEIGHT=0.1`、`SDCN_Q_MI_WEIGHT=0.1`
+- `edge_message`：auto 策略下对 v3 强制关闭（避免“双重 edge→node 注入”）
+
+产物：
+- suite_seed0（models-only）：`reports/synthetic_benchmark_report_zh_autorec2_pretrain200_strategyA_richonly_emv3off.md`
+- suite_seed1（models-only）：`reports/synthetic_benchmark_report_zh_suite_seed1_autorec2_pretrain200_strategyA_richonly_emv3off.md`
+
+观察：
+- suite_seed0 上，`v3edge_cross_layers` 在 `dist_two_moons` 的 **collapse_rate 降到 0**，且在 `rich_geo_temporal` 的均值 acc 明显高于 v2（但在 `rich_multirelation` 仍有较高塌缩）。
+- suite_seed1 上仍存在“数据生成随机性/初始化敏感”导致的波动：例如 `dist_two_moons` 对 v2/v3 都比较不稳，`rich_edge_profiles` 上 v3 仍可能顽固塌缩。
+
+### 定点排查：`rich_multirelation` 的 v3 “均匀塌缩（uniform trap）”
+
+这类失败模式和“一簇吞噬”不同：它更像是 **q/p/pred 接近均匀分布（熵≈logK）+ KL(P||Q)≈0** 的“零梯度坏解”。  
+现象上看起来可能是：
+- `pred` 的 soft 概率几乎均匀，但因为极小偏置导致所有样本 argmax 落到同一个簇（或少数几个簇）→ 表现为“塌缩/少簇”。
+- trace 中常见：`q_entropy_mean≈logK`、`p_entropy_mean≈logK`、`kl_p_q_mean≈0`。
+
+为更可控地复现/定位，我们用 `tools/sweep_stability.py` 固定数据集 `/tmp/sdcn_dlaa_suite_seed0/rich_multirelation`，只扫 v3 的关键超参，并记录每轮 `trace.jsonl`。
+
+#### 1) 仅扫 `sigma/q_source/ce_weight`（`edge_message=0`）不足以解决
+
+此前 stage1a（不池化边特征、默认大 AE）里，`sigma/q_source/ce_weight` 的组合基本都陷入上述“均匀坏解”，几乎全程 `KL≈0`，很难靠损失自身拉出。
+
+#### 2) `--node_edge_pool mean_replace` + 小 AE 能大幅降低“单簇”概率，但容易“少簇（2~3）”
+
+当把 `edge_attr` 池化进节点输入（`--node_edge_pool mean_replace`）并把 AE 缩小（`SDCN_ENC_DIMS=256,256,512`），在 v3 上常能把“全点单簇”的比例明显压下去，但仍经常出现“少簇”：
+- 典型表现：`cluster_distribution` 用到了 2~3 个簇（`max_frac` 不高），但缺失某些簇 id。
+- 这更像是“欠分簇/合并簇”而不是“塌到一簇”，需要进一步增强分离/置信度。
+
+#### 3) 在该数据集上，`edge_message=1` 反而是有效开关（与默认 auto 策略相反）
+
+在同样的“小 AE + mean_replace”前提下，我们扫 `sigma∈{0.5,0.75,0.9,1.0}`、`q_source∈{z,h4,fused}` 并开启 `SDCN_EDGE_MESSAGE=1`（其余固定：`pretrain=200, lr=5e-4, dropout=0, heads=4, n_z=10, ce_warmup=10`），得到一批**非塌缩且高分**的点：
+- seed0：`sigma=0.9, q_source=fused` → acc≈0.70，且 4 簇都被使用（`/tmp/sweep_rich_multirelation_v3_stage1b8/aggregate.json`）
+- seed1：`sigma=0.75, q_source=h4` → acc≈0.76，且簇分布较均衡（同上）
+- seed2：仍最难，但 `sigma=1.0, q_source=h4` 可得到非塌缩点（acc≈0.49，簇分布偏斜）
+
+复现示例（单次跑一个点）：
+- `SDCN_PRETRAIN_EPOCHS=200 SDCN_ENC_DIMS=256,256,512 SDCN_SIGMA=0.75 SDCN_Q_SOURCE=h4 SDCN_EDGE_MESSAGE=1 SDCN_CE_WARMUP_EPOCHS=10 SDCN_CE_WEIGHT=1 python tools/test_conceptual_data.py --data_dir /tmp/sdcn_dlaa_suite_seed0/rich_multirelation --lr 5e-4 --dropout 0 --heads 4 --n_z 10 --node_edge_pool mean_replace`
+
+> 备注：本段的 “collapse” 使用当前工具的严格定义（少簇也算），因此建议同时参考 `cluster_distribution` 的 `max_frac` 来区分“单簇塌缩”与“欠分簇”。
 
 ## 下一步建议（建议继续多轮迭代）
 

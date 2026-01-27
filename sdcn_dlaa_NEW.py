@@ -22,6 +22,7 @@ from evaluation import eva
 import sys
 import os
 from datetime import datetime
+import math
 
 # Import SpatialConv from DLAA
 from DLAA_NEW import SpatialConv
@@ -636,6 +637,16 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
 
             # Calculate target distribution
             p = target_distribution(q.data)
+
+            # Optional: smooth target distribution towards uniform (reduces early peaking / collapse).
+            p_smooth_env = os.getenv("SDCN_P_SMOOTHING", "").strip()
+            p_smooth = float(p_smooth_env) if p_smooth_env else 0.0
+            if p_smooth > 0:
+                p_smooth = max(0.0, min(1.0, p_smooth))
+                k = int(p.size(1))
+                uniform = torch.full_like(p, 1.0 / max(k, 1))
+                p = (1.0 - p_smooth) * p + p_smooth * uniform
+                p = p / p.sum(dim=1, keepdim=True).clamp(min=1e-10)
             
             # Calculate loss (numerically stable: avoid log(0) in KL computations)
             eps = 1e-10
@@ -648,8 +659,25 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
             ce_loss = F.kl_div(pred_safe.log(), p, reduction='batchmean')
             re_loss = F.mse_loss(x_bar, data)
             
+            # Optional CE warmup (avoid overfitting to noisy targets early).
+            ce_warmup_env = os.getenv("SDCN_CE_WARMUP_EPOCHS", "").strip()
+            ce_warmup = int(ce_warmup_env) if ce_warmup_env else 0
+            ce_scale = 1.0
+            if ce_warmup > 0:
+                ce_scale = min(1.0, float(epoch + 1) / float(ce_warmup))
+
             # Combined loss with the same weights as original SDCN
-            loss = 0.1 * kl_loss + 0.01 * ce_loss + re_loss
+            loss = 0.1 * kl_loss + (0.01 * ce_scale) * ce_loss + re_loss
+
+            # Optional mutual-information regularizer on pred: balanced yet confident assignments.
+            mi_w_env = os.getenv("SDCN_PRED_MI_WEIGHT", "").strip()
+            mi_w = float(mi_w_env) if mi_w_env else 0.0
+            if mi_w != 0.0:
+                mean_pred = pred_safe.mean(dim=0)  # [K]
+                ent_mean = -(mean_pred.clamp(min=eps) * mean_pred.clamp(min=eps).log()).sum()
+                ent_cond = -(pred_safe * pred_safe.log()).sum(dim=1).mean()
+                mi_loss = ent_cond - ent_mean
+                loss = loss + float(mi_w) * mi_loss
             
             # Backward pass and optimization
             optimizer.zero_grad()
@@ -664,18 +692,28 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
     
     # Get final clustering results
     # ---> Use model.eval() and no_grad() for final inference <---
+    final_assign = os.getenv("SDCN_FINAL_ASSIGN", "pred").strip().lower()
+    if final_assign not in {"pred", "q", "p"}:
+        raise ValueError(f"Unknown SDCN_FINAL_ASSIGN={final_assign!r}. Use one of: pred, q, p.")
+
     model.eval()
     try:
         with torch.no_grad():
-            _, _, final_pred, _, _ = model(data, adj, edge_attr)
-        final_clusters = final_pred.data.cpu().numpy().argmax(1)
+            _, q_final, pred_final, _, _ = model(data, adj, edge_attr)
+            p_final = target_distribution(q_final.data)
+
+        if final_assign == "q":
+            final_clusters = q_final.data.cpu().numpy().argmax(1)
+        elif final_assign == "p":
+            final_clusters = p_final.data.cpu().numpy().argmax(1)
+        else:
+            final_clusters = pred_final.data.cpu().numpy().argmax(1)
     except Exception as e:
         print(f"Error getting final clustering results: {str(e)}")
         # Fallback logic...
         if 'res2' in locals() and res2 is not None:
              final_clusters = res2
         elif len(results) > 0 and len(results[-1]) > 6 : # Check if previous eval results exist
-             # Attempt to reconstruct from last valid 'res2' if possible (needs storing res2)
              # As a simple fallback, use the last recorded P prediction if available
              if 'res3' in locals() and res3 is not None:
                  final_clusters = res3
@@ -1063,6 +1101,16 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
 
             p = target_distribution(q.data)
 
+            # Optional: smooth target distribution towards uniform (reduces early peaking / collapse).
+            p_smooth_env = os.getenv("SDCN_P_SMOOTHING", "").strip()
+            p_smooth = float(p_smooth_env) if p_smooth_env else 0.0
+            if p_smooth > 0:
+                p_smooth = max(0.0, min(1.0, p_smooth))
+                k = int(p.size(1))
+                uniform = torch.full_like(p, 1.0 / max(k, 1))
+                p = (1.0 - p_smooth) * p + p_smooth * uniform
+                p = p / p.sum(dim=1, keepdim=True).clamp(min=1e-10)
+
             # Numerical stability: avoid log(0) in KL computations
             eps = 1e-10
             q_safe = torch.clamp(q, min=eps)
@@ -1080,7 +1128,71 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
             kl_w = float(kl_w_env) if kl_w_env else 1.0
             ce_w = float(ce_w_env) if ce_w_env else 0.1
             re_w = float(re_w_env) if re_w_env else 1.0
-            loss = kl_w * kl_loss + ce_w * ce_loss + re_w * re_loss
+
+            # Optional CE warmup (avoid overfitting to noisy targets early).
+            ce_warmup_env = os.getenv("SDCN_CE_WARMUP_EPOCHS", "").strip()
+            ce_warmup = int(ce_warmup_env) if ce_warmup_env else 0
+            ce_scale = 1.0
+            if ce_warmup > 0:
+                ce_scale = min(1.0, float(epoch + 1) / float(ce_warmup))
+
+            loss = kl_w * kl_loss + (ce_w * ce_scale) * ce_loss + re_w * re_loss
+
+            # Optional entropy penalty on q (discourage uniform assignments).
+            q_ent_env = os.getenv("SDCN_Q_ENTROPY_WEIGHT", "").strip()
+            q_ent_w = float(q_ent_env) if q_ent_env else 0.0
+            if q_ent_w != 0.0:
+                q_ent = -(q_safe * q_safe.log()).sum(dim=1).mean()
+                loss = loss + float(q_ent_w) * q_ent
+
+            # Optional mutual-information regularizer on q: balanced yet confident soft assignments.
+            q_mi_w_env = os.getenv("SDCN_Q_MI_WEIGHT", "").strip()
+            q_mi_w = float(q_mi_w_env) if q_mi_w_env else 0.0
+            if q_mi_w != 0.0:
+                mean_q = q_safe.mean(dim=0)  # [K]
+                ent_mean = -(mean_q.clamp(min=eps) * mean_q.clamp(min=eps).log()).sum()
+                ent_cond = -(q_safe * q_safe.log()).sum(dim=1).mean()
+                mi_loss = ent_cond - ent_mean
+                loss = loss + float(q_mi_w) * mi_loss
+
+            # Optional balance regularizer on q mean: KL(mean_q || uniform).
+            q_bal_env = os.getenv("SDCN_Q_BALANCE_WEIGHT", "").strip()
+            q_bal_w = float(q_bal_env) if q_bal_env else 0.0
+            if q_bal_w != 0.0:
+                mean_q = q_safe.mean(dim=0)
+                mean_q = mean_q / mean_q.sum().clamp(min=eps)
+                k = int(mean_q.numel())
+                logk = float(math.log(max(k, 1)))
+                q_bal_loss = (mean_q.clamp(min=eps) * (mean_q.clamp(min=eps).log() + logk)).sum()
+                loss = loss + float(q_bal_w) * q_bal_loss
+
+            # Optional entropy penalty on pred (discourage uniform predictions).
+            pred_ent_env = os.getenv("SDCN_PRED_ENTROPY_WEIGHT", "").strip()
+            pred_ent_w = float(pred_ent_env) if pred_ent_env else 0.0
+            if pred_ent_w != 0.0:
+                pred_ent = -(pred_safe * pred_safe.log()).sum(dim=1).mean()
+                loss = loss + float(pred_ent_w) * pred_ent
+
+            # Optional mutual-information regularizer on pred: balanced yet confident assignments.
+            mi_w_env = os.getenv("SDCN_PRED_MI_WEIGHT", "").strip()
+            mi_w = float(mi_w_env) if mi_w_env else 0.0
+            if mi_w != 0.0:
+                mean_pred = pred_safe.mean(dim=0)  # [K]
+                ent_mean = -(mean_pred.clamp(min=eps) * mean_pred.clamp(min=eps).log()).sum()
+                ent_cond = -(pred_safe * pred_safe.log()).sum(dim=1).mean()
+                mi_loss = ent_cond - ent_mean
+                loss = loss + float(mi_w) * mi_loss
+
+            # Optional balance regularizer on pred mean: KL(mean_pred || uniform).
+            pred_bal_env = os.getenv("SDCN_PRED_BALANCE_WEIGHT", "").strip()
+            pred_bal_w = float(pred_bal_env) if pred_bal_env else 0.0
+            if pred_bal_w != 0.0:
+                mean_pred = pred_safe.mean(dim=0)
+                mean_pred = mean_pred / mean_pred.sum().clamp(min=eps)
+                k = int(mean_pred.numel())
+                logk = float(math.log(max(k, 1)))
+                pred_bal_loss = (mean_pred.clamp(min=eps) * (mean_pred.clamp(min=eps).log() + logk)).sum()
+                loss = loss + float(pred_bal_w) * pred_bal_loss
  
             optimizer.zero_grad()
             loss.backward()
@@ -1096,11 +1208,22 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         trace_f.close()
     
     # ---> Use model.eval() and no_grad() for final inference <---
+    final_assign = os.getenv("SDCN_FINAL_ASSIGN", "pred").strip().lower()
+    if final_assign not in {"pred", "q", "p"}:
+        raise ValueError(f"Unknown SDCN_FINAL_ASSIGN={final_assign!r}. Use one of: pred, q, p.")
+
     model.eval()
     try:
         with torch.no_grad():
-            _, _, final_pred, _, _ = model(data, adj, edge_attr)
-        final_clusters = final_pred.data.cpu().numpy().argmax(1)
+            _, q_final, pred_final, _, _ = model(data, adj, edge_attr)
+            p_final = target_distribution(q_final.data)
+
+        if final_assign == "q":
+            final_clusters = q_final.data.cpu().numpy().argmax(1)
+        elif final_assign == "p":
+            final_clusters = p_final.data.cpu().numpy().argmax(1)
+        else:
+            final_clusters = pred_final.data.cpu().numpy().argmax(1)
     except Exception as e:
         print(f"Error getting final clustering results: {str(e)}")
         # If error occurs, use last successful clustering results

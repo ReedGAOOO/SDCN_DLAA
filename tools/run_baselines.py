@@ -4,8 +4,12 @@ Run classic baseline clustering methods on a labeled dataset directory.
 
 Baselines (by default):
 - kmeans_x: KMeans on node features
+- kmeans_edge_mean: KMeans on per-node mean pooled edge_attr
+- kmeans_x_edge_mean: KMeans on [x || mean(edge_attr)] concatenated
 - spectral_adj_binary: Spectral clustering on binary adjacency
 - spectral_edge_distance: Spectral clustering on distance-derived weights (uses edge_attr[:,0])
+- spectral_edge_l2: Spectral clustering on weights derived from all edge_attr dims (z-scored L2 norm)
+- spectral_node_edge_rbf: Spectral clustering on RBF weights computed from per-node pooled edge_attr
 
 Expected files in --data_dir:
 - node_features.npy
@@ -51,12 +55,45 @@ def _cluster_distribution(labels: np.ndarray) -> dict[int, int]:
     return {int(k): int(v) for k, v in zip(unique, counts)}
 
 
+def _pool_edge_attr_to_nodes_mean(adj_sp: sp.spmatrix, edge_attr: np.ndarray, n_nodes: int) -> np.ndarray:
+    """
+    Mean-pool edge_attr to nodes by aggregating incident edges to both endpoints.
+    Expects edge_attr rows aligned with adj_sp.tocoo() nonzeros.
+    """
+    adj = adj_sp.tocoo()
+    if edge_attr.shape[0] != adj.nnz:
+        raise ValueError(f"edge_attr rows ({edge_attr.shape[0]}) != adj.nnz ({adj.nnz})")
+    edge_dim = int(edge_attr.shape[1])
+
+    rows = adj.row.astype(np.int64, copy=False)
+    cols = adj.col.astype(np.int64, copy=False)
+
+    node_sum = np.zeros((n_nodes, edge_dim), dtype=np.float32)
+    node_cnt = np.zeros((n_nodes,), dtype=np.int64)
+
+    np.add.at(node_sum, rows, edge_attr)
+    np.add.at(node_cnt, rows, 1)
+    np.add.at(node_sum, cols, edge_attr)
+    np.add.at(node_cnt, cols, 1)
+
+    denom = np.maximum(node_cnt, 1).astype(np.float32).reshape(-1, 1)
+    return (node_sum / denom).astype(np.float32)
+
+
 def _run_kmeans_x(x: np.ndarray, n_clusters: int, seed: int | None) -> np.ndarray:
     x_std = StandardScaler().fit_transform(x)
     kwargs: dict[str, Any] = {"n_clusters": n_clusters, "n_init": 20}
     if seed is not None:
         kwargs["random_state"] = seed
     return KMeans(**kwargs).fit_predict(x_std)
+
+
+def _run_kmeans_features(features: np.ndarray, n_clusters: int, seed: int | None) -> np.ndarray:
+    feats = StandardScaler().fit_transform(features)
+    kwargs: dict[str, Any] = {"n_clusters": n_clusters, "n_init": 20}
+    if seed is not None:
+        kwargs["random_state"] = seed
+    return KMeans(**kwargs).fit_predict(feats)
 
 
 def _run_spectral(adj: sp.spmatrix, n_clusters: int, seed: int | None) -> np.ndarray:
@@ -98,11 +135,53 @@ def _weighted_adj_from_edge_distance(adj: sp.csr_matrix, edge_attr: np.ndarray, 
     return sp.csr_matrix((weights, (rows, cols)), shape=adj.shape)
 
 
+def _weighted_adj_from_edge_l2(adj: sp.csr_matrix, edge_attr: np.ndarray, gamma: float) -> sp.csr_matrix:
+    """
+    Build a weighted adjacency using all edge_attr dimensions:
+    - z-score edge_attr across edges
+    - scalarize each edge by its L2 norm
+    - weight = exp(-gamma * minmax(norm))
+    """
+    adj_coo = adj.tocoo()
+    rows = adj_coo.row
+    cols = adj_coo.col
+    if edge_attr.shape[0] != adj_coo.nnz:
+        raise ValueError(
+            f"edge_attr row count mismatch: edge_attr has {edge_attr.shape[0]}, "
+            f"but adjacency has {adj_coo.nnz} nonzeros"
+        )
+
+    edge_std = StandardScaler().fit_transform(edge_attr.astype(np.float32, copy=False))
+    norms = np.linalg.norm(edge_std.astype(np.float32, copy=False), axis=1).astype(np.float32)
+    norm_scaled = _minmax(norms)
+    weights = np.exp(-gamma * norm_scaled).astype(np.float32)
+    return sp.csr_matrix((weights, (rows, cols)), shape=adj.shape)
+
+
+def _weighted_adj_from_node_edge_rbf(adj: sp.csr_matrix, node_edge: np.ndarray, gamma: float) -> sp.csr_matrix:
+    """
+    Build a weighted adjacency using per-node pooled edge features:
+    weight(i,j) = exp(-gamma * minmax(||node_edge[i]-node_edge[j]||)).
+    """
+    adj_coo = adj.tocoo()
+    rows = adj_coo.row.astype(np.int64, copy=False)
+    cols = adj_coo.col.astype(np.int64, copy=False)
+    diffs = node_edge[rows] - node_edge[cols]
+    dist = np.linalg.norm(diffs.astype(np.float32, copy=False), axis=1).astype(np.float32)
+    dist_scaled = _minmax(dist)
+    weights = np.exp(-gamma * dist_scaled).astype(np.float32)
+    return sp.csr_matrix((weights, (rows, cols)), shape=adj.shape)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, required=True)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--methods", type=str, default="kmeans_x,spectral_adj_binary,spectral_edge_distance")
+    parser.add_argument(
+        "--methods",
+        type=str,
+        default="kmeans_x,kmeans_edge_mean,kmeans_x_edge_mean,spectral_adj_binary,spectral_edge_distance,spectral_edge_l2,spectral_node_edge_rbf",
+    )
     parser.add_argument("--distance_gamma", type=float, default=5.0)
     parser.add_argument("--summary_json", type=str, default="summary_baselines.json")
     args = parser.parse_args()
@@ -116,16 +195,28 @@ def main() -> None:
     edge_attr = np.load(os.path.join(args.data_dir, "edge_attr.npy")).astype(np.float32)
 
     n_clusters = int(np.unique(y_true).size)
+    node_edge = _pool_edge_attr_to_nodes_mean(adj, edge_attr, n_nodes=int(x.shape[0]))
 
     results: list[dict[str, Any]] = []
 
     for method in methods:
         if method == "kmeans_x":
             y_pred = _run_kmeans_x(x, n_clusters=n_clusters, seed=seed)
+        elif method == "kmeans_edge_mean":
+            y_pred = _run_kmeans_features(node_edge, n_clusters=n_clusters, seed=seed)
+        elif method == "kmeans_x_edge_mean":
+            feats = np.concatenate([x.astype(np.float32, copy=False), node_edge], axis=1)
+            y_pred = _run_kmeans_features(feats, n_clusters=n_clusters, seed=seed)
         elif method == "spectral_adj_binary":
             y_pred = _run_spectral(adj, n_clusters=n_clusters, seed=seed)
         elif method == "spectral_edge_distance":
             w_adj = _weighted_adj_from_edge_distance(adj, edge_attr, gamma=float(args.distance_gamma))
+            y_pred = _run_spectral(w_adj, n_clusters=n_clusters, seed=seed)
+        elif method == "spectral_edge_l2":
+            w_adj = _weighted_adj_from_edge_l2(adj, edge_attr, gamma=float(args.distance_gamma))
+            y_pred = _run_spectral(w_adj, n_clusters=n_clusters, seed=seed)
+        elif method == "spectral_node_edge_rbf":
+            w_adj = _weighted_adj_from_node_edge_rbf(adj, node_edge, gamma=float(args.distance_gamma))
             y_pred = _run_spectral(w_adj, n_clusters=n_clusters, seed=seed)
         else:
             raise SystemExit(f"Unknown baseline method: {method}")
