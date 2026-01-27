@@ -475,6 +475,157 @@ def _make_edge_attr_rich_semantic_only(
     return edge_attr.astype(np.float32), extra
 
 
+def _make_edge_attr_real_social_topics(
+    rng: np.random.Generator,
+    coords: np.ndarray,
+    rows: np.ndarray,
+    cols: np.ndarray,
+    labels: np.ndarray,
+    edge_dim: int,
+    topic_dim: int = 8,
+    latent_dim: int = 6,
+) -> tuple[np.ndarray, dict]:
+    """
+    More realistic "interaction" edges without explicit label leaks:
+    - coords are uninformative (distance is noise-like)
+    - each node has latent embedding + activity + soft topic distribution
+    - each edge samples a topic histogram (fractional) + interaction stats
+
+    IMPORTANT: edge_attr[:,0] is random noise so distance-only baselines cannot exploit it.
+    """
+    n = int(labels.shape[0])
+    n_clusters = int(np.unique(labels).size)
+    e = int(rows.shape[0])
+
+    centers = rng.normal(loc=0.0, scale=1.0, size=(n_clusters, latent_dim)).astype(np.float32)
+    z = centers[labels] + rng.normal(loc=0.0, scale=0.8, size=(n, latent_dim)).astype(np.float32)
+
+    # Node activity (independent-ish confounder).
+    activity = rng.lognormal(mean=0.0, sigma=0.45, size=n).astype(np.float32)
+
+    # Node topic distribution (soft), derived from latent embedding.
+    w = rng.normal(loc=0.0, scale=1.0, size=(latent_dim, topic_dim)).astype(np.float32)
+    logits = z @ w + 0.35 * rng.normal(loc=0.0, scale=1.0, size=(n, topic_dim)).astype(np.float32)
+    logits = logits - logits.max(axis=1, keepdims=True)
+    theta = np.exp(logits).astype(np.float32)
+    theta = theta / (theta.sum(axis=1, keepdims=True) + 1e-6)
+
+    z_i = z[rows]
+    z_j = z[cols]
+    dot = np.sum(z_i * z_j, axis=1, dtype=np.float32)
+    cos = dot / ((np.linalg.norm(z_i, axis=1) * np.linalg.norm(z_j, axis=1)) + 1e-6)
+    l2 = np.sqrt(np.sum((z_i - z_j) ** 2, axis=1, dtype=np.float32))
+
+    cos_n = _minmax(cos.astype(np.float32))
+    l2_n = _minmax(l2.astype(np.float32))
+
+    # Interaction count: depends on similarity + activity (no direct label channel).
+    sim = np.exp(-0.9 * l2).astype(np.float32)
+    rate = (0.4 + 3.0 * sim) * np.sqrt(activity[rows] * activity[cols]).astype(np.float32)
+    rate = np.clip(rate, 0.05, 50.0)
+    total = rng.poisson(lam=rate).astype(np.float32)
+    total_n = _minmax(total.astype(np.float32))
+
+    # Topic histogram (fractional): multinomial over per-edge mixture of endpoint topics.
+    mix = 0.5 * theta[rows] + 0.5 * theta[cols]
+    topic_counts = np.zeros((e, topic_dim), dtype=np.float32)
+    for i in range(e):
+        cnt = int(total[i])
+        if cnt <= 0:
+            continue
+        topic_counts[i] = rng.multinomial(cnt, mix[i]).astype(np.float32)
+    topic_frac = topic_counts / np.maximum(total.reshape(-1, 1), 1.0).astype(np.float32)
+
+    # Reciprocity / recency-style stats.
+    recip_p = np.clip(0.10 + 0.75 * sim + 0.10 * rng.random(size=e).astype(np.float32), 0.0, 1.0)
+    reciprocity = (rng.random(size=e) < recip_p).astype(np.float32)
+
+    dt = rng.exponential(scale=(1.0 / (0.20 + sim))).astype(np.float32)  # stronger tie => smaller dt
+    dt_n = _minmax(dt.astype(np.float32))
+
+    # Noise-like "distance" channel (avoid distance baseline shortcuts).
+    noise0 = rng.random(size=e).astype(np.float32)
+
+    base_mat = np.concatenate(
+        [
+            noise0.reshape(-1, 1),
+            cos_n.reshape(-1, 1),
+            l2_n.reshape(-1, 1),
+            total_n.reshape(-1, 1),
+            reciprocity.reshape(-1, 1),
+            dt_n.reshape(-1, 1),
+            topic_frac.astype(np.float32),
+        ],
+        axis=1,
+    ).astype(np.float32)
+
+    if edge_dim <= base_mat.shape[1]:
+        edge_attr = base_mat[:, :edge_dim].astype(np.float32)
+    else:
+        edge_attr = np.zeros((e, edge_dim), dtype=np.float32)
+        edge_attr[:, : base_mat.shape[1]] = base_mat
+        edge_attr[:, base_mat.shape[1] :] = rng.normal(loc=0.0, scale=0.05, size=(e, edge_dim - base_mat.shape[1])).astype(np.float32)
+
+    extra = {
+        "n_clusters": n_clusters,
+        "topic_dim": int(topic_dim),
+        "edge_attr": "real_social_topics",
+        "edge_attr_note": "edge_attr[:,0] is random noise; remaining channels encode interaction stats/topics",
+    }
+    return edge_attr.astype(np.float32), extra
+
+
+def _make_edge_attr_relational_cycle(
+    rng: np.random.Generator,
+    rows: np.ndarray,
+    cols: np.ndarray,
+    labels: np.ndarray,
+    edge_dim: int,
+) -> tuple[np.ndarray, dict]:
+    """
+    Typed relation edges that encode a *relative* cluster offset:
+      rel = (label_dst - label_src) mod K
+
+    This makes per-node marginal edge-type histograms close to uniform under random graphs,
+    so simple mean-pooling baselines are weak; multi-hop message passing can exploit constraints.
+
+    IMPORTANT: edge_attr[:,0] is random noise.
+    """
+    n_clusters = int(np.unique(labels).size)
+    e = int(rows.shape[0])
+
+    noise0 = rng.random(size=e).astype(np.float32)
+    rel = ((labels[cols] - labels[rows]) % max(n_clusters, 1)).astype(np.int64)
+    rel_onehot = np.eye(max(n_clusters, 1), dtype=np.float32)[rel] if n_clusters > 0 else np.zeros((e, 0), dtype=np.float32)
+
+    # Relation-dependent strength/noise (still not "same_cluster").
+    strength_base = (1.0 + 0.15 * rel.astype(np.float32) + 0.25 * rng.random(size=e).astype(np.float32)).astype(np.float32)
+    strength_n = _minmax(strength_base)
+
+    base_mat = np.concatenate(
+        [
+            noise0.reshape(-1, 1),
+            strength_n.reshape(-1, 1),
+            rel_onehot.astype(np.float32),
+        ],
+        axis=1,
+    ).astype(np.float32)
+
+    if edge_dim <= base_mat.shape[1]:
+        edge_attr = base_mat[:, :edge_dim].astype(np.float32)
+    else:
+        edge_attr = np.zeros((e, edge_dim), dtype=np.float32)
+        edge_attr[:, : base_mat.shape[1]] = base_mat
+        edge_attr[:, base_mat.shape[1] :] = rng.normal(loc=0.0, scale=0.05, size=(e, edge_dim - base_mat.shape[1])).astype(np.float32)
+
+    extra = {
+        "n_clusters": n_clusters,
+        "edge_attr": "relational_cycle",
+        "edge_attr_note": "edge_attr[:,0] is random noise; rel_type encodes (dst-src) mod K",
+    }
+    return edge_attr.astype(np.float32), extra
+
+
 def _make_edge_attr_rich_semantic_only_nonknn(
     rng: np.random.Generator,
     rows: np.ndarray,
@@ -666,6 +817,42 @@ def _preset_rich_edge_semantic_only(seed: int) -> tuple[np.ndarray, np.ndarray, 
     x = _make_node_features(rng, labels, coords, feature_dim=6, cluster_bias=0.0, coord_proj_scale=0.0, noise_scale=1.0)
     return coords, labels, x, {"points_per_cluster": points_per, "note": "geometry uninformative; edge_attr carries semantic signal"}
 
+
+def _preset_real_social_topics_nonknn(seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    """
+    More realistic "social interactions":
+    - geometry uninformative (non-spatial)
+    - node features weak
+    - edge_attr carries interaction/topic signals without explicit label one-hot
+    """
+    rng = np.random.default_rng(seed)
+    n_clusters = 4
+    points_per = 60
+
+    labels = np.repeat(np.arange(n_clusters, dtype=np.int64), points_per)
+    labels = labels[rng.permutation(labels.shape[0])]
+
+    coords = rng.normal(loc=0.0, scale=1.0, size=(labels.shape[0], 2)).astype(np.float32)
+    x = _make_node_features(rng, labels, coords, feature_dim=8, cluster_bias=0.06, coord_proj_scale=0.0, noise_scale=1.2)
+    return coords, labels, x, {"points_per_cluster": points_per, "note": "non-spatial; edge topics/interaction stats"}
+
+
+def _preset_relational_cycle_nonknn(seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    """
+    Typed relation edges encode relative offsets between clusters (cycle-like constraints).
+    Node features are intentionally weak so pooling baselines struggle.
+    """
+    rng = np.random.default_rng(seed)
+    n_clusters = 4
+    points_per = 60
+
+    labels = np.repeat(np.arange(n_clusters, dtype=np.int64), points_per)
+    labels = labels[rng.permutation(labels.shape[0])]
+
+    coords = rng.normal(loc=0.0, scale=1.0, size=(labels.shape[0], 2)).astype(np.float32)
+    x = _make_node_features(rng, labels, coords, feature_dim=6, cluster_bias=0.03, coord_proj_scale=0.0, noise_scale=1.3)
+    return coords, labels, x, {"points_per_cluster": points_per, "note": "edge types are relative (dst-src) mod K; marginals near-uniform"}
+
 PresetFn = Callable[[int], tuple[np.ndarray, np.ndarray, np.ndarray, dict]]
 
 
@@ -682,6 +869,20 @@ PRESETS: dict[str, dict] = {
     "rich_edge_semantic_only_nonknn": {
         "category": "rich_edge",
         "fn": _preset_rich_edge_semantic_only,
+        "edge_dim": 16,
+        "knn_k": 10,  # used as random-k for this preset
+        "graph_type": "random_k",
+    },
+    "real_social_topics_nonknn": {
+        "category": "rich_edge",
+        "fn": _preset_real_social_topics_nonknn,
+        "edge_dim": 32,
+        "knn_k": 10,  # used as random-k for this preset
+        "graph_type": "random_k",
+    },
+    "relational_cycle_nonknn": {
+        "category": "rich_edge",
+        "fn": _preset_relational_cycle_nonknn,
         "edge_dim": 16,
         "knn_k": 10,  # used as random-k for this preset
         "graph_type": "random_k",
@@ -765,6 +966,12 @@ def main() -> None:
                 extra = {**extra, **extra_edge, "edge_attr": "semantic_only"}
             elif name == "rich_edge_semantic_only_nonknn":
                 edge_attr, extra_edge = _make_edge_attr_rich_semantic_only_nonknn(rng, rows, cols, labels, edge_dim=edge_dim)
+                extra = {**extra, **extra_edge}
+            elif name == "real_social_topics_nonknn":
+                edge_attr, extra_edge = _make_edge_attr_real_social_topics(rng, coords, rows, cols, labels, edge_dim=edge_dim)
+                extra = {**extra, **extra_edge}
+            elif name == "relational_cycle_nonknn":
+                edge_attr, extra_edge = _make_edge_attr_relational_cycle(rng, rows, cols, labels, edge_dim=edge_dim)
                 extra = {**extra, **extra_edge}
             else:
                 edge_attr = _make_edge_attr_rich_profiles(rng, coords, rows, cols, labels, edge_dim=edge_dim)

@@ -237,6 +237,12 @@ def main() -> None:
         default="",
         help="Optional comma-separated 0/1 (or true/false) to set SDCN_EDGE_MESSAGE.",
     )
+    parser.add_argument(
+        "--edge_ees",
+        type=str,
+        default="",
+        help="Optional comma-separated 0/1 (or true/false) to set SDCN_EDGE_EE (edge-edge update on/off).",
+    )
     parser.add_argument("--enc_dims_list", type=str, default="", help="Optional AE encoder dims list: '256,256,256;500,500,512'.")
     parser.add_argument("--kl_weights", type=str, default="", help="Optional comma-separated SDCN_KL_WEIGHT overrides.")
     parser.add_argument("--ce_weights", type=str, default="", help="Optional comma-separated SDCN_CE_WEIGHT overrides.")
@@ -265,6 +271,15 @@ def main() -> None:
     parser.add_argument("--edge_attr_clip", type=float, default=5.0, help="Clip used by zscore_clip.")
     parser.add_argument("--max_edges_per_node", type=int, default=10)
     parser.add_argument("--final_assign", type=str, default="pred", help="Final clustering source: pred|q|p (sets SDCN_FINAL_ASSIGN).")
+    parser.add_argument("--pool_residuals", type=str, default="", help="Optional comma-separated 0/1 to set SDCN_POOL_RESIDUAL.")
+    parser.add_argument("--pool_raws", type=str, default="", help="Optional comma-separated 0/1 to set SDCN_POOL_RAW.")
+    parser.add_argument("--pool_upds", type=str, default="", help="Optional comma-separated 0/1 to set SDCN_POOL_UPD.")
+    parser.add_argument(
+        "--pool_gate_modes",
+        type=str,
+        default="",
+        help="Optional comma-separated SDCN_POOL_GATE_MODE values (learned|one|zero).",
+    )
     parser.add_argument("--cpu", action="store_true")
     args = parser.parse_args()
 
@@ -282,6 +297,7 @@ def main() -> None:
     sigmas = _parse_float_list(args.sigmas) if args.sigmas.strip() else [None]
     q_sources = _parse_optional_str_list(args.q_sources)
     edge_messages = _parse_optional_bool_list(args.edge_messages)
+    edge_ees = _parse_optional_bool_list(args.edge_ees)
     enc_dims_list = _parse_enc_dims_list(args.enc_dims_list)
     kl_weights = _parse_optional_float_list(args.kl_weights)
     ce_weights = _parse_optional_float_list(args.ce_weights)
@@ -300,6 +316,15 @@ def main() -> None:
     final_assign = (args.final_assign or "pred").strip().lower()
     if final_assign not in {"pred", "q", "p"}:
         raise SystemExit(f"Unknown --final_assign={final_assign!r}. Use one of: pred, q, p.")
+    pool_residuals = _parse_optional_bool_list(args.pool_residuals)
+    pool_raws = _parse_optional_bool_list(args.pool_raws)
+    pool_upds = _parse_optional_bool_list(args.pool_upds)
+    pool_gate_modes = _parse_optional_str_list(args.pool_gate_modes)
+    for m in pool_gate_modes:
+        if m is None:
+            continue
+        if m.strip().lower() not in {"learned", "one", "zero"}:
+            raise SystemExit(f"Invalid --pool_gate_modes item: {m!r}. Use learned|one|zero.")
 
     all_runs: list[dict] = []
 
@@ -314,6 +339,7 @@ def main() -> None:
         sigma,
         q_source,
         edge_message,
+        edge_ee,
         kl_w,
         ce_w,
         re_w,
@@ -328,6 +354,10 @@ def main() -> None:
         pool_mode,
         edge_norm,
         enc_dims,
+        pool_residual,
+        pool_raw,
+        pool_upd,
+        pool_gate_mode,
     ) in product(
         variants,
         seeds,
@@ -339,6 +369,7 @@ def main() -> None:
         sigmas,
         q_sources,
         edge_messages,
+        edge_ees,
         kl_weights,
         ce_weights,
         re_weights,
@@ -353,6 +384,10 @@ def main() -> None:
         node_edge_pools,
         edge_attr_norms,
         enc_dims_list,
+        pool_residuals,
+        pool_raws,
+        pool_upds,
+        pool_gate_modes,
     ):
         run_name = f"seed{seed}_ep{epochs}_lr{lr:g}_do{dropout:g}_h{heads}_nz{n_z}"
         if sigma is not None:
@@ -361,6 +396,8 @@ def main() -> None:
             run_name += f"_q{q_source}"
         if edge_message is not None:
             run_name += f"_em{1 if edge_message else 0}"
+        if edge_ee is not None:
+            run_name += f"_ee{1 if edge_ee else 0}"
         if kl_w is not None:
             run_name += f"_kl{kl_w:g}"
         if ce_w is not None:
@@ -393,6 +430,14 @@ def main() -> None:
             run_name += f"_enc{enc_dims.replace(',', '-')}"
         if final_assign != "pred":
             run_name += f"_final{final_assign}"
+        if pool_residual is not None:
+            run_name += f"_pr{1 if pool_residual else 0}"
+        if pool_raw is not None:
+            run_name += f"_praw{1 if pool_raw else 0}"
+        if pool_upd is not None:
+            run_name += f"_pupd{1 if pool_upd else 0}"
+        if pool_gate_mode is not None:
+            run_name += f"_pg{str(pool_gate_mode).strip().lower()}"
 
         run_dir = out_dir / data_dir.name / variant / run_name
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -415,6 +460,10 @@ def main() -> None:
             env["SDCN_EDGE_MESSAGE"] = "1" if edge_message else "0"
         else:
             env.pop("SDCN_EDGE_MESSAGE", None)
+        if edge_ee is not None:
+            env["SDCN_EDGE_EE"] = "1" if edge_ee else "0"
+        else:
+            env.pop("SDCN_EDGE_EE", None)
         if kl_w is not None:
             env["SDCN_KL_WEIGHT"] = str(kl_w)
         else:
@@ -463,6 +512,22 @@ def main() -> None:
             env["SDCN_ENC_DIMS"] = enc_dims
         else:
             env.pop("SDCN_ENC_DIMS", None)
+        if pool_residual is not None:
+            env["SDCN_POOL_RESIDUAL"] = "1" if pool_residual else "0"
+        else:
+            env.pop("SDCN_POOL_RESIDUAL", None)
+        if pool_raw is not None:
+            env["SDCN_POOL_RAW"] = "1" if pool_raw else "0"
+        else:
+            env.pop("SDCN_POOL_RAW", None)
+        if pool_upd is not None:
+            env["SDCN_POOL_UPD"] = "1" if pool_upd else "0"
+        else:
+            env.pop("SDCN_POOL_UPD", None)
+        if pool_gate_mode is not None:
+            env["SDCN_POOL_GATE_MODE"] = str(pool_gate_mode).strip().lower()
+        else:
+            env.pop("SDCN_POOL_GATE_MODE", None)
 
         cmd = [
             sys.executable,
@@ -504,6 +569,8 @@ def main() -> None:
                 f"SDCN_SIGMA={(sigma if sigma is not None else '')} "
                 f"SDCN_Q_SOURCE={(q_source if q_source is not None else '')} "
                 f"SDCN_EDGE_MESSAGE={(edge_message if edge_message is not None else '')} "
+                f"SDCN_EDGE_EE={(edge_ee if edge_ee is not None else '')} "
+                f"SDCN_FINAL_ASSIGN={final_assign} "
                 f"SDCN_KL_WEIGHT={(kl_w if kl_w is not None else '')} "
                 f"SDCN_CE_WEIGHT={(ce_w if ce_w is not None else '')} "
                 f"SDCN_RE_WEIGHT={(re_w if re_w is not None else '')} "
@@ -516,6 +583,10 @@ def main() -> None:
                 f"SDCN_Q_ENTROPY_WEIGHT={(q_ent_w if q_ent_w is not None else '')} "
                 f"SDCN_PRED_ENTROPY_WEIGHT={(pred_ent_w if pred_ent_w is not None else '')} "
                 f"SDCN_ENC_DIMS={enc_dims}\n"
+                f"SDCN_POOL_RESIDUAL={(pool_residual if pool_residual is not None else '')} "
+                f"SDCN_POOL_RAW={(pool_raw if pool_raw is not None else '')} "
+                f"SDCN_POOL_UPD={(pool_upd if pool_upd is not None else '')} "
+                f"SDCN_POOL_GATE_MODE={(pool_gate_mode if pool_gate_mode is not None else '')}\n"
                 f"node_edge_pool={pool_mode} edge_ablation={edge_ablation} edge_attr_norm={edge_norm} edge_attr_clip={args.edge_attr_clip}\n\n"
             )
             log_f.flush()
@@ -547,6 +618,7 @@ def main() -> None:
                 "sigma": None if sigma is None else float(sigma),
                 "q_source": q_source,
                 "edge_message": None if edge_message is None else bool(edge_message),
+                "edge_ee": None if edge_ee is None else bool(edge_ee),
                 "kl_weight": None if kl_w is None else float(kl_w),
                 "ce_weight": None if ce_w is None else float(ce_w),
                 "re_weight": None if re_w is None else float(re_w),
@@ -564,6 +636,10 @@ def main() -> None:
                 "edge_attr_clip": float(args.edge_attr_clip),
                 "enc_dims": enc_dims,
                 "final_assign": str(final_assign),
+                "pool_residual": None if pool_residual is None else bool(pool_residual),
+                "pool_raw": None if pool_raw is None else bool(pool_raw),
+                "pool_upd": None if pool_upd is None else bool(pool_upd),
+                "pool_gate_mode": pool_gate_mode,
                 "metrics": summary.get("metrics"),
                 "cluster_distribution": cluster_dist,
                 "collapse_final": collapse_final,
@@ -581,7 +657,8 @@ def main() -> None:
         print(
             f"{data_dir.name}, {variant}, seed={seed}, ep={epochs}, lr={lr:g}, do={dropout:g}, heads={heads}, nz={n_z}, "
             f"sigma={(sigma if sigma is not None else 'default')}, q={(q_source if q_source is not None else 'default')}, "
-            f"edge_msg={(edge_message if edge_message is not None else 'default')}, pool={pool_mode}, norm={edge_norm}, "
+            f"edge_msg={(edge_message if edge_message is not None else 'default')}, edge_ee={(edge_ee if edge_ee is not None else 'default')}, "
+            f"pool={pool_mode}, norm={edge_norm}, "
             f"enc_dims={(enc_dims if enc_dims else 'default')}: "
             f"acc={acc:.4f} nmi={nmi:.4f} ari={ari:.4f} f1={f1:.4f} collapse_final={collapse_final}"
         )

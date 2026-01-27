@@ -19,6 +19,13 @@ from torch_geometric.utils import softmax
 _UNSET = object()
 
 
+def _env_flag(name: str, default: bool) -> bool:
+    raw = os.getenv(name, "").strip().lower()
+    if raw == "":
+        return bool(default)
+    return raw in {"1", "true", "yes", "y", "on"}
+
+
 class GATLayer(nn.Module):
     """Graph Attention Network Layer
     
@@ -455,6 +462,16 @@ class SpatialConvV4EdgePoolFusion(nn.Module):
         self.edge_dim = edge_dim if edge_dim is not None else hidden_size
         self.out_activation = activation if out_activation is _UNSET else out_activation
 
+        self.edge_ee = _env_flag("SDCN_EDGE_EE", True)
+        self.pool_residual = _env_flag("SDCN_POOL_RESIDUAL", True)
+        self.pool_raw = _env_flag("SDCN_POOL_RAW", True)
+        self.pool_upd = _env_flag("SDCN_POOL_UPD", True)
+        self.pool_gate_mode = os.getenv("SDCN_POOL_GATE_MODE", "learned").strip().lower()
+        if self.pool_gate_mode not in {"learned", "one", "zero"}:
+            raise ValueError(
+                f"Unknown SDCN_POOL_GATE_MODE={self.pool_gate_mode!r}. Use one of: learned, one, zero."
+            )
+
         self.edge_dim_proj = None
         if self.edge_dim != hidden_size:
             self.edge_dim_proj = nn.Linear(self.edge_dim, hidden_size)
@@ -523,18 +540,27 @@ class SpatialConvV4EdgePoolFusion(nn.Module):
         edge_feat_0 = F.relu(edge_dist + edge_nodes)  # [E, H]
 
         # Edge-to-edge update (edges only).
-        edge_feat_1 = self.ee_gat(edge_feat_0, edge_to_edge_index)  # [E, H]
+        edge_feat_1 = self.ee_gat(edge_feat_0, edge_to_edge_index) if self.edge_ee else edge_feat_0  # [E, H]
 
         # Node update via attention with edge embeddings.
         node_att = self.en_gat(x, edge_index, edge_feat_1)  # [N, H]
 
-        # Explicit edge->node pooling residual (mean over incident edges).
-        pooled_raw = self._pool_edges_to_nodes_mean(dist_feat_order, edge_index, num_nodes=num_nodes)  # [N, H]
-        pooled_upd = self._pool_edges_to_nodes_mean(edge_feat_1, edge_index, num_nodes=num_nodes)  # [N, H]
-        pooled = pooled_raw + pooled_upd
+        node_out = node_att
+        if self.pool_residual and (self.pool_raw or self.pool_upd):
+            pooled = 0.0
+            if self.pool_raw:
+                pooled = pooled + self._pool_edges_to_nodes_mean(dist_feat_order, edge_index, num_nodes=num_nodes)  # [N, H]
+            if self.pool_upd:
+                pooled = pooled + self._pool_edges_to_nodes_mean(edge_feat_1, edge_index, num_nodes=num_nodes)  # [N, H]
 
-        gate = torch.sigmoid(self.pool_gate(torch.cat([node_att, pooled], dim=1)))
-        node_out = node_att + gate * self.pool_proj(pooled)
+            if self.pool_gate_mode == "learned":
+                gate = torch.sigmoid(self.pool_gate(torch.cat([node_att, pooled], dim=1)))
+            elif self.pool_gate_mode == "one":
+                gate = torch.ones_like(node_att)
+            else:
+                gate = torch.zeros_like(node_att)
+
+            node_out = node_att + gate * self.pool_proj(pooled)
 
         if self.out_activation is not None:
             node_out = self.out_activation(node_out)
@@ -555,6 +581,16 @@ class SpatialConvV5EdgePoolResidual(nn.Module):
         self.hidden_size = hidden_size
         self.edge_dim = edge_dim if edge_dim is not None else hidden_size
         self.out_activation = activation if out_activation is _UNSET else out_activation
+
+        self.edge_ee = _env_flag("SDCN_EDGE_EE", True)
+        self.pool_residual = _env_flag("SDCN_POOL_RESIDUAL", True)
+        self.pool_raw = _env_flag("SDCN_POOL_RAW", True)
+        self.pool_upd = _env_flag("SDCN_POOL_UPD", True)
+        self.pool_gate_mode = os.getenv("SDCN_POOL_GATE_MODE", "learned").strip().lower()
+        if self.pool_gate_mode not in {"learned", "one", "zero"}:
+            raise ValueError(
+                f"Unknown SDCN_POOL_GATE_MODE={self.pool_gate_mode!r}. Use one of: learned, one, zero."
+            )
 
         self.edge_dim_proj = None
         if self.edge_dim != hidden_size:
@@ -624,18 +660,27 @@ class SpatialConvV5EdgePoolResidual(nn.Module):
         edge_feat_0 = F.relu(self.edge_fc(torch.cat([x[srcs], x[dsts], dist_feat_order], dim=1)))  # [E, H]
 
         # ---- Step 2: edge-to-edge update (edges only) ----
-        edge_feat_1 = self.ee_gat(edge_feat_0, edge_to_edge_index)  # [E, H]
+        edge_feat_1 = self.ee_gat(edge_feat_0, edge_to_edge_index) if self.edge_ee else edge_feat_0  # [E, H]
 
         # ---- Step 3: node update using *raw* dist_feat (V2 philosophy) ----
         node_att = self.en_gat(x, edge_index, dist_feat)  # [N, H]
 
-        # ---- Step 4: explicit edge->node pooling residual (raw + updated) ----
-        pooled_raw = self._pool_edges_to_nodes_mean(dist_feat, edge_index, num_nodes=num_nodes)
-        pooled_upd = self._pool_edges_to_nodes_mean(edge_feat_1, edge_index, num_nodes=num_nodes)
-        pooled = pooled_raw + pooled_upd
+        node_out = node_att
+        if self.pool_residual and (self.pool_raw or self.pool_upd):
+            pooled = 0.0
+            if self.pool_raw:
+                pooled = pooled + self._pool_edges_to_nodes_mean(dist_feat, edge_index, num_nodes=num_nodes)
+            if self.pool_upd:
+                pooled = pooled + self._pool_edges_to_nodes_mean(edge_feat_1, edge_index, num_nodes=num_nodes)
 
-        gate = torch.sigmoid(self.pool_gate(torch.cat([node_att, pooled], dim=1)))
-        node_out = node_att + gate * self.pool_proj(pooled)
+            if self.pool_gate_mode == "learned":
+                gate = torch.sigmoid(self.pool_gate(torch.cat([node_att, pooled], dim=1)))
+            elif self.pool_gate_mode == "one":
+                gate = torch.ones_like(node_att)
+            else:
+                gate = torch.zeros_like(node_att)
+
+            node_out = node_att + gate * self.pool_proj(pooled)
 
         if self.out_activation is not None:
             node_out = self.out_activation(node_out)
