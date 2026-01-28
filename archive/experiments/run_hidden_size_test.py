@@ -1,11 +1,14 @@
+import os
 import subprocess
 import sys
-import os
+
+# ARCHIVED: kept for reference (hidden-size sweeps). Not used by the default pipeline.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # --- Configuration ---
 # Target script name to execute
 # Updated to point to hiddensize version
-target_script = "test_sdcn_dlaa_NEW_hiddensize.py"
+target_script = os.path.join(REPO_ROOT, "archive", "experiments", "test_sdcn_dlaa_NEW_hiddensize.py")
 
 # Fixed heads parameter value
 fixed_heads = 1

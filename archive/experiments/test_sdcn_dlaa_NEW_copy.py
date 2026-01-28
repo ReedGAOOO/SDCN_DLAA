@@ -1,3 +1,11 @@
+import os
+import sys
+
+# Ensure repo root is importable when running from `archive/experiments/`.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -7,9 +15,7 @@ from sdcn_dlaa_NEW import SDCN_DLAA, target_distribution, eva, train_sdcn_dlaa_c
 from sklearn.cluster import KMeans
 import argparse
 import pandas as pd
-import os
 from datetime import datetime
-import sys
 from collections import defaultdict
 import random
 

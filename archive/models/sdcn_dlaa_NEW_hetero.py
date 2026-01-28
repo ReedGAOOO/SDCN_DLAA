@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+# ARCHIVED: Hetero experimental training script kept for reference. Not used by the default pipeline.
 import argparse
 import random
 import numpy as np

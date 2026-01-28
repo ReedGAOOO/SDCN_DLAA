@@ -28,6 +28,8 @@ For the full documentation, see:
 - `DLAA_NEW.py`: DLAA / `SpatialConv` implementations and variants.
 - `preprocess_distance_matrix.py`: builds a sparse graph + edge features from a distance matrix.
 - `NEWDATA/`: example raw + processed data outputs.
+- `experiments/`: runnable entry scripts for sparse KNN / threshold graphs and quick sanity tests.
+- `archive/`: archived experimental variants (AMP/hetero/hiddensize) kept for reference.
 - `tools/`: synthetic (“conceptual”) dataset generator and variant comparison runner.
 
 ## Model Overview (High Level)
@@ -53,7 +55,7 @@ Override with `--node_features` / `--distance_matrix` if needed.
 ### 2) Run (sparse KNN)
 
 ```bash
-python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
 ```
 
 Common knobs:
@@ -72,7 +74,7 @@ export SDCN_FINAL_ASSIGN=p                       # pred | q | p (choose which he
 export SDCN_SEED=0                              # optional: reproducible runs
 export SDCN_EPOCHS=30                           # optional: override epochs
 export SDCN_EDGE_MESSAGE=1                      # optional: edge_attr as message content
-python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
 
 Variant intent:
@@ -86,7 +88,7 @@ Variant intent:
 
 ```bash
 # Threshold-sparsified graph
-python test_sdcn_dlaa_NEW_sparse_threshold.py --data_dir NEWDATA/processed_threshold_0.5
+python experiments/test_sdcn_dlaa_NEW_sparse_threshold.py --data_dir NEWDATA/processed_threshold_0.5
 ```
 
 ## Synthetic Conceptual Benchmark (Optional)

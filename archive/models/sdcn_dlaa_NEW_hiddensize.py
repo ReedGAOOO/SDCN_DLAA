@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+# ARCHIVED: Hidden-size sweep variant kept for reference. Not used by the default pipeline.
 import argparse
 import random
 import numpy as np
@@ -16,15 +17,14 @@ from torch.utils.data import DataLoader
 from torch.nn import Linear
 from torch_geometric.data import Data
 from torch_geometric.utils import to_edge_index, dense_to_sparse
+# Assuming utils and evaluation are in the same directory or accessible
 from Reference.SDCN_ORIGINAL.utils import load_data, load_graph
 from evaluation import eva
 import sys
 import os
 from datetime import datetime
-# ---> 1. Add AMP imports <---
-from torch.cuda.amp import autocast, GradScaler
 
-# Import SpatialConv from DLAA
+# Import SpatialConv from DLAA_NEW (assuming it's in the same directory)
 from DLAA_NEW import SpatialConv
 
 
@@ -33,7 +33,7 @@ class AE(nn.Module):
     Autoencoder module for SDCN, same as the original implementation
     """
     def __init__(self, n_enc_1, n_enc_2, n_enc_3, n_dec_1, n_dec_2, n_dec_3,
-                n_input, n_z):
+                 n_input, n_z):
         super(AE, self).__init__()
         self.enc_1 = Linear(n_input, n_enc_1)
         self.enc_2 = Linear(n_enc_1, n_enc_2)
@@ -116,11 +116,12 @@ class SDCN_DLAA(nn.Module):
             n_z=n_z)
 
         # SpatialConv layers replacing GNNLayers
-        self.spatial_conv1 = SpatialConv(n_enc_1, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
-        self.spatial_conv2 = SpatialConv(n_enc_2, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
-        self.spatial_conv3 = SpatialConv(n_enc_3, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
-        self.spatial_conv4 = SpatialConv(n_z, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
-        self.spatial_conv5 = SpatialConv(n_clusters, edge_dim=self.edge_dim, dropout=dropout, heads=heads)
+        # Ensure heads are passed correctly
+        self.spatial_conv1 = SpatialConv(n_enc_1, edge_dim=self.edge_dim, dropout=dropout, heads=self.heads)
+        self.spatial_conv2 = SpatialConv(n_enc_2, edge_dim=self.edge_dim, dropout=dropout, heads=self.heads)
+        self.spatial_conv3 = SpatialConv(n_enc_3, edge_dim=self.edge_dim, dropout=dropout, heads=self.heads)
+        self.spatial_conv4 = SpatialConv(n_z, edge_dim=self.edge_dim, dropout=dropout, heads=self.heads)
+        self.spatial_conv5 = SpatialConv(n_clusters, edge_dim=self.edge_dim, dropout=dropout, heads=self.heads)
 
         # Projection layers to match dimensions between layers
         self.proj1 = nn.Linear(n_input, n_enc_1)
@@ -154,24 +155,24 @@ class SDCN_DLAA(nn.Module):
         """
         num_nodes = x.size(0)
 
-        # Important fix: Add validation for node count and feature dimensions
+        # Critical fix: Add validation for node count and feature dimensions
         if num_nodes < 4:
-            raise ValueError(f"Number of nodes must be greater than 3, current: {num_nodes}")
+            raise ValueError(f"Number of nodes must be greater than 3, got {num_nodes}")
 
-        # Check if x contains valid features
+        # Validate x contains valid features
         if not torch.is_floating_point(x) or torch.isnan(x).any():
             raise ValueError("Node features contain invalid values (NaN or non-float)")
 
         # Check if we already have precomputed graph structures from initialization
         if self.precomputed_edge_index is not None and self.precomputed_edge_to_edge_index is not None:
-            # Important fix: Validate precomputed edge indices don't exceed node range
+            # Critical fix: Validate precomputed edge indices don't exceed node count
             max_node_idx = self.precomputed_edge_index.max().item()
             if max_node_idx >= num_nodes:
                 print(f"Warning: Precomputed edge indices ({max_node_idx}) exceed current node count ({num_nodes}), recalculating...")
                 # Clear precomputed results and recalculate
                 self.precomputed_edge_index = None
                 self.precomputed_edge_to_edge_index = None
-                # Continue with the logic below to recalculate
+                # Continue with recalculation logic below
             else:
                 # If precomputed edge indices are valid, use them to create data object
                 data = Data(
@@ -191,20 +192,20 @@ class SDCN_DLAA(nn.Module):
         else:
             adj_id = f"{adj.sum().item()}"
 
-        # Important fix: Include node count and feature dimensions in cache key
+        # Critical fix: Include node count and feature dimensions in cache key
         cache_key = f"{adj_id}_{max_edges_per_node}_{num_nodes}_{x.size(1)}"
 
         # Check if we have cached this graph structure
         if cache_key in self.graph_cache:
             cached = self.graph_cache[cache_key]
 
-            # Important fix: Validate cached edge indices don't exceed node range
+            # Critical fix: Validate cached edge indices don't exceed node count
             max_node_idx = cached['edge_index'].max().item()
             if max_node_idx >= num_nodes:
                 print(f"Warning: Cached edge indices ({max_node_idx}) exceed current node count ({num_nodes}), recalculating...")
                 # Remove invalid cache entry
                 self.graph_cache.pop(cache_key)
-                # Continue with the logic below to recalculate
+                # Continue with recalculation logic below
             else:
                 # If cached edge indices are valid, use them to create data object
                 data = Data(
@@ -327,7 +328,6 @@ class SDCN_DLAA(nn.Module):
             z: Latent representation
             spatial_shapes: Dictionary of layer shapes
         """
-        # Record original node count, this is important
         original_nodes = x.size(0)
 
         # Get autoencoder outputs
@@ -375,7 +375,7 @@ class SDCN_DLAA(nn.Module):
         # Project node features: map each node's features from n_z to n_clusters
         projected_features = self.proj5(data.x)   # projected_features.shape = [original_nodes, n_clusters]
 
-        # Construct new Data object, ensuring node count remains original_nodes
+        # Create new Data object, ensuring node count remains original_nodes
         updated_data = Data(
             x=projected_features,
             edge_index=data.edge_index,
@@ -385,7 +385,7 @@ class SDCN_DLAA(nn.Module):
             edge_to_edge_index=data.edge_to_edge_index
         )
 
-        # Correctly pass data to SpatialConv
+        # Properly pass data to SpatialConv
         node_edge_feat5 = self.spatial_conv5(updated_data)
         h5 = node_edge_feat5[:original_nodes]
         spatial_shapes['Layer 5'] = h5.shape
@@ -436,7 +436,7 @@ def target_distribution(q):
 
 def train_sdcn_dlaa(dataset, args, edge_attr=None):
     """
-    Train SDCN_DLAA model
+    Train SDCN_DLAA model (Original version, kept for reference)
 
     Args:
         dataset: Dataset object containing features and labels
@@ -503,14 +503,14 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
 
     # Create model with precomputed graph structures
     model = SDCN_DLAA(
-        500, 500, 2000, 2000, 500, 500,
+        500, 500, 2000, 2000, 500, 500, # Default hidden sizes
         n_input=args.n_input,
         n_z=args.n_z,
         n_clusters=args.n_clusters,
         v=1.0,
         dropout=args.dropout,
         edge_dim=args.edge_dim,
-        heads=4,
+        heads=args.heads, # Use heads from args
         max_edges_per_node=max_edges_per_node,
         precomputed_edge_index=edge_index,
         precomputed_edge_to_edge_index=edge_to_edge_index
@@ -526,21 +526,13 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
     y = dataset.y
 
     # Initialize cluster centers using pretrained autoencoder
-    # ---> Use no_grad here too for initialization inference <---
-    model.eval() # Set model to eval mode for initialization inference
     with torch.no_grad():
         _, _, _, _, z = model.ae(data)
-    model.train() # Switch back to train mode
 
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
     y_pred = kmeans.fit_predict(z.data.cpu().numpy())
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
-    # Check if y has enough classes for evaluation metrics
-    if len(np.unique(y)) > 1:
-        eva(y, y_pred, 'pae')
-    else:
-        print(f"Initial clustering (pae) completed. Cluster distribution may not be diverse.")
-        print(f"Initial y_pred counts: {np.bincount(y_pred)}")
+    eva(y, y_pred, 'pae')
 
     # Create a list to store results
     results = []
@@ -551,15 +543,10 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
         model.current_epoch = epoch
 
         if epoch % 1 == 0:
-            # ---> Set model to evaluation mode <---
-            model.eval()
             # Evaluate the model
             try:
-                # ---> Use torch.no_grad() for evaluation inference <---
-                with torch.no_grad():
-                    _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
+                _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
 
-                # The rest of the calculations generally don't need gradients
                 tmp_q = tmp_q.data
                 p = target_distribution(tmp_q)
 
@@ -567,34 +554,19 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
                 res2 = pred.data.cpu().numpy().argmax(1)  # Z
                 res3 = p.data.cpu().numpy().argmax(1)  # P
 
-                # Check if y has enough classes for evaluation metrics
-                if len(np.unique(y)) > 1:
-                    acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
-                    acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
-                    acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
-                    # Save clustering results for each round
-                    results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
-                else:
-                    # Handle case with insufficient classes in y
-                    print(f"Epoch {epoch} evaluation skipped due to insufficient ground truth classes.")
-                    # Append placeholders or skip appending
-                    results.append([epoch] + [0] * 12) # Example: Append zeros
+                # Get evaluation metrics for each round
+                acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
+                acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
+                acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
 
+                # Save clustering results for each round
+                results.append([epoch, acc1, f1_1, acc2, f1_2, acc3, f1_3])
             except Exception as e:
                 print(f"Epoch {epoch} evaluation error: {str(e)}")
-                # ---> Ensure model returns to train mode even if eval fails <---
-                model.train()
-                continue # Skip to next epoch if evaluation fails
-            finally:
-                # ---> Switch model back to training mode AFTER evaluation try block <---
-                model.train()
+                continue
 
-        # Forward pass (Training) - already wrapped in its own try-except
-        # No changes needed here unless train mode was not set correctly
+        # Forward pass
         try:
-            # Ensure model is in train mode before forward pass for training
-            model.train() # Redundant if correctly placed after eval, but safe
-
             x_bar, q, pred, _, _ = model(data, adj, edge_attr)
 
             # Calculate target distribution
@@ -626,35 +598,20 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
             continue
 
     # Get final clustering results
-    # ---> Use model.eval() and no_grad() for final inference <---
-    model.eval()
     try:
-        with torch.no_grad():
-            _, _, final_pred, _, _ = model(data, adj, edge_attr)
+        _, _, final_pred, _, _ = model(data, adj, edge_attr)
         final_clusters = final_pred.data.cpu().numpy().argmax(1)
     except Exception as e:
         print(f"Error getting final clustering results: {str(e)}")
-        # Fallback logic...
-        if 'res2' in locals() and res2 is not None:
-             final_clusters = res2
-        elif len(results) > 0 and len(results[-1]) > 6 : # Check if previous eval results exist
-             # Attempt to reconstruct from last valid 'res2' if possible (needs storing res2)
-             # As a simple fallback, use the last recorded P prediction if available
-             if 'res3' in locals() and res3 is not None:
-                 final_clusters = res3
-             else: # Last resort: zeros
-                 final_clusters = np.zeros(len(dataset.x), dtype=int)
-             print("Warning: Using fallback for final clustering results.")
+        # If error, use last successful clustering result
+        if 'res2' in locals():
+            final_clusters = res2
         else:
+            # If no successful clustering results, return zeros
             final_clusters = np.zeros(len(dataset.x), dtype=int)
-            print("Warning: Using zeros for final clustering results due to errors.")
 
     # Save results
-    column_names = ['Epoch', 'Acc_Q', 'F1_Q', 'NMI_Q', 'ARI_Q', 'Acc_Z', 'F1_Z', 'NMI_Z', 'ARI_Z', 'Acc_P', 'F1_P', 'NMI_P', 'ARI_P']
-    if len(results) > 0 and len(results[0]) != len(column_names): # Adjust columns if only epoch was saved
-        column_names = ['Epoch'] + [f'Metric_{i}' for i in range(len(results[0]) - 1)]
-
-    results_df = pd.DataFrame(results, columns=column_names)
+    results_df = pd.DataFrame(results, columns=['Epoch', 'Acc_Q', 'F1_Q', 'Acc_Z', 'F1_Z', 'Acc_P', 'F1_P'])
     results_df.to_csv('sdcn_dlaa_training_results.csv', index=False)
 
     print("Training complete. Results saved to 'sdcn_dlaa_training_results.csv'.")
@@ -670,7 +627,7 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
 class Logger(object):
     def __init__(self, filename="Default.log", terminal_mode="normal"):
         self.terminal = sys.stdout
-        self.log = open(filename, "a", encoding="utf-8")  # Added UTF-8 encoding
+        self.log = open(filename, "a", encoding="utf-8")
         self.terminal_mode = terminal_mode
 
     def write(self, message):
@@ -703,38 +660,34 @@ class Logger(object):
 
 def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
     """
-    Optimized training function - for custom datasets (with AMP integrated)
-
+    Optimized training function for custom datasets with hidden layer sizes configurable via command line arguments
+    
     Args:
         dataset: Dataset object containing features and labels
         adj: Adjacency matrix (torch sparse tensor)
-        args: Training parameters
+        args: Training arguments (including hs1, hs2, hs3, heads etc.)
         edge_attr: Edge features [num_edges, edge_dim]
     """
 
-    # Check if edge attributes are provided, if not, create simple edge features
     if edge_attr is None:
         print("No edge features provided, using randomly initialized edge features")
         num_edges = adj._nnz()
         edge_attr = torch.ones(num_edges, args.edge_dim).to(args.device)
     else:
-        # Ensure edge features are on the correct device
         edge_attr = edge_attr.to(args.device)
 
-    # Performance optimization: Preprocess edge-to-edge graph structure
-    print("Performance optimization: Precomputing graph structures...")
+    print("Performance optimization: Precomputing graph structure...")
     if adj.is_sparse:
         adj = adj.coalesce()
         edge_index = adj.indices()
     else:
         edge_index, _ = dense_to_sparse(adj)
 
-    # Validate edge indices
     num_nodes = dataset.num_nodes
     max_index = edge_index.max().item()
 
     if max_index >= num_nodes:
-        print(f"Warning: Edge indices contain values exceeding node count range (max: {max_index}, node count: {num_nodes})")
+        print(f"Warning: Edge indices contain values exceeding node count range (max: {max_index}, nodes: {num_nodes})")
         print(f"Filtering invalid edges...")
 
         valid_edges_mask = (edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)
@@ -746,64 +699,65 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
 
         if edge_index.size(1) == 0:
             print("Error: No valid edges remain after filtering!")
-            # Create minimal valid graph
             edge_index = torch.zeros((2, 1), dtype=torch.long).to(args.device)
             edge_index[0, 0] = 0
-            edge_index[1, 0] = min(1, num_nodes-1)  # Connect to self if only 1 node
+            edge_index[1, 0] = min(1, num_nodes-1)  # If there's only 1 node, connect it to itself
 
             # Update edge features
             if edge_attr is not None:
                 edge_attr = torch.ones(1, args.edge_dim).to(args.device)
 
-    # Build edge-to-edge connections
     print("Building edge-to-edge connections...")
     num_edges = edge_index.size(1)
 
-    # Build mapping from nodes to edges
     node_to_edges = defaultdict(list)
     for i in range(num_edges):
         src, dst = edge_index[0, i].item(), edge_index[1, i].item()
         node_to_edges[src].append(i)
         node_to_edges[dst].append(i)
 
-    # Create edge-to-edge connections
     edge_to_edge_list = []
     for node, connected_edges in node_to_edges.items():
         if len(connected_edges) > 1:
-            # Randomly sample if exceeding max edges per node limit
             if len(connected_edges) > args.max_edges_per_node:
                 sampled_edges = random.sample(connected_edges, args.max_edges_per_node)
             else:
                 sampled_edges = connected_edges
 
-            # Connect all pairs of edges that share this node
             for i in range(len(sampled_edges)):
                 for j in range(i+1, len(sampled_edges)):
                     edge_i = sampled_edges[i]
                     edge_j = sampled_edges[j]
-                    # Add both directions for undirected graph
                     edge_to_edge_list.append([edge_i, edge_j])
                     edge_to_edge_list.append([edge_j, edge_i])
 
-    # Convert to tensor form
     if len(edge_to_edge_list) > 0:
         edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
     else:
-        # If no edge-to-edge connections, create empty tensor
         edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
 
-    print(f"Precomputation complete: Node-to-node edge count: {edge_index.shape[1]}, Edge-to-edge connection count: {edge_to_edge_index.shape[1]}")
+    print(f"Precomputation complete: Node-to-node edges: {edge_index.shape[1]}, Edge-to-edge connections: {edge_to_edge_index.shape[1]}")
 
-    # Create model using precomputed graph structures
+    hs1 = args.hs1
+    hs2 = args.hs2
+    hs3 = args.hs3
+    n_enc_1 = hs1
+    n_enc_2 = hs2
+    n_enc_3 = hs3
+    n_dec_1 = hs3
+    n_dec_2 = hs2
+    n_dec_3 = hs1
+
     model = SDCN_DLAA(
-        500, 500, 2000, 2000, 500, 500,
+        n_enc_1=n_enc_1, n_enc_2=n_enc_2, n_enc_3=n_enc_3,
+        n_dec_1=n_dec_1, n_dec_2=n_dec_2, n_dec_3=n_dec_3, 
         n_input=args.n_input,
         n_z=args.n_z,
         n_clusters=args.n_clusters,
         v=1.0,
         dropout=args.dropout,
         edge_dim=args.edge_dim,
-        heads=args.heads,
+        heads=args.heads, # Using heads passed from args
         max_edges_per_node=args.max_edges_per_node,
         precomputed_edge_index=edge_index,
         precomputed_edge_to_edge_index=edge_to_edge_index
@@ -811,56 +765,44 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
 
     print(model)
 
-    # Optimizer
     optimizer = Adam(model.parameters(), lr=args.lr)
 
-    # ---> 2. Initialize GradScaler (only when CUDA is available) <---
-    scaler = GradScaler(enabled=args.cuda)
-
-    # Move adjacency matrix to specified device
     adj = adj.to(args.device)
 
-    # Prepare data
     data = torch.Tensor(dataset.x).to(args.device)
     y = dataset.y
 
-    # Initialize cluster centers using pretrained autoencoder
-    model.eval()
+    # ---> Use no_grad here too for initialization inference <---
+    model.eval() # Set model to eval mode for initialization inference
     with torch.no_grad():
-        # ---> 7. Use autocast within no_grad (optional) <---
-        with autocast(enabled=args.cuda):
-            _, _, _, _, z = model.ae(data)
-    model.train()
+        _, _, _, _, z = model.ae(data)
+    model.train() # Switch back to train mode
 
-    # Use K-means for initial clustering
+
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
     # Ensure z is on CPU for KMeans
     y_pred = kmeans.fit_predict(z.data.cpu().numpy())
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
 
-    # Evaluate initial clustering results
-    if len(np.unique(y)) > 1:  # If true labels exist
+    if len(np.unique(y)) > 1: 
         eva(y, y_pred, 'pae')
     else:
-        print(f"Initial clustering completed. Cluster count: {args.n_clusters}")
+        print(f"Initial clustering completed. Number of clusters: {args.n_clusters}")
 
-    # Create list to store results
     results = []
-    last_successful_res2 = None # For fallback in case of errors
 
-    # Training loop
-    for epoch in range(60):
-        # Update current epoch
+    for epoch in range(60): 
         model.current_epoch = epoch
 
         if epoch % 1 == 0:
+            # ---> Set model to evaluation mode <---
             model.eval()
             try:
+                # ---> Use torch.no_grad() for evaluation inference <---
                 with torch.no_grad():
-                    # ---> 7. Use autocast within no_grad (optional) <---
-                    with autocast(enabled=args.cuda):
-                        _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
+                     _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
 
+                # The rest of the calculations generally don't need gradients
                 tmp_q = tmp_q.data
                 p = target_distribution(tmp_q)
 
@@ -869,64 +811,56 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                 res3 = p.data.cpu().numpy().argmax(1)  # P
                 last_successful_res2 = res2 # Store the latest successful result
 
-                # Evaluate clustering metrics each round
-                if len(np.unique(y)) > 1:  # If true labels exist
+                if len(np.unique(y)) > 1:  # If ground truth labels exist
                     acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
                     acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
                     acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
 
-                    # Save clustering results for each round
                     results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
                 else:
-                    # Without labels, only save clustering results, don't compute metrics
+                    # Without labels, only save clustering results without evaluation metrics
                     cluster_distribution = np.bincount(res2)
                     print(f"Epoch {epoch}, Cluster distribution: {cluster_distribution}")
-                    results.append([epoch] + [0] * 12)  # Placeholder fill
+                    results.append([epoch] + [0] * 12)  # Placeholder padding
             except Exception as e:
                 print(f"Epoch {epoch} evaluation error: {str(e)}")
+                 # ---> Ensure model returns to train mode even if eval fails <---
                 model.train()
                 continue # Skip to next epoch if evaluation fails
             finally:
+                 # ---> Switch model back to training mode AFTER evaluation try block <---
                 model.train()
 
-        # Forward pass (Training)
+        # Forward pass (training) - already wrapped in its own try-except
         try:
+            # Ensure model is in train mode
             model.train()
-            optimizer.zero_grad() # Typically clear gradients here
 
-            # ---> 3. Wrap forward pass and loss calculation with autocast <---
-            with autocast(enabled=args.cuda):
-                x_bar, q, pred, _, _ = model(data, adj, edge_attr)
+            x_bar, q, pred, _, _ = model(data, adj, edge_attr)
 
-                # Calculate target distribution
-                # Note: p calculation depends on q.data, typically doesn't need to be in autocast,
-                # but if target_distribution has complex operations, it's fine to leave it in
-                p = target_distribution(q.data)
+            # Compute target distribution
+            p = target_distribution(q.data)
 
-                # Calculate loss (numerically stable: avoid log(0) in KL computations)
-                eps = 1e-10
-                q_safe = torch.clamp(q, min=eps)
-                q_safe = q_safe / q_safe.sum(dim=1, keepdim=True)
-                pred_safe = torch.clamp(pred, min=eps)
-                pred_safe = pred_safe / pred_safe.sum(dim=1, keepdim=True)
+            # Calculate losses (numerically stable: avoid log(0) in KL computations)
+            eps = 1e-10
+            q_safe = torch.clamp(q, min=eps)
+            q_safe = q_safe / q_safe.sum(dim=1, keepdim=True)
+            pred_safe = torch.clamp(pred, min=eps)
+            pred_safe = pred_safe / pred_safe.sum(dim=1, keepdim=True)
 
-                kl_loss = F.kl_div(q_safe.log(), p, reduction='batchmean')
-                ce_loss = F.kl_div(pred_safe.log(), p, reduction='batchmean')
-                re_loss = F.mse_loss(x_bar, data)
+            kl_loss = F.kl_div(q_safe.log(), p, reduction='batchmean')
+            ce_loss = F.kl_div(pred_safe.log(), p, reduction='batchmean')
+            re_loss = F.mse_loss(x_bar, data)
 
-                # Combined loss
-                loss = 0.1 * kl_loss + 0.01 * ce_loss + re_loss
+            # Combined loss with same weights as original SDCN
+            loss = 0.1 * kl_loss + 0.01 * ce_loss + re_loss
 
-            # ---> 4. Scale loss with GradScaler for backward pass <---
-            scaler.scale(loss).backward()
+            # Backpropagation and optimization
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-            # ---> 5. Update optimizer with GradScaler (including gradient unscaling) <---
-            scaler.step(optimizer)
-
-            # ---> 6. Update GradScaler's scale factor <---
-            scaler.update()
-
-            # Print loss information every 10 epochs
+            # Print loss info every 10 epochs
             if epoch % 10 == 0:
                 print(f"Epoch {epoch}, Loss: {loss.item():.4f}, KL: {kl_loss.item():.4f}, CE: {ce_loss.item():.4f}, RE: {re_loss.item():.4f}")
         except Exception as e:
@@ -934,247 +868,15 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
             continue
 
     # Get final clustering results
+    # ---> Use model.eval() and no_grad() for final inference <---
     model.eval()
     try:
         with torch.no_grad():
-            # ---> 7. Use autocast within no_grad (optional) <---
-            with autocast(enabled=args.cuda):
-                _, _, final_pred, _, _ = model(data, adj, edge_attr)
+            _, _, final_pred, _, _ = model(data, adj, edge_attr)
         final_clusters = final_pred.data.cpu().numpy().argmax(1)
     except Exception as e:
         print(f"Error getting final clustering results: {str(e)}")
-        # If error occurs, use last successful clustering result
-        if last_successful_res2 is not None:
-            print("Warning: Using last successful evaluation result for final clusters.")
-            final_clusters = last_successful_res2
-        else:
-            # If no successful clustering results, return all zeros
-            print("Warning: Using zeros for final clusters due to errors.")
-            final_clusters = np.zeros(dataset.num_nodes, dtype=int)
-
-    # Save results
-    print("performance optimize：pre-calculate garph structure...")
-    if adj.is_sparse:
-        adj = adj.coalesce()
-        edge_index = adj.indices()
-    else:
-        edge_index, _ = dense_to_sparse(adj)
-
-    # Validate edge indices
-    num_nodes = dataset.num_nodes
-    max_index = edge_index.max().item()
-
-    if max_index >= num_nodes:
-        print(f"Warning: Edge indices contain values exceeding node count range (max: {max_index}, node count: {num_nodes})")
-        print(f"Filtering invalid edges...")
-
-        valid_edges_mask = (edge_index[0] < num_nodes) & (edge_index[1] < num_nodes)
-        edge_index = edge_index[:, valid_edges_mask]
-
-        # Update edge features
-        if edge_attr is not None:
-            edge_attr = edge_attr[valid_edges_mask]
-
-        if edge_index.size(1) == 0:
-            print("Error: No valid edges remain after filtering!")
-            # Create minimal valid graph
-            edge_index = torch.zeros((2, 1), dtype=torch.long).to(args.device)
-            edge_index[0, 0] = 0
-            edge_index[1, 0] = min(1, num_nodes-1)  # Connect to self if only 1 node
-
-            # Update edge features
-            if edge_attr is not None:
-                edge_attr = torch.ones(1, args.edge_dim).to(args.device)
-
-    # Build edge-to-edge connections
-    print("Building edge-to-edge connections...")
-    num_edges = edge_index.size(1)
-
-    # Build mapping from nodes to edges
-    node_to_edges = defaultdict(list)
-    for i in range(num_edges):
-        src, dst = edge_index[0, i].item(), edge_index[1, i].item()
-        node_to_edges[src].append(i)
-        node_to_edges[dst].append(i)
-
-    # Create edge-to-edge connections
-    edge_to_edge_list = []
-    for node, connected_edges in node_to_edges.items():
-        if len(connected_edges) > 1:
-            # Randomly sample if exceeding max edges per node limit
-            if len(connected_edges) > args.max_edges_per_node:
-                sampled_edges = random.sample(connected_edges, args.max_edges_per_node)
-            else:
-                sampled_edges = connected_edges
-
-            # Connect all pairs of edges that share this node
-            for i in range(len(sampled_edges)):
-                for j in range(i+1, len(sampled_edges)):
-                    edge_i = sampled_edges[i]
-                    edge_j = sampled_edges[j]
-                    # Add both directions for undirected graph
-                    edge_to_edge_list.append([edge_i, edge_j])
-                    edge_to_edge_list.append([edge_j, edge_i])
-
-    # Convert to tensor form
-    if len(edge_to_edge_list) > 0:
-        edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
-    else:
-        # If no edge-to-edge connections, create empty tensor
-        edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
-
-    print(f"Precomputation complete: Node-to-node edge count: {edge_index.shape[1]}, Edge-to-edge connection count: {edge_to_edge_index.shape[1]}")
-
-    # Create model using precomputed graph structures
-    model = SDCN_DLAA(
-        500, 500, 2000, 2000, 500, 500,
-        n_input=args.n_input,
-        n_z=args.n_z,
-        n_clusters=args.n_clusters,
-        v=1.0,
-        dropout=args.dropout,
-        edge_dim=args.edge_dim,
-        heads=args.heads,
-        max_edges_per_node=args.max_edges_per_node,
-        precomputed_edge_index=edge_index,
-        precomputed_edge_to_edge_index=edge_to_edge_index
-    ).to(args.device)
-
-    print(model)
-
-    # Optimizer
-    optimizer = Adam(model.parameters(), lr=args.lr)
-
-    # ---> 2. Initialize GradScaler (only when CUDA is available) <---
-    scaler = GradScaler(enabled=args.cuda)
-
-    # Move adjacency matrix to specified device
-    adj = adj.to(args.device)
-
-    # Prepare data
-    data = torch.Tensor(dataset.x).to(args.device)
-    y = dataset.y
-
-    # Initialize cluster centers using pretrained autoencoder
-    model.eval()
-    with torch.no_grad():
-        # ---> 7. Use autocast within no_grad (optional) <---
-        with autocast(enabled=args.cuda):
-            _, _, _, _, z = model.ae(data)
-    model.train()
-
-    # Use K-means for initial clustering
-    kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
-    # Ensure z is on CPU for KMeans
-    y_pred = kmeans.fit_predict(z.data.cpu().numpy())
-    model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
-
-    # Evaluate initial clustering results
-    if len(np.unique(y)) > 1:  # If true labels exist
-        eva(y, y_pred, 'pae')
-    else:
-        print(f"Initial clustering completed. Cluster count: {args.n_clusters}")
-
-    # Create list to store results
-    results = []
-    last_successful_res2 = None # For fallback in case of errors
-
-    # Training loop
-    for epoch in range(60):
-        # Update current epoch
-        model.current_epoch = epoch
-
-        if epoch % 1 == 0:
-            model.eval()
-            try:
-                with torch.no_grad():
-                    # ---> 7. Use autocast within no_grad (optional) <---
-                    with autocast(enabled=args.cuda):
-                        _, tmp_q, pred, _, _ = model(data, adj, edge_attr)
-
-                tmp_q = tmp_q.data
-                p = target_distribution(tmp_q)
-
-                res1 = tmp_q.cpu().numpy().argmax(1)  # Q
-                res2 = pred.data.cpu().numpy().argmax(1)  # Z
-                res3 = p.data.cpu().numpy().argmax(1)  # P
-                last_successful_res2 = res2 # Store the latest successful result
-
-                # Evaluate clustering metrics each round
-                if len(np.unique(y)) > 1:  # If true labels exist
-                    acc1, f1_1, nmi1, ari1 = eva(y, res1, f'{epoch}Q')
-                    acc2, f1_2, nmi2, ari2 = eva(y, res2, f'{epoch}Z')
-                    acc3, f1_3, nmi3, ari3 = eva(y, res3, f'{epoch}P')
-
-                    # Save clustering results for each round
-                    results.append([epoch, acc1, f1_1, nmi1, ari1, acc2, f1_2, nmi2, ari2, acc3, f1_3, nmi3, ari3])
-                else:
-                    # Without labels, only save clustering results, don't compute metrics
-                    cluster_distribution = np.bincount(res2)
-                    print(f"Epoch {epoch}, Cluster distribution: {cluster_distribution}")
-                    results.append([epoch] + [0] * 12)  # Placeholder fill
-            except Exception as e:
-                print(f"Epoch {epoch} evaluation error: {str(e)}")
-                model.train()
-                continue # Skip to next epoch if evaluation fails
-            finally:
-                model.train()
-
-        # Forward pass (Training)
-        try:
-            model.train()
-            optimizer.zero_grad() # Typically clear gradients here
-
-            # ---> 3. Wrap forward pass and loss calculation with autocast <---
-            with autocast(enabled=args.cuda):
-                x_bar, q, pred, _, _ = model(data, adj, edge_attr)
-
-                # Calculate target distribution
-                # Note: p calculation depends on q.data, typically doesn't need to be in autocast,
-                # but if target_distribution has complex operations, it's fine to leave it in
-                p = target_distribution(q.data)
-
-                # Calculate loss (numerically stable: avoid log(0) in KL computations)
-                eps = 1e-10
-                q_safe = torch.clamp(q, min=eps)
-                q_safe = q_safe / q_safe.sum(dim=1, keepdim=True)
-                pred_safe = torch.clamp(pred, min=eps)
-                pred_safe = pred_safe / pred_safe.sum(dim=1, keepdim=True)
-
-                kl_loss = F.kl_div(q_safe.log(), p, reduction='batchmean')
-                ce_loss = F.kl_div(pred_safe.log(), p, reduction='batchmean')
-                re_loss = F.mse_loss(x_bar, data)
-
-                # Combined loss
-                loss = 0.1 * kl_loss + 0.01 * ce_loss + re_loss
-
-            # ---> 4. Scale loss with GradScaler for backward pass <---
-            scaler.scale(loss).backward()
-
-            # ---> 5. Update optimizer with GradScaler (including gradient unscaling) <---
-            scaler.step(optimizer)
-
-            # ---> 6. Update GradScaler's scale factor <---
-            scaler.update()
-
-            # Print loss information every 10 epochs
-            if epoch % 10 == 0:
-                print(f"Epoch {epoch}, Loss: {loss.item():.4f}, KL: {kl_loss.item():.4f}, CE: {ce_loss.item():.4f}, RE: {re_loss.item():.4f}")
-        except Exception as e:
-            print(f"Epoch {epoch} training error: {str(e)}")
-            continue
-
-    # Get final clustering results
-    model.eval()
-    try:
-        with torch.no_grad():
-            # ---> 7. Use autocast within no_grad (optional) <---
-            with autocast(enabled=args.cuda):
-                _, _, final_pred, _, _ = model(data, adj, edge_attr)
-        final_clusters = final_pred.data.cpu().numpy().argmax(1)
-    except Exception as e:
-        print(f"Error getting final clustering results: {str(e)}")
-        # If error occurs, use last successful clustering result
+        # If error occurs, use last successful clustering results
         if last_successful_res2 is not None:
             print("Warning: Using last successful evaluation result for final clusters.")
             final_clusters = last_successful_res2
@@ -1201,11 +903,11 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         results_filename = f'sdcn_dlaa_hiddensize_training_results_hs{args.hs1}-{args.hs2}-{args.hs3}_heads{args.heads}.csv'
         final_clusters_filename = f'sdcn_dlaa_hiddensize_final_clusters_hs{args.hs1}-{args.hs2}-{args.hs3}_heads{args.heads}.csv'
     else:
-        results_filename = 'sdcn_dlaa_training_results.csv'
-        final_clusters_filename = 'sdcn_dlaa_final_cluster_results.csv'
+        results_filename = 'sdcn_dlaa_training_results.csv' # Fallback, though this file is for hiddensize
+        final_clusters_filename = 'sdcn_dlaa_final_cluster_results.csv' # Fallback
 
     results_df.to_csv(results_filename, index=False)
-    print(f"Training complete. Results saved to '{results_filename}'.")
+    print(f"Training completed. Results saved to '{results_filename}'.")
 
     final_results_df = pd.DataFrame({'NodeID': np.arange(len(final_clusters)), 'ClusterID': final_clusters})
     final_results_df.to_csv(final_clusters_filename, index=False)
@@ -1221,7 +923,7 @@ if __name__ == "__main__":
 
     # Create a log file with timestamp
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_filename = f'logs/sdcn_dlaa_run_{timestamp}.txt'
+    log_filename = f'logs/sdcn_dlaa_run_{timestamp}.txt' # Keep original main log name
 
     # Redirect stdout to both console and file, with minimal terminal output
     sys.stdout = Logger(log_filename, terminal_mode="minimal")
@@ -1242,6 +944,12 @@ if __name__ == "__main__":
     parser.add_argument('--use_edge_attr', action='store_true', help='Use edge attributes from dataset if available')
     parser.add_argument('--max_edges_per_node', type=int, default=10, help='Maximum number of edges to consider per node for edge-to-edge connections')
 
+    # --- Add hidden size arguments for direct execution (if needed) ---
+    parser.add_argument('--hs1', type=int, default=500, help='Hidden size for AE layer 1 & SpatialConv 1')
+    parser.add_argument('--hs2', type=int, default=500, help='Hidden size for AE layer 2 & SpatialConv 2')
+    parser.add_argument('--hs3', type=int, default=2000, help='Hidden size for AE layer 3 & SpatialConv 3')
+    # --- End hidden size arguments ---
+
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
     print("use cuda: {}".format(args.cuda))
@@ -1257,36 +965,34 @@ if __name__ == "__main__":
         if args.edge_dim is None:
             args.edge_dim = edge_attr.shape[1]
 
-    # Set dataset-specific parameters
+    # Set dataset-specific parameters (These might need adjustment or removal if using custom data)
     if args.name == 'usps':
         args.n_clusters = 10
         args.n_input = 256
-
-    if args.name == 'hhar':
+    elif args.name == 'hhar':
         args.k = 5
         args.n_clusters = 6
         args.n_input = 561
-
-    if args.name == 'reut':
+    elif args.name == 'reut':
         args.lr = 1e-4
         args.n_clusters = 4
         args.n_input = 2000
-
-    if args.name == 'acm':
+    elif args.name == 'acm':
         args.k = None
         args.n_clusters = 3
         args.n_input = 1870
-
-    if args.name == 'dblp':
+    elif args.name == 'dblp':
         args.k = None
         args.n_clusters = 4
         args.n_input = 334
-
-    if args.name == 'cite':
+    elif args.name == 'cite':
         args.lr = 1e-4
         args.k = None
         args.n_clusters = 6
         args.n_input = 3703
+    else: # Handle custom data case where n_input might not be set
+        if not hasattr(args, 'n_input'):
+             args.n_input = dataset.num_features # Assuming dataset has num_features
 
     # If edge_dim is still None, set it to n_input
     if args.edge_dim is None:
@@ -1295,17 +1001,22 @@ if __name__ == "__main__":
 
     print(args)
 
+    # Load graph (assuming load_graph works for custom data or is adapted)
+    # This part might need adjustment depending on how adjacency is handled for custom data
+    try:
+        adj = load_graph(args.name, args.k) # This might fail for custom data
+        adj = adj.to(args.device)
+    except FileNotFoundError:
+         print(f"Warning: Could not load graph using load_graph for '{args.name}'.")
+         print("Assuming adjacency matrix is handled within train_sdcn_dlaa_custom.")
+         # Create a dummy sparse tensor or handle appropriately
+         # For now, let's assume train_sdcn_dlaa_custom expects a sparse tensor
+         # This needs careful review based on how custom data is structured
+         num_nodes = dataset.num_features # Or dataset.x.shape[0]
+         adj = torch.sparse_coo_tensor(torch.zeros((2,0), dtype=torch.long), [], (num_nodes, num_nodes)).to(args.device)
+
+
     # Train the model using the custom function
-    # Load adjacency matrix for custom training
-    if args.k is not None:
-        adj = load_graph(args.name, args.k)
-    else:
-        # Handle datasets without k (like acm, dblp, cite)
-        # Assuming load_graph can handle k=None or returns appropriate adj
-        adj = load_graph(args.name, k=None) # Or however your load_graph handles this
-
-    # Ensure adj is a sparse tensor
-    if not adj.is_sparse:
-        adj = adj.to_sparse()
-
-    model, results_df, final_clusters = train_sdcn_dlaa_custom(dataset, adj, args, edge_attr)
+    # Note: The original train_sdcn_dlaa is kept above for reference
+    # We call train_sdcn_dlaa_custom here
+    model, results, final_clusters = train_sdcn_dlaa_custom(dataset, adj, args, edge_attr)

@@ -1,3 +1,13 @@
+import os
+import sys
+
+# Ensure repo root + archived models are importable when running from `archive/experiments/`.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ARCHIVE_MODELS = os.path.join(REPO_ROOT, "archive", "models")
+for p in (REPO_ROOT, ARCHIVE_MODELS):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -8,9 +18,7 @@ from sdcn_dlaa_NEW_hetero import SDCN_DLAA, target_distribution, train_sdcn_dlaa
 from sklearn.cluster import KMeans
 import argparse
 import pandas as pd
-import os
 from datetime import datetime
-import sys
 from collections import defaultdict
 import random
 

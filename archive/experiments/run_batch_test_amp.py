@@ -1,10 +1,13 @@
+import os
 import subprocess
 import sys
-import os
+
+# ARCHIVED: kept for reference (AMP experiments). Not used by the default pipeline.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # --- Configuration ---
 # Target script name to execute (modify to point to the AMP version test script)
-target_script = "test_sdcn_dlaa_NEW_amp.py"
+target_script = os.path.join(REPO_ROOT, "archive", "experiments", "test_sdcn_dlaa_NEW_amp.py")
 
 # List of heads parameters to test
 heads_to_test = [1, 2, 4]

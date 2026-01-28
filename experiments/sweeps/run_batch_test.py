@@ -1,10 +1,13 @@
+import os
 import subprocess
 import sys
-import os
+
+# Ensure repo root is the working base so relative paths resolve.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # --- Configuration ---
 # Target script name to execute
-target_script = "test_sdcn_dlaa_NEW.py"
+target_script = os.path.join(REPO_ROOT, "experiments", "test_sdcn_dlaa_NEW.py")
 
 # List of heads parameters to test
 heads_to_test = [1, 2, 4]

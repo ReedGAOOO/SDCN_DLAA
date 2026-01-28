@@ -1,3 +1,11 @@
+import os
+import sys
+
+# Ensure repo root is importable when running from subdirectories (e.g., `experiments/`).
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -7,9 +15,7 @@ from sdcn_dlaa_NEW import SDCN_DLAA, target_distribution, eva, train_sdcn_dlaa_c
 from sklearn.cluster import KMeans
 import argparse
 import pandas as pd
-import os
 from datetime import datetime
-import sys
 from collections import defaultdict
 import random
 
@@ -140,8 +146,6 @@ def precompute_edge_to_edge_graph(adj, max_edges_per_node=10, device=None):
         adj = adj.coalesce()
         edge_index = adj.indices()
     else:
-        # This part might need adjustment if adj is dense
-        from torch_geometric.utils import dense_to_sparse # Import if needed
         edge_index, _ = dense_to_sparse(adj)
     
     # Move to target device
@@ -198,16 +202,14 @@ if __name__ == "__main__":
     
     # Create timestamped log file
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    # Modified log filename prefix
-    log_filename = f'logs/sdcn_dlaa_knn_run_{timestamp}.txt' 
+    log_filename = f'logs/sdcn_dlaa_fixed_run_{timestamp}.txt'
     
     # Redirect stdout to both console and file
     sys.stdout = Logger(log_filename)
     
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        # Modified description
-        description='Train SDCN_DLAA model using preprocessed KNN data', 
+        description='Train fixed SDCN_DLAA model using preprocessed data from NEWDATA/processed_sparse',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument('--lr', type=float, default=1e-3)
@@ -217,36 +219,17 @@ if __name__ == "__main__":
     parser.add_argument('--heads', type=int, default=4)
     parser.add_argument('--edge_dim', type=int, default=10)
     parser.add_argument('--max_edges_per_node', type=int, default=10)
-    # Add argument for data directory
-    parser.add_argument('--data_dir', type=str, default='NEWDATA/processed_knn_k10', 
-                        help='Directory containing preprocessed KNN data (node_features.npy, binary_adj.npz, edge_attr.npy)')
-
+    
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
     print("Use CUDA: {}".format(args.cuda))
     args.device = torch.device("cuda" if args.cuda else "cpu")
     
-    # Set file paths based on data_dir argument
-    node_features_path = os.path.join(args.data_dir, 'node_features.npy')
-    binary_adj_path = os.path.join(args.data_dir, 'binary_adj.npz')
-    edge_attr_path = os.path.join(args.data_dir, 'edge_attr.npy')
+    # Set file paths
+    node_features_path = 'NEWDATA/processed_sparse/node_features.npy'
+    binary_adj_path = 'NEWDATA/processed_sparse/binary_adj.npz'
+    edge_attr_path = 'NEWDATA/processed_sparse/edge_attr.npy'
     
-    print(f"Loading data from: {args.data_dir}")
-    print(f"Node features path: {node_features_path}")
-    print(f"Binary adj path: {binary_adj_path}")
-    print(f"Edge attr path: {edge_attr_path}")
-
-    # Check if files exist
-    if not os.path.exists(node_features_path):
-        print(f"Error: Node features file not found at {node_features_path}")
-        sys.exit(1)
-    if not os.path.exists(binary_adj_path):
-        print(f"Error: Binary adjacency file not found at {binary_adj_path}")
-        sys.exit(1)
-    if not os.path.exists(edge_attr_path):
-        print(f"Warning: Edge attribute file not found at {edge_attr_path}. Proceeding without edge attributes.")
-        edge_attr_path = None # Set to None if not found
-
     # Create dataset with specified device
     dataset = CustomDataset(node_features_path, edge_attr_path, device=args.device)
     
@@ -256,20 +239,17 @@ if __name__ == "__main__":
     # Set feature dimensions
     args.n_input = dataset.num_features
     
-    # Load edge features (might be None if file didn't exist)
+    # Load edge features
     edge_attr = dataset.edge_attr
     
     # Print information
     print(f"Number of nodes: {dataset.num_nodes}")
     print(f"Feature dimensions: {dataset.num_features}")
-    if edge_attr is not None:
-        print(f"Edge feature dimensions: {edge_attr.shape[1] if edge_attr.ndim > 1 else 1}")
-    else:
-        print("Edge features: Not loaded")
+    print(f"Edge feature dimensions: {args.edge_dim}")
     print(f"Number of clusters: {args.n_clusters}")
     
     # Train model
-    print("\nStarting training for SDCN_DLAA model with KNN data...")
+    print("\nStarting training for fixed SDCN_DLAA model...")
     try:
         model, results, clusters = train_sdcn_dlaa_custom(dataset, adj, args, edge_attr)
         

@@ -5,9 +5,9 @@ import os
 # Define a list of head values to test
 head_values = [1, 2, 4]
 
-# Get the directory of the current script to build the path to test_sdcn_dlaa_NEW.py
-current_dir = os.path.dirname(os.path.abspath(__file__))
-test_script_path = os.path.join(current_dir, "test_sdcn_dlaa_NEW.py")
+# Resolve repo root and point to the experiment entry.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+test_script_path = os.path.join(REPO_ROOT, "experiments", "test_sdcn_dlaa_NEW.py")
 
 # Check if test_sdcn_dlaa_NEW.py exists
 if not os.path.exists(test_script_path):

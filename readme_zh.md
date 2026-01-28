@@ -28,6 +28,8 @@ SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 
 - `DLAA_NEW.py`: DLAA / `SpatialConv` 及其版本实现。
 - `preprocess_distance_matrix.py`: 从距离矩阵构建稀疏图并生成边特征。
 - `NEWDATA/`: 示例原始数据与预处理输出目录。
+- `experiments/`: 可直接运行的入口脚本（Sparse KNN / Threshold 等）。
+- `archive/`: 已归档的实验模型与脚本（AMP/hetero/hiddensize），保留以便回溯。
 - `tools/`: 概念数据生成与三版本对比脚本。
 
 ## 模型结构（概览）
@@ -53,7 +55,7 @@ python preprocess_distance_matrix.py --output_dir NEWDATA/processed_knn_k10 --me
 ### 2) 运行（Sparse KNN）
 
 ```bash
-python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
 ```
 
 常用参数：
@@ -72,7 +74,7 @@ export SDCN_FINAL_ASSIGN=p                       # pred | q | p（选择最终�
 export SDCN_SEED=0                              # 可选：复现实验
 export SDCN_EPOCHS=30                           # 可选：覆盖训练轮数
 export SDCN_EDGE_MESSAGE=1                      # 可选：edge_attr 作为消息内容注入
-python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
 
 版本含义（简述）：
@@ -86,7 +88,7 @@ python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --h
 
 ```bash
 # Threshold 稀疏化图
-python test_sdcn_dlaa_NEW_sparse_threshold.py --data_dir NEWDATA/processed_threshold_0.5
+python experiments/test_sdcn_dlaa_NEW_sparse_threshold.py --data_dir NEWDATA/processed_threshold_0.5
 ```
 
 ## 概念数据对比（可选）

@@ -1,5 +1,7 @@
 
 """
+ARCHIVED: Legacy hetero variant kept for reference. Not used by the default pipeline.
+
 This file implements custom PyTorch Geometric layers for graph neural networks,
 specifically focusing on heterogeneous graph processing and spatial attention mechanisms.
 Key components include:

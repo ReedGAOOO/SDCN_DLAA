@@ -9,7 +9,7 @@
 ### Innovation 2: Implementation and Application of Dual-Level Aggregation under the PyTorch Geometric Framework (DLAA_NEW.py)
 This project implements the dual-level graph aggregation mechanism (core idea from the SMAN model) completely and efficiently within the PyTorch Geometric (PyG) framework for the first time. Adaptations and optimizations (e.g., memory optimization, parallelization improvements) have been made for PyG's data representation and message passing features (custom message passing). This provides an important implementation foundation and application example for applying such interactive node-edge joint modeling techniques within the mainstream PyG ecosystem, especially validating its effectiveness in self-supervised clustering tasks.
 
-This project is still experimental and currently in the parameter tuning phase to address unstable learning rates during training. However, the feasibility of the SDCN_DLAA framework has been theoretically demonstrated (see engineering note for details: https://docs.google.com/document/d/1qZmEbDUiWt8VqjI-uQMnlMk5Skk1pxMWrIq58-LcI8I/edit?usp=sharing). Furthermore, current runs on `test_sdcn_dlaa_NEW_sparse.py` indicate its ability to incorporate EDGE FEATURES into NODE CLUSTERING and capture meaningful information.
+This project is still experimental and currently in the parameter tuning phase to address unstable learning rates during training. However, the feasibility of the SDCN_DLAA framework has been theoretically demonstrated (see engineering note for details: https://docs.google.com/document/d/1qZmEbDUiWt8VqjI-uQMnlMk5Skk1pxMWrIq58-LcI8I/edit?usp=sharing). Furthermore, current runs on `experiments/test_sdcn_dlaa_NEW_sparse.py` indicate its ability to incorporate EDGE FEATURES into NODE CLUSTERING and capture meaningful information.
 
 ## QUICK START
 Here are the basic steps to quickly run the model:
@@ -22,9 +22,9 @@ Here are the basic steps to quickly run the model:
 
 2.  **Model Testing (using KNN preprocessed data):**
 
-    ```bash
-    python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
-    ```
+```bash
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
+```
 
 *Note: Ensure `NEWDATA/X_simplize.CSV` and `NEWDATA/A.csv` files exist in the default paths, or specify their paths using the `--node_features` and `--distance_matrix` arguments. Refer to subsequent sections for detailed parameters.*
 
@@ -95,8 +95,8 @@ After processing, the generated `.pt` files can be directly used for subsequent 
 
 After preprocessing, the following scripts can be used to test the SDCN-DLAA model, which load the preprocessed data:
 
-*   **`test_sdcn_dlaa_NEW_sparse_KNN.py`**: Used for testing data preprocessed with the **KNN** method.
-*   **`test_sdcn_dlaa_NEW_sparse_threshold.py`**: Used for testing data preprocessed with the **Threshold** method.
+*   **`experiments/test_sdcn_dlaa_NEW_sparse_KNN.py`**: Used for testing data preprocessed with the **KNN** method.
+*   **`experiments/test_sdcn_dlaa_NEW_sparse_threshold.py`**: Used for testing data preprocessed with the **Threshold** method.
 
 ### Usage
 
@@ -117,33 +117,38 @@ Run the corresponding test script via the command line. Both scripts accept a ke
 
 1.  **Testing KNN data (assuming data is in `NEWDATA/processed_knn_k15`):**
 
-    ```bash
-    python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k15
-    ```
+```bash
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k15
+```
 
 2.  **Testing Threshold data (assuming data is in `NEWDATA/processed_threshold_0.5`):**
 
-    ```bash
-    python test_sdcn_dlaa_NEW_sparse_threshold.py --data_dir NEWDATA/processed_threshold_0.5
-    ```
+```bash
+python experiments/test_sdcn_dlaa_NEW_sparse_threshold.py --data_dir NEWDATA/processed_threshold_0.5
+```
 
 The script will load data from the specified directory, train the model, and output the training process and clustering results to a log file (located in the `logs/` directory, filename includes timestamp and method name) and the console.
 
-## SpatialConv Variants (v1/v2/v3)
+## SpatialConv Variants (v1–v5)
 
-This repo provides three `SpatialConv` implementations for ablation/verification. The active version is selected at import-time via an environment variable in `DLAA_NEW.py`.
+This repo provides multiple `SpatialConv` implementations for ablation/verification. The active version is selected at import-time via an environment variable in `DLAA_NEW.py` (default: `v5edge_pool_residual`).
 
 ### How to Run
 
 ```bash
-# Select SpatialConv version (default: v2edge_single_layer)
-export SPATIALCONV_VARIANT=v2edge_single_layer
+# Select SpatialConv version (default: v5edge_pool_residual)
+export SPATIALCONV_VARIANT=v5edge_pool_residual
+
+# Recommended for edge-driven datasets (see reports/realistic_synthetic_ablation_zh.md)
+export SDCN_Q_SOURCE=h4
+export SDCN_EDGE_MESSAGE=1
+export SDCN_FINAL_ASSIGN=p
 
 # Optional: make runs reproducible / faster for experiments
 export SDCN_SEED=0
 export SDCN_EPOCHS=30
 
-python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
 
 ### Structural Differences
@@ -151,6 +156,8 @@ python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --h
 *   **v1original**: Legacy info flow. Performs edge init + edge-edge update on the concatenated `[nodes; edges]` tensor and feeds the concatenated tensor into node update. `SGATLayer` is constructed without `edge_dim`, so `dist_feat` may not actually participate in `GATConv` attention in PyG (baseline / for comparison).
 *   **v2edge_single_layer**: Minimal fix. Keeps the legacy edge init + edge-edge update flow, but sets `edge_dim` so `dist_feat` is used in attention, and only updates **nodes** in the node update step (avoids washing edge rows). Edge information influences node aggregation mainly via `dist_feat` in the current layer.
 *   **v3edge_cross_layers**: Edge-aware node update. Updates edge embeddings on the edge graph and uses the updated edge embeddings as `edge_attr` in node attention, so edge-edge context influences node embeddings; the effect then propagates across layers via the node representations.
+*   **v4edge_pool_fusion**: v3-style edge embeddings + explicit edge→node mean-pooling residual (gated) to make edge semantics directly shape node embeddings.
+*   **v5edge_pool_residual**: v2-style (node attention uses raw edge features) + explicit edge→node pooling residual; most robust in edge-semantic synthetic tests.
 
 ### Conceptual Benchmark (Synthetic)
 
@@ -164,7 +171,7 @@ python tools/compare_spatialconv_variants.py \
   --out_dir /tmp/sdcn_dlaa_variant_compare \
   --seeds 0,1,2 \
   --epochs 30 \
-  --variants v1original,v2edge_single_layer,v3edge_cross_layers \
+  --variants v1original,v2edge_single_layer,v3edge_cross_layers,v4edge_pool_fusion,v5edge_pool_residual \
   --heads 1
 ```
 
@@ -186,15 +193,16 @@ python tools/compare_spatialconv_variants.py \
 ## EXPERIMENTAL TEST CODE
 
 This section introduces code variants used for experimental testing and analysis, primarily aimed at addressing Out-Of-Memory (OOM) issues encountered when using dense graphs as input.
+These are **archived** under `archive/` and are not part of the default pipeline.
 
 ### Mixed Precision Training (AMP)
 
-*   **Related Files**: `sdcn_dlaa_NEW_amp.py`, `test_sdcn_dlaa_NEW_amp.py`, `run_batch_test_amp.py`
+*   **Related Files**: `archive/models/sdcn_dlaa_NEW_amp.py`, `archive/experiments/test_sdcn_dlaa_NEW_amp.py`, `archive/experiments/run_batch_test_amp.py`
 *   **Purpose**: These files with the `_amp` suffix utilize Automatic Mixed Precision (AMP) technology for training. AMP uses lower-precision floating-point numbers (like FP16) for some computations while maintaining FP32 precision for critical parts. This effectively reduces GPU memory usage and computation time without significantly sacrificing model performance. It is particularly useful for handling graph data with a large number of nodes and dense edge connections, alleviating memory bottlenecks.
 
 ### Heterogeneous Graph Convolution (HeteroConv)
 
-*   **Related Files**: `DLAA_NEW_hetero.py`, `sdcn_dlaa_NEW_hetero.py`, `test_sdcn_dlaa_NEW_hetero.py`
+*   **Related Files**: `archive/models/DLAA_NEW_hetero.py`, `archive/models/sdcn_dlaa_NEW_hetero.py`, `archive/experiments/test_sdcn_dlaa_NEW_hetero.py`
 *   **Purpose**: These files with the `_hetero` suffix employ the `HeteroConv` module from the PyTorch Geometric (PyG) library. Unlike the `SpatialConv` used in the original model (which implicitly models edge information in the convolution layer), `HeteroConv` allows for the explicit definition and handling of different types of nodes and edges and their relationships. This offers a more flexible way to model complex interactions within the graph, potentially helping to capture finer structural details. By reshaping the implicit relationship modeling of `SpatialConv`, it explores different graph information aggregation strategies. Additionally, using `HeteroConv` avoids the OOM issue caused by concatenating large node-edge vectors in `SpatialConv`.
 
 ### Parameter Sensitivity Testing
@@ -202,10 +210,10 @@ This section introduces code variants used for experimental testing and analysis
 To locate and understand potential memory bottlenecks when the model processes dense graphs, the following test scripts were designed:
 
 *   **Batch Test (GAT Heads)**
-    *   **Related Files**: `run_batch_test.py`, `run_batch_test_amp.py`
+    *   **Related Files**: `experiments/sweeps/run_batch_test.py`, `archive/experiments/run_batch_test_amp.py`
     *   **Purpose**: These scripts perform a series of tests by systematically varying the number of attention heads (`heads` parameter) in the Graph Attention Network (GAT) layer. Changing `heads` affects the model's complexity and computational load. Running these tests helps analyze the impact of different numbers of attention heads on model performance and memory consumption, especially when dealing with large-scale or dense graphs.
 *   **Hidden Size Test**
-    *   **Related Files**: `run_hidden_size_test.py`, `sdcn_dlaa_NEW_hiddensize.py`, `test_sdcn_dlaa_NEW_hiddensize.py`
+    *   **Related Files**: `archive/experiments/run_hidden_size_test.py`, `archive/models/sdcn_dlaa_NEW_hiddensize.py`, `archive/experiments/test_sdcn_dlaa_NEW_hiddensize.py`
     *   **Purpose**: These scripts focus on testing the impact of the dimension of hidden representations (`hidden_size` parameter) in different layers of the model on performance and resource consumption. By varying the size of these intermediate vectors, the trade-off between model capacity and memory requirements can be evaluated, helping to determine the optimal or feasible hidden layer dimension configuration when processing graph data of a specific scale (especially dense graphs).
 
 ## Theoretical Analysis:

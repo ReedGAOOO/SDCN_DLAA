@@ -9,7 +9,7 @@
 创新点二：PyTorch Geometric 框架下的双层聚合实现与应用（DLAA_NEW.py）
 本项目首次在 PyTorch Geometric (PyG) 框架下完整、高效地实现了双层图聚合机制（核心思想来自SMAN模型）。针对 PyG 的数据表示和消息传递（定制message passing）特性进行了适配与优化 (如内存优化、并行化改进)，为在主流 PyG 生态中应用此类交互式节点-边联合建模技术提供了重要的实现基础和应用范例，特别是在自监督聚类任务中验证了其有效性。
 
-这个项目依然是一份实验性质的，目前正处于解决训练时的学习率不稳定的情况（参数调整阶段）。但是理论上证明了SDCN_DLAA框架的可行性（详细请见engineering note https://docs.google.com/document/d/1qZmEbDUiWt8VqjI-uQMnlMk5Skk1pxMWrIq58-LcI8I/edit?usp=sharing），并且从目前在test_sdcn_dlaa_NEW_sparse.py上运行的过程来看，其已经表现出了能够将EDGE FEATURE融入NODE CLUSTERING中，并且捕获有意义的信息的能力。
+这个项目依然是一份实验性质的，目前正处于解决训练时的学习率不稳定的情况（参数调整阶段）。但是理论上证明了SDCN_DLAA框架的可行性（详细请见engineering note https://docs.google.com/document/d/1qZmEbDUiWt8VqjI-uQMnlMk5Skk1pxMWrIq58-LcI8I/edit?usp=sharing），并且从目前在 `experiments/test_sdcn_dlaa_NEW_sparse.py` 上运行的过程来看，其已经表现出了能够将 EDGE FEATURE 融入 NODE CLUSTERING 中，并且捕获有意义的信息的能力。
 ## QUICK START
 以下是快速运行模型的基本步骤：
 
@@ -21,9 +21,9 @@
 
 2.  **模型测试 (使用 KNN 预处理的数据):**
 
-    ```bash
-    python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
-    ```
+```bash
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10
+```
 
 *注意: 请确保 `NEWDATA/X_simplize.CSV` 和 `NEWDATA/A.csv` 文件存在于默认路径，或使用 `--node_features` 和 `--distance_matrix` 参数指定路径。详细参数请参考后续章节。*
 
@@ -94,8 +94,8 @@
 
 预处理完成后，可以使用以下脚本对 SDCN-DLAA 模型进行测试，这些脚本会加载预处理后的数据：
 
-*   **`test_sdcn_dlaa_NEW_sparse_KNN.py`**: 用于测试基于 **KNN** 方法预处理的数据。
-*   **`test_sdcn_dlaa_NEW_sparse_threshold.py`**: 用于测试基于 **Threshold** 方法预处理的数据。
+*   **`experiments/test_sdcn_dlaa_NEW_sparse_KNN.py`**: 用于测试基于 **KNN** 方法预处理的数据。
+*   **`experiments/test_sdcn_dlaa_NEW_sparse_threshold.py`**: 用于测试基于 **Threshold** 方法预处理的数据。
 
 ### 使用方法
 
@@ -116,34 +116,39 @@
 
 1.  **测试 KNN 数据 (假设数据在 `NEWDATA/processed_knn_k15`):**
 
-    ```bash
-    python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k15
-    ```
+```bash
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k15
+```
 
 2.  **测试 Threshold 数据 (假设数据在 `NEWDATA/processed_threshold_0.5`):**
 
-    ```bash
-    python test_sdcn_dlaa_NEW_sparse_threshold.py --data_dir NEWDATA/processed_threshold_0.5
-    ```
+```bash
+python experiments/test_sdcn_dlaa_NEW_sparse_threshold.py --data_dir NEWDATA/processed_threshold_0.5
+```
 
 脚本将加载指定目录中的数据，训练模型，并在日志文件（位于 `logs/` 目录下，文件名包含时间戳和方法名）和控制台中输出训练过程和聚类结果。
 
 
-## SpatialConv 版本 (v1/v2/v3)
+## SpatialConv 版本 (v1–v5)
 
-本仓库提供三种 `SpatialConv` 实现用于消融/验证。版本在 `DLAA_NEW.py` 中通过环境变量在 import 时选择（默认：`v2edge_single_layer`）。
+本仓库提供多种 `SpatialConv` 实现用于消融/验证。版本在 `DLAA_NEW.py` 中通过环境变量在 import 时选择（默认：`v5edge_pool_residual`）。
 
 ### 运行方式
 
 ```bash
-# 选择 SpatialConv 版本（默认：v2edge_single_layer）
-export SPATIALCONV_VARIANT=v2edge_single_layer
+# 选择 SpatialConv 版本（默认：v5edge_pool_residual）
+export SPATIALCONV_VARIANT=v5edge_pool_residual
+
+# 对“边信息驱动聚类”的推荐组合（见 reports/realistic_synthetic_ablation_zh.md）
+export SDCN_Q_SOURCE=h4
+export SDCN_EDGE_MESSAGE=1
+export SDCN_FINAL_ASSIGN=p
 
 # 可选：复现实验 / 缩短实验时间
 export SDCN_SEED=0
 export SDCN_EPOCHS=30
 
-python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
+python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
 
 ### 结构差异
@@ -151,6 +156,8 @@ python test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --h
 *   **v1original**: 旧版信息流。先做 edge init，再在拼接后的 `[nodes; edges]` 上做 edge-edge 更新，并把拼接后的张量一起送入 node update。由于 `SGATLayer` 未显式设置 `edge_dim`，在 PyG 的 `GATConv` 中 `dist_feat` 可能不会真正参与注意力（基线对照）。
 *   **v2edge_single_layer**: 小改动修复。保留旧版 edge init + edge-edge 更新的信息流，但为 `SGATLayer` 明确 `edge_dim` 以确保 `dist_feat` 参与注意力；node update 时只更新节点部分，避免 edge 行在 node-node 图里变成“孤立点”被洗掉。边信息主要通过当前层的 `dist_feat` 影响节点聚合。
 *   **v3edge_cross_layers**: 跨层边信息流。先在 edge 图上更新 edge embedding，再将更新后的 edge embedding 作为 `edge_attr` 参与 node attention，使 edge-edge 上下文影响节点表示，并随层堆叠向更深层传播。
+*   **v4edge_pool_fusion**: 基于 v3 的 edge embedding，再加入显式 edge→node mean-pooling residual（带门控），让边语义可以直接塑形节点表征。
+*   **v5edge_pool_residual**: 延续 v2 思路（node attention 用 raw edge），同时加入 edge→node pooling residual；在 edge 语义主导的合成数据上更鲁棒。
 
 ### 概念数据对比（Synthetic）
 
@@ -164,7 +171,7 @@ python tools/compare_spatialconv_variants.py \
   --out_dir /tmp/sdcn_dlaa_variant_compare \
   --seeds 0,1,2 \
   --epochs 30 \
-  --variants v1original,v2edge_single_layer,v3edge_cross_layers \
+  --variants v1original,v2edge_single_layer,v3edge_cross_layers,v4edge_pool_fusion,v5edge_pool_residual \
   --heads 1
 ```
 
@@ -186,15 +193,16 @@ python tools/compare_spatialconv_variants.py \
 ## EXP TEST CODE
 
 本部分介绍用于实验性测试和分析的代码变体，主要用于解决使用稠密图作为输入时导致的OOM问题。
+这部分内容已统一 **归档** 到 `archive/`，不属于默认训练/推理流水线。
 
 ### 混合精度训练 (AMP)
 
-*   **相关文件**: `sdcn_dlaa_NEW_amp.py`, `test_sdcn_dlaa_NEW_amp.py`, `run_batch_test_amp.py`
+*   **相关文件**: `archive/models/sdcn_dlaa_NEW_amp.py`, `archive/experiments/test_sdcn_dlaa_NEW_amp.py`, `archive/experiments/run_batch_test_amp.py`
 *   **目的**: 这些带有 `_amp` 后缀的文件利用了自动混合精度 (Automatic Mixed Precision, AMP) 技术进行训练。AMP 使用较低精度的浮点数（如 FP16）进行部分计算，同时保持关键部分的 FP32 精度，从而在不显著牺牲模型性能的情况下，有效减少 GPU 内存占用和计算时间。这对于处理节点数量多、边连接稠密的图数据尤其有用，可以缓解内存瓶颈问题。
 
 ### 异构图卷积 (HeteroConv)
 
-*   **相关文件**: `DLAA_NEW_hetero.py`, `sdcn_dlaa_NEW_hetero.py`, `test_sdcn_dlaa_NEW_hetero.py`
+*   **相关文件**: `archive/models/DLAA_NEW_hetero.py`, `archive/models/sdcn_dlaa_NEW_hetero.py`, `archive/experiments/test_sdcn_dlaa_NEW_hetero.py`
 *   **目的**: 这些带有 `_hetero` 后缀的文件采用了 PyTorch Geometric (PyG) 库中的 `HeteroConv` 模块。与原始模型中使用的 `SpatialConv`（隐式建模边信息的卷积层）不同，`HeteroConv` 允许显式地定义和处理不同类型的节点和边及其关系。这提供了更灵活的方式来建模图中复杂的交互，可能有助于捕捉更精细的结构信息。通过重塑 `SpatialConv` 的隐式关系建模方式，探索不同的图信息聚合策略。同时使用`HeteroConv`将规避`SpatialConv`中拼接node_edge向量过大，导致OOM的问题。
 
 ### 参数敏感性测试
@@ -202,10 +210,10 @@ python tools/compare_spatialconv_variants.py \
 为了定位和理解模型在处理稠密图时可能遇到的内存瓶颈，设计了以下测试脚本：
 
 *   **Batch Test (GAT Heads)**
-    *   **相关文件**: `run_batch_test.py`, `run_batch_test_amp.py`
+    *   **相关文件**: `experiments/sweeps/run_batch_test.py`, `archive/experiments/run_batch_test_amp.py`
     *   **目的**: 这些脚本通过系统性地改变图注意力网络 (GAT) 层中的注意力头数 (`heads` 参数) 来进行一系列测试。改变 `heads` 会影响模型的复杂度和计算量，运行这些测试有助于分析不同注意力头数对模型性能和内存消耗的影响，特别是在处理大规模或稠密图时的表现。
 *   **Hidden Size Test**
-    *   **相关文件**: `run_hidden_size_test.py`, `sdcn_dlaa_NEW_hiddensize.py`, `test_sdcn_dlaa_NEW_hiddensize.py`
+    *   **相关文件**: `archive/experiments/run_hidden_size_test.py`, `archive/models/sdcn_dlaa_NEW_hiddensize.py`, `archive/experiments/test_sdcn_dlaa_NEW_hiddensize.py`
     *   **目的**: 这些脚本专注于测试模型内部不同层隐藏表示的维度 (`hidden_size` 参数) 对性能和资源消耗的影响。通过改变这些中间向量的大小，可以评估模型容量与内存需求之间的权衡，帮助确定在处理特定规模（尤其是稠密）图数据时最优或可行的隐藏层维度配置。
 
 ## 理论分析：
