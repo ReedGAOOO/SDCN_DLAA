@@ -2,10 +2,6 @@
 
 Structural Deep Clustering Network (SDCN) with Dual-Level Attentive Aggregation (DLAA). This repo implements a `SpatialConv`-style node↔edge and edge↔edge message passing (PyTorch Geometric) to inject edge semantics into node clustering.
 
-For the full documentation, see:
-- `readme_full.md` (EN)
-- `readme_zh_full.md` (中文)
-
 ## Highlights (Simplified Innovation)
 
 - **Deep edge-aware clustering (SDCN + DLAA)**: dual-level aggregation (node↔edge, edge↔edge) so edge semantics can influence node clustering.
@@ -14,7 +10,7 @@ For the full documentation, see:
 - **Edge message injection (optional)**: set `SDCN_EDGE_MESSAGE=1` to let `edge_attr` affect node updates as message content (not just attention weights), helpful when node features are weak.
 - **Experiment tooling**: `SDCN_SEED` / `SDCN_EPOCHS` and `tools/` scripts for conceptual/synthetic comparison.
 
-## Recommended Defaults (as of 2026-01-27)
+## Recommended Defaults
 
 - Default variant: **`v5edge_pool_residual`** (best overall on edge-semantic synthetic benchmark; see `reports/realistic_synthetic_ablation_zh.md`).
 - Recommended training knobs for edge-driven datasets:
@@ -126,7 +122,7 @@ python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed
 ```
 
 Variant intent:
-- `v1original`: legacy baseline.
+- `v1original`: legacy baseline(original design).
 - `v2edge_single_layer`: minimal fix (ensures edge features participate in attention, avoids washing edge rows).
 - `v3edge_cross_layers`: uses updated edge embeddings as `edge_attr` for node attention.
 - `v4edge_pool_fusion`: v3 + explicit edge→node pooling residual (gated).
@@ -166,4 +162,4 @@ python tools/benchmark_synthetic_suite.py \
   --heads 1
 ```
 
-Example result tables and deeper explanations live in `readme_full.md`.
+Example result tables and deeper explanations live in this README.

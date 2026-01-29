@@ -2,10 +2,6 @@
 
 Structural Deep Clustering Network (SDCN) with Dual-Level Attentive Aggregation (DLAA). This repo implements a `SpatialConv`-style node↔edge and edge↔edge message passing (PyTorch Geometric) to inject edge semantics into node clustering.
 
-For the full documentation, see:
-- `readme_full.md` (EN)
-- `readme_zh_full.md` (中文)
-
 ## Highlights (Simplified Innovation)
 
 - **Deep edge-aware clustering (SDCN + DLAA)**: dual-level aggregation (node↔edge, edge↔edge) so edge semantics can influence node clustering.
@@ -118,4 +114,4 @@ python tools/benchmark_synthetic_suite.py \
   --heads 1
 ```
 
-Example result tables and deeper explanations live in `readme_full.md`.
+Example result tables and deeper explanations live in this README.

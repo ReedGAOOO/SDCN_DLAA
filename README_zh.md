@@ -2,10 +2,6 @@
 
 SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 中实现了类似 `SpatialConv` 的节点↔边、边↔边交互式消息传递，用于将边语义（距离/关系强度等）融入节点聚类。
 
-完整版说明见：
-- `readme_zh_full.md`（中文）
-- `readme_full.md`（EN）
-
 ## 项目亮点（创新点简述）
 
 - **边信息融入聚类（SDCN + DLAA）**：通过双层聚合（节点↔边、边↔边）让边语义影响节点表示与聚类。
@@ -14,7 +10,7 @@ SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 
 - **可选 edge message 注入**：设置 `SDCN_EDGE_MESSAGE=1`，让 `edge_attr` 以“消息内容”参与节点更新（不仅是调注意力权重），适合 node_features 很弱的场景。
 - **实验辅助工具**：`SDCN_SEED` / `SDCN_EPOCHS` + `tools/` 的概念/合成数据对比脚本。
 
-## 推荐默认配置（截至 2026-01-27）
+## 推荐默认配置
 
 - 默认版本：**`v5edge_pool_residual`**（在 edge 语义主导的合成数据上可稳定超过强 baseline，详见 `reports/realistic_synthetic_ablation_zh.md`）。
 - 对“边信息驱动聚类”的常用组合：
@@ -126,7 +122,7 @@ python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed
 ```
 
 版本含义（简述）：
-- `v1original`: 旧版基线。
+- `v1original`: 旧版基线(初版设计)。
 - `v2edge_single_layer`: 小改动修复（保证边特征进注意力，避免 edge 行被“洗掉”）。
 - `v3edge_cross_layers`: 将更新后的 edge embedding 作为 `edge_attr` 参与 node attention。
 - `v4edge_pool_fusion`: 在 v3 基础上加入显式的 edge→node pooling residual（带门控）。
@@ -166,4 +162,4 @@ python tools/benchmark_synthetic_suite.py \
   --heads 1
 ```
 
-示例结果表与更详细的说明见 `readme_zh_full.md`。
+示例结果表与更详细的说明已整合在本文档中。

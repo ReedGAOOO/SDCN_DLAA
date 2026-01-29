@@ -2,10 +2,6 @@
 
 SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 中实现了类似 `SpatialConv` 的节点↔边、边↔边交互式消息传递，用于将边语义（距离/关系强度等）融入节点聚类。
 
-完整版说明见：
-- `readme_zh_full.md`（中文）
-- `readme_full.md`（EN）
-
 ## 项目亮点（创新点简述）
 
 - **边信息融入聚类（SDCN + DLAA）**：通过双层聚合（节点↔边、边↔边）让边语义影响节点表示与聚类。
@@ -118,4 +114,4 @@ python tools/benchmark_synthetic_suite.py \
   --heads 1
 ```
 
-示例结果表与更详细的说明见 `readme_zh_full.md`。
+示例结果表与更详细的说明已整合在本文档中。
