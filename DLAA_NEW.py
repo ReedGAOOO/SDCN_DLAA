@@ -583,6 +583,9 @@ class SpatialConvV5EdgePoolResidual(nn.Module):
         self.out_activation = activation if out_activation is _UNSET else out_activation
 
         self.edge_ee = _env_flag("SDCN_EDGE_EE", True)
+        # Whether to pass raw edge features into node attention as edge_attr (for ablation).
+        # If disabled, SGAT falls back to node-only attention (no edge_attr in attention, no edge_message injection).
+        self.node_att_edge = _env_flag("SDCN_NODE_ATT_EDGE", True)
         self.pool_residual = _env_flag("SDCN_POOL_RESIDUAL", True)
         self.pool_raw = _env_flag("SDCN_POOL_RAW", True)
         self.pool_upd = _env_flag("SDCN_POOL_UPD", True)
@@ -662,8 +665,9 @@ class SpatialConvV5EdgePoolResidual(nn.Module):
         # ---- Step 2: edge-to-edge update (edges only) ----
         edge_feat_1 = self.ee_gat(edge_feat_0, edge_to_edge_index) if self.edge_ee else edge_feat_0  # [E, H]
 
-        # ---- Step 3: node update using *raw* dist_feat (V2 philosophy) ----
-        node_att = self.en_gat(x, edge_index, dist_feat)  # [N, H]
+        # ---- Step 3: node update (V2 philosophy: optionally use raw dist_feat as edge_attr) ----
+        node_edge_attr = dist_feat if self.node_att_edge else None
+        node_att = self.en_gat(x, edge_index, node_edge_attr)  # [N, H]
 
         node_out = node_att
         if self.pool_residual and (self.pool_raw or self.pool_upd):

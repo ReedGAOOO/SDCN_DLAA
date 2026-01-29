@@ -238,6 +238,12 @@ def main() -> None:
         help="Optional comma-separated 0/1 (or true/false) to set SDCN_EDGE_MESSAGE.",
     )
     parser.add_argument(
+        "--node_att_edges",
+        type=str,
+        default="",
+        help="Optional comma-separated 0/1 (or true/false) to set SDCN_NODE_ATT_EDGE (use raw edge_attr in node attention).",
+    )
+    parser.add_argument(
         "--edge_ees",
         type=str,
         default="",
@@ -297,6 +303,7 @@ def main() -> None:
     sigmas = _parse_float_list(args.sigmas) if args.sigmas.strip() else [None]
     q_sources = _parse_optional_str_list(args.q_sources)
     edge_messages = _parse_optional_bool_list(args.edge_messages)
+    node_att_edges = _parse_optional_bool_list(args.node_att_edges)
     edge_ees = _parse_optional_bool_list(args.edge_ees)
     enc_dims_list = _parse_enc_dims_list(args.enc_dims_list)
     kl_weights = _parse_optional_float_list(args.kl_weights)
@@ -339,6 +346,7 @@ def main() -> None:
         sigma,
         q_source,
         edge_message,
+        node_att_edge,
         edge_ee,
         kl_w,
         ce_w,
@@ -369,6 +377,7 @@ def main() -> None:
         sigmas,
         q_sources,
         edge_messages,
+        node_att_edges,
         edge_ees,
         kl_weights,
         ce_weights,
@@ -396,6 +405,8 @@ def main() -> None:
             run_name += f"_q{q_source}"
         if edge_message is not None:
             run_name += f"_em{1 if edge_message else 0}"
+        if node_att_edge is not None:
+            run_name += f"_nae{1 if node_att_edge else 0}"
         if edge_ee is not None:
             run_name += f"_ee{1 if edge_ee else 0}"
         if kl_w is not None:
@@ -460,6 +471,10 @@ def main() -> None:
             env["SDCN_EDGE_MESSAGE"] = "1" if edge_message else "0"
         else:
             env.pop("SDCN_EDGE_MESSAGE", None)
+        if node_att_edge is not None:
+            env["SDCN_NODE_ATT_EDGE"] = "1" if node_att_edge else "0"
+        else:
+            env.pop("SDCN_NODE_ATT_EDGE", None)
         if edge_ee is not None:
             env["SDCN_EDGE_EE"] = "1" if edge_ee else "0"
         else:
@@ -569,6 +584,7 @@ def main() -> None:
                 f"SDCN_SIGMA={(sigma if sigma is not None else '')} "
                 f"SDCN_Q_SOURCE={(q_source if q_source is not None else '')} "
                 f"SDCN_EDGE_MESSAGE={(edge_message if edge_message is not None else '')} "
+                f"SDCN_NODE_ATT_EDGE={(node_att_edge if node_att_edge is not None else '')} "
                 f"SDCN_EDGE_EE={(edge_ee if edge_ee is not None else '')} "
                 f"SDCN_FINAL_ASSIGN={final_assign} "
                 f"SDCN_KL_WEIGHT={(kl_w if kl_w is not None else '')} "
@@ -618,6 +634,7 @@ def main() -> None:
                 "sigma": None if sigma is None else float(sigma),
                 "q_source": q_source,
                 "edge_message": None if edge_message is None else bool(edge_message),
+                "node_att_edge": None if node_att_edge is None else bool(node_att_edge),
                 "edge_ee": None if edge_ee is None else bool(edge_ee),
                 "kl_weight": None if kl_w is None else float(kl_w),
                 "ce_weight": None if ce_w is None else float(ce_w),

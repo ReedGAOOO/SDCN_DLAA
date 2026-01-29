@@ -184,3 +184,37 @@ Baseline 输出目录：
 4) **为什么难以超过谱聚类（以 `rich_edge_profiles` 为例）**
    - baseline 已经直接用距离构造 affinity 并做 spectral 分解，这是针对该数据分布的“强归纳偏置”；而当前 SDCN 类训练目标更偏向自训练聚类头 + 表征学习，未显式逼近谱分解/图割目标，所以在该类任务上天然吃亏。
 
+## 5) 三条“互补通路”的更严格消融（v5）
+
+为把 v5 的三条通路拆得更干净，我们新增了一个开关：`SDCN_NODE_ATT_EDGE`（是否让 node attention 真的接收 raw edge 作为 `edge_attr` 参与注意力）。
+
+下面基于 `rich_edge_semantic_only_nonknn`（seed=0）做消融（train seed=0/1/2；`SDCN_EDGE_MESSAGE=0`；`SDCN_POOL_GATE_MODE=one`；`SDCN_FINAL_ASSIGN=p`）：
+
+### A) 注意力通路（node_att 是否使用 raw edge）
+
+| 设置 | acc | collapse_rate |
+|---|---:|---:|
+| `SDCN_NODE_ATT_EDGE=1` | 0.9833 ± 0.0056 | 0.00 |
+| `SDCN_NODE_ATT_EDGE=0` | 0.8907 ± 0.0479 | 0.00 |
+
+结论：raw edge 参与注意力能显著提升效果，但即使关掉，v5 仍可依靠 pooling residual 保持较强性能（不塌缩）。
+
+### B) 强基线通路（pool residual）
+
+| 设置 | acc | collapse_rate |
+|---|---:|---:|
+| `SDCN_POOL_RESIDUAL=1` | 0.9833 ± 0.0056 | 0.00 |
+| `SDCN_POOL_RESIDUAL=0` | 0.3444 ± 0.0192 | 1.00 |
+
+结论：在 edge 语义数据上，pool residual 是**结构必要项**（关掉基本直接塌缩）。
+
+### C) 边表征通路（edge↔edge + pool_upd）
+
+| `SDCN_EDGE_EE` | `SDCN_POOL_UPD` | acc | collapse_rate |
+|---:|---:|---:|---:|
+| 1 | 1 | 0.9833 ± 0.0056 | 0.00 |
+| 1 | 0 | 0.9926 ± 0.0032 | 0.00 |
+| 0 | 1 | 0.9796 ± 0.0128 | 0.00 |
+| 0 | 0 | 0.9926 ± 0.0032 | 0.00 |
+
+结论：在该数据上，edge↔edge 与 “updated edge pooling” 不是关键瓶颈，收益更依赖 node-att(raw edge) + pool residual 这两条主干。

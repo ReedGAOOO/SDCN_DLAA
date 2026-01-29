@@ -64,6 +64,7 @@ node_out    = node_att + sigmoid(gate([node_att, pooled])) * proj(pooled)
 **结构消融开关（研究用）**
 - `SDCN_POOL_RESIDUAL=0/1`（关闭/开启 pooling residual）
 - `SDCN_EDGE_EE=0/1`（关闭/开启 edge↔edge 更新）
+- `SDCN_NODE_ATT_EDGE=0/1`（关闭/开启 node attention 的 raw edge_attr）
 - `SDCN_POOL_GATE_MODE=learned|one|zero`（门控行为）
 
 ## 目录结构

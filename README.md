@@ -64,6 +64,7 @@ This is the part that ablation shows to be “structurally necessary” on edge-
 **Ablation toggles (for research)**
 - `SDCN_POOL_RESIDUAL=0/1` (disable/enable pooling residual)
 - `SDCN_EDGE_EE=0/1` (disable/enable edge↔edge update)
+- `SDCN_NODE_ATT_EDGE=0/1` (disable/enable raw edge_attr in node attention)
 - `SDCN_POOL_GATE_MODE=learned|one|zero` (gate behavior)
 
 ## Repo Structure

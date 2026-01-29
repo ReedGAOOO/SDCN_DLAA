@@ -216,6 +216,7 @@ def main() -> None:
         "sdcn_q_source": os.getenv("SDCN_Q_SOURCE", "").strip(),
         "sdcn_edge_message": os.getenv("SDCN_EDGE_MESSAGE", "").strip(),
         "sdcn_edge_ee": os.getenv("SDCN_EDGE_EE", "").strip(),
+        "sdcn_node_att_edge": os.getenv("SDCN_NODE_ATT_EDGE", "").strip(),
         "sdcn_pool_residual": os.getenv("SDCN_POOL_RESIDUAL", "").strip(),
         "sdcn_pool_raw": os.getenv("SDCN_POOL_RAW", "").strip(),
         "sdcn_pool_upd": os.getenv("SDCN_POOL_UPD", "").strip(),
