@@ -9,7 +9,8 @@ SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 
 ## 项目亮点（创新点简述）
 
 - **边信息融入聚类（SDCN + DLAA）**：通过双层聚合（节点↔边、边↔边）让边语义影响节点表示与聚类。
-- **可切换的 SpatialConv 版本**：`v1original`、`v2edge_single_layer`、`v3edge_cross_layers`、`v4edge_pool_fusion`、`v5edge_pool_residual`（默认），用 `SPATIALCONV_VARIANT` 方便做消融/对比。
+- **默认最佳版本（`v5edge_pool_residual`）**：在 edge 语义主导的合成数据上最鲁棒（见 `reports/realistic_synthetic_ablation_zh.md`）。
+- **可切换的 SpatialConv 版本**：`v1original`、`v2edge_single_layer`、`v3edge_cross_layers`、`v4edge_pool_fusion`、`v5edge_pool_residual`，用 `SPATIALCONV_VARIANT` 方便做消融/对比。
 - **可选 edge message 注入**：设置 `SDCN_EDGE_MESSAGE=1`，让 `edge_attr` 以“消息内容”参与节点更新（不仅是调注意力权重），适合 node_features 很弱的场景。
 - **实验辅助工具**：`SDCN_SEED` / `SDCN_EPOCHS` + `tools/` 的概念/合成数据对比脚本。
 
@@ -21,6 +22,53 @@ SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 
   - `SDCN_EDGE_MESSAGE=1`
   - `SDCN_FINAL_ASSIGN=p`
   - profile 类边特征建议加 `--edge_attr_norm zscore_clip`（在 `tools/test_conceptual_data.py` / `tools/sweep_stability.py` 中设置）
+
+## v5 结构详解（推荐）
+
+`v5edge_pool_residual` 面向 **“边信息驱动聚类”**：当边承载的语义（关系类型、交互统计、多维 profile）比节点特征更关键时，v5 更容易把边语义“兑现”为节点可聚类的表征。
+
+**核心思路**：保留两条互补路径，分别从不同角度把边信息注入到节点表征里。
+
+**单个 SpatialConv block 的前向流程（示意）**：
+
+```text
+输入：x（节点特征）, edge_index, dist_feat（raw edge_attr）, dist_feat_order, edge_to_edge_index
+
+edge_feat_0 = MLP([x_src, x_dst, dist_feat_order])
+edge_feat_1 = ee_gat(edge_feat_0, edge_to_edge_index)            # edge↔edge 上下文
+
+node_att    = SGAT(x, edge_index, edge_attr=dist_feat)            # raw edge 直接参与注意力
+pooled      = mean_pool(dist_feat) + mean_pool(edge_feat_1)       # edge→node residual（两端点聚合）
+node_out    = node_att + sigmoid(gate([node_att, pooled])) * proj(pooled)
+```
+
+1) **node attention 直接使用 raw edge（v2 思路）**  
+节点更新使用 `SGATLayer(GATConv(edge_dim=...))`，其中 `edge_attr = dist_feat` 直接参与注意力计算，避免 edge embedding 在早期被“洗掉”。
+
+2) **edge↔edge 更新（局部一致性/上下文）**  
+边向量先由 `(x_src, x_dst, dist_feat_order)` 初始化，再在 `edge_to_edge_index`（共享端点的边构成的图）上用 `ee_gat` 做更新，捕捉边之间的上下文。
+
+3) **显式 edge→node pooling residual（类似强 baseline，但可学习）**  
+把边特征 mean-pool 到节点（两端点都聚合），再用门控融合：
+
+- pooled = mean_pool(raw_edge) + mean_pool(updated_edge)
+- node_out = node_att + sigmoid(gate([node_att, pooled])) * proj(pooled)
+
+从消融实验来看，这个 residual 在 edge 语义数据上经常是“结构必要项”（关掉会明显掉点/塌缩）。
+
+**默认选择**
+- 当前仓库默认就是 `v5edge_pool_residual`（见 `DLAA_NEW.py`），也可手动指定：
+  - `export SPATIALCONV_VARIANT=v5edge_pool_residual`
+
+**v5 推荐组合**
+- `SDCN_Q_SOURCE=h4`（用图分支 embedding 做 q/p 自训练）
+- `SDCN_FINAL_ASSIGN=p`（当 `pred` 头落后时用 p 作为最终聚类输出）
+- `SDCN_EDGE_MESSAGE=1`（让 edge_attr 以“消息内容”额外注入）
+
+**结构消融开关（研究用）**
+- `SDCN_POOL_RESIDUAL=0/1`（关闭/开启 pooling residual）
+- `SDCN_EDGE_EE=0/1`（关闭/开启 edge↔edge 更新）
+- `SDCN_POOL_GATE_MODE=learned|one|zero`（门控行为）
 
 ## 目录结构
 
@@ -82,7 +130,7 @@ python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed
 - `v2edge_single_layer`: 小改动修复（保证边特征进注意力，避免 edge 行被“洗掉”）。
 - `v3edge_cross_layers`: 将更新后的 edge embedding 作为 `edge_attr` 参与 node attention。
 - `v4edge_pool_fusion`: 在 v3 基础上加入显式的 edge→node pooling residual（带门控）。
-- `v5edge_pool_residual`: 延续 v2 思路（node attention 用 raw edge），同时加入 edge→node pooling residual；在 edge 语义主导任务上更鲁棒。
+- `v5edge_pool_residual`（推荐）: 延续 v2 思路（node attention 用 raw edge），同时加入 edge→node pooling residual；在 edge 语义主导任务上更鲁棒。
 
 ## 其他运行方式
 

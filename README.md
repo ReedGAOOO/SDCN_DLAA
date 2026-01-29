@@ -9,7 +9,8 @@ For the full documentation, see:
 ## Highlights (Simplified Innovation)
 
 - **Deep edge-aware clustering (SDCN + DLAA)**: dual-level aggregation (node↔edge, edge↔edge) so edge semantics can influence node clustering.
-- **Variant-friendly SpatialConv**: `v1original`, `v2edge_single_layer`, `v3edge_cross_layers`, `v4edge_pool_fusion`, `v5edge_pool_residual` (default) via `SPATIALCONV_VARIANT` for ablation/verification.
+- **Default best variant (`v5edge_pool_residual`)**: most robust on edge-semantic synthetic benchmarks (see `reports/realistic_synthetic_ablation_zh.md`).
+- **Variant-friendly SpatialConv**: `v1original`, `v2edge_single_layer`, `v3edge_cross_layers`, `v4edge_pool_fusion`, `v5edge_pool_residual` via `SPATIALCONV_VARIANT` for ablation/verification.
 - **Edge message injection (optional)**: set `SDCN_EDGE_MESSAGE=1` to let `edge_attr` affect node updates as message content (not just attention weights), helpful when node features are weak.
 - **Experiment tooling**: `SDCN_SEED` / `SDCN_EPOCHS` and `tools/` scripts for conceptual/synthetic comparison.
 
@@ -21,6 +22,53 @@ For the full documentation, see:
   - `SDCN_EDGE_MESSAGE=1`
   - `SDCN_FINAL_ASSIGN=p`
   - For profile-like edge features: add `--edge_attr_norm zscore_clip` (via `tools/test_conceptual_data.py` / `tools/sweep_stability.py`)
+
+## v5 Structure (Recommended)
+
+`v5edge_pool_residual` is designed for **edge-semantic clustering**: when edges carry richer information than nodes (relationship types, interaction stats, multi-dim profiles).
+
+**Core idea**: keep two complementary paths that are both edge-aware, but in different ways.
+
+**Forward-pass sketch (one SpatialConv block):**
+
+```text
+Inputs: x (node feats), edge_index, dist_feat (raw edge_attr), dist_feat_order, edge_to_edge_index
+
+edge_feat_0 = MLP([x_src, x_dst, dist_feat_order])
+edge_feat_1 = ee_gat(edge_feat_0, edge_to_edge_index)          # edge↔edge context
+
+node_att   = SGAT(x, edge_index, edge_attr=dist_feat)          # raw edge participates in attention
+pooled     = mean_pool(dist_feat) + mean_pool(edge_feat_1)     # edge→node residual (both endpoints)
+node_out   = node_att + sigmoid(gate([node_att, pooled])) * proj(pooled)
+```
+
+1) **Node attention uses raw edge features (V2 philosophy)**  
+Node updates are computed with `SGATLayer(GATConv(edge_dim=...))`, where `edge_attr = dist_feat` directly participates in attention.
+
+2) **Edges get refined on an edge↔edge graph (local consistency)**  
+Edges are embedded from `(x_src, x_dst, dist_feat_order)` and updated by `ee_gat` on `edge_to_edge_index` (edges sharing endpoints).
+
+3) **Explicit edge→node pooling residual (baseline-style, but learnable)**  
+Mean-pool edge features to nodes (both endpoints), then fuse into node embeddings with a gate:
+
+- pooled signal = mean_pool(raw_edge) + mean_pool(updated_edge)
+- node_out = node_att + sigmoid(gate([node_att, pooled])) * proj(pooled)
+
+This is the part that ablation shows to be “structurally necessary” on edge-semantic data.
+
+**Default runtime selection**
+- The repo default is already `v5edge_pool_residual` (see `DLAA_NEW.py`), but you can override:
+  - `export SPATIALCONV_VARIANT=v5edge_pool_residual`
+
+**Recommended knobs for v5**
+- `SDCN_Q_SOURCE=h4` (cluster self-training uses graph-aware embedding)
+- `SDCN_FINAL_ASSIGN=p` (use target distribution head when `pred` lags behind)
+- `SDCN_EDGE_MESSAGE=1` (edge_attr also contributes as message content)
+
+**Ablation toggles (for research)**
+- `SDCN_POOL_RESIDUAL=0/1` (disable/enable pooling residual)
+- `SDCN_EDGE_EE=0/1` (disable/enable edge↔edge update)
+- `SDCN_POOL_GATE_MODE=learned|one|zero` (gate behavior)
 
 ## Repo Structure
 
@@ -82,7 +130,7 @@ Variant intent:
 - `v2edge_single_layer`: minimal fix (ensures edge features participate in attention, avoids washing edge rows).
 - `v3edge_cross_layers`: uses updated edge embeddings as `edge_attr` for node attention.
 - `v4edge_pool_fusion`: v3 + explicit edge→node pooling residual (gated).
-- `v5edge_pool_residual`: v2-style (raw edge for node attention) + explicit edge→node pooling residual; most robust in edge-semantic tests.
+- `v5edge_pool_residual` (recommended): node attention uses raw edge features + explicit edge→node pooling residual; most robust in edge-semantic tests.
 
 ## Other Runs
 
