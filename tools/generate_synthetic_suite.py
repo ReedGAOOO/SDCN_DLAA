@@ -102,6 +102,54 @@ def _make_random_k_edges(num_nodes: int, k: int, rng: np.random.Generator) -> tu
     return rows, cols
 
 
+def _make_mixed_within_cross_edges(
+    labels: np.ndarray,
+    k_within: int,
+    k_cross: int,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Build an undirected graph (returned as directed edges) where each node samples:
+      - k_within neighbors from the same cluster
+      - k_cross neighbors from other clusters
+    This is useful for stress-testing edge↔edge because every node sees a mixture of
+    within/cross edges (incidence ee graph is noisy; incidence_sim can filter).
+    """
+    n = int(labels.shape[0])
+    if n <= 1:
+        return np.zeros((0,), dtype=np.int64), np.zeros((0,), dtype=np.int64)
+
+    k_within = int(max(0, k_within))
+    k_cross = int(max(0, k_cross))
+
+    clusters = {int(cid): np.where(labels == cid)[0] for cid in np.unique(labels)}
+    all_nodes = np.arange(n, dtype=np.int64)
+
+    edges: set[tuple[int, int]] = set()
+    for i in range(n):
+        src_c = int(labels[i])
+
+        within_candidates = clusters.get(src_c, np.zeros((0,), dtype=np.int64))
+        within_candidates = within_candidates[within_candidates != i]
+        if within_candidates.size > 0 and k_within > 0:
+            nbrs = rng.choice(within_candidates, size=min(int(k_within), int(within_candidates.size)), replace=False)
+            for j in nbrs.tolist():
+                edges.add((i, int(j)))
+                edges.add((int(j), i))
+
+        cross_candidates = all_nodes[labels != src_c]
+        if cross_candidates.size > 0 and k_cross > 0:
+            nbrs = rng.choice(cross_candidates, size=min(int(k_cross), int(cross_candidates.size)), replace=False)
+            for j in nbrs.tolist():
+                edges.add((i, int(j)))
+                edges.add((int(j), i))
+
+    rows_cols = sorted(edges)
+    rows = np.fromiter((rc[0] for rc in rows_cols), dtype=np.int64, count=len(rows_cols))
+    cols = np.fromiter((rc[1] for rc in rows_cols), dtype=np.int64, count=len(rows_cols))
+    return rows, cols
+
+
 def _add_random_edges(
     rows: np.ndarray,
     cols: np.ndarray,
@@ -575,6 +623,70 @@ def _make_edge_attr_real_social_topics(
     return edge_attr.astype(np.float32), extra
 
 
+def _make_edge_attr_edge_edge_denoise_nonknn(
+    rng: np.random.Generator,
+    rows: np.ndarray,
+    cols: np.ndarray,
+    labels: np.ndarray,
+    edge_dim: int,
+    *,
+    proto_dim: int = 8,
+    within_noise: float = 0.20,
+    cross_noise: float = 1.00,
+    nuisance_noise: float = 0.05,
+    noise0_scale: float = 0.10,
+) -> tuple[np.ndarray, dict]:
+    """
+    Edge-edge diagnostic edge attributes (non-spatial):
+    - Edges within the same true cluster share a cluster-prototype vector (plus small noise).
+    - Cross-cluster edges are mostly random (high-entropy nuisance).
+
+    This creates a regime where:
+      - incidence ee graph mixes informative+noise edges (can wash out signal),
+      - incidence_sim ee graph can preferentially connect the coherent within-edges
+        around a node, making edge↔edge updates useful.
+
+    IMPORTANT: edge_attr[:,0] is weak random noise (scaled) to avoid dist-only shortcuts.
+    """
+    n_clusters = int(np.unique(labels).size)
+    e = int(rows.shape[0])
+
+    if edge_dim < 1 + int(proto_dim):
+        raise ValueError(f"edge_dim must be >= 1+proto_dim ({1+int(proto_dim)}), got {edge_dim}")
+
+    proto = rng.normal(loc=0.0, scale=1.0, size=(max(n_clusters, 1), int(proto_dim))).astype(np.float32)
+    proto = proto / (np.linalg.norm(proto, axis=1, keepdims=True) + 1e-6)
+
+    same = (labels[rows] == labels[cols])
+    sem = np.zeros((e, int(proto_dim)), dtype=np.float32)
+    if np.any(same):
+        sem[same] = proto[labels[rows[same]]] + rng.normal(loc=0.0, scale=float(within_noise), size=(int(same.sum()), int(proto_dim))).astype(np.float32)
+    if np.any(~same):
+        sem[~same] = rng.normal(loc=0.0, scale=float(cross_noise), size=(int((~same).sum()), int(proto_dim))).astype(np.float32)
+
+    noise0 = (float(noise0_scale) * rng.random(size=e).astype(np.float32)).reshape(-1, 1)
+
+    rem = int(edge_dim) - 1 - int(proto_dim)
+    if rem > 0:
+        nuisance = rng.normal(loc=0.0, scale=float(nuisance_noise), size=(e, rem)).astype(np.float32)
+        edge_attr = np.concatenate([noise0, sem, nuisance], axis=1).astype(np.float32)
+    else:
+        edge_attr = np.concatenate([noise0, sem], axis=1).astype(np.float32)
+
+    extra = {
+        "n_clusters": int(n_clusters),
+        "edge_attr": "edge_edge_denoise_nonknn",
+        "edge_attr_note": "within-edges share a cluster prototype; cross-edges are mostly random noise",
+        "proto_dim": int(proto_dim),
+        "within_noise": float(within_noise),
+        "cross_noise": float(cross_noise),
+        "nuisance_noise": float(nuisance_noise),
+        "noise0_scale": float(noise0_scale),
+        "same_edge_frac": float(same.mean()) if same.size else 0.0,
+    }
+    return edge_attr.astype(np.float32), extra
+
+
 def _make_edge_attr_relational_cycle(
     rng: np.random.Generator,
     rows: np.ndarray,
@@ -853,6 +965,34 @@ def _preset_relational_cycle_nonknn(seed: int) -> tuple[np.ndarray, np.ndarray, 
     x = _make_node_features(rng, labels, coords, feature_dim=6, cluster_bias=0.03, coord_proj_scale=0.0, noise_scale=1.3)
     return coords, labels, x, {"points_per_cluster": points_per, "note": "edge types are relative (dst-src) mod K; marginals near-uniform"}
 
+
+def _preset_edge_edge_denoise_nonknn(seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    """
+    Purpose-built diagnostic dataset for edge↔edge:
+    - Non-spatial: coords are uninformative.
+    - Node features are weak/noisy.
+    - Graph has a controlled mix of within- and cross-cluster edges per node.
+    - Edge attributes: within-edges share a cluster prototype; cross-edges are mostly random.
+    """
+    rng = np.random.default_rng(seed)
+    n_clusters = 4
+    points_per = 60
+
+    labels = np.repeat(np.arange(n_clusters, dtype=np.int64), points_per)
+    labels = labels[rng.permutation(labels.shape[0])]
+
+    coords = rng.normal(loc=0.0, scale=1.0, size=(labels.shape[0], 2)).astype(np.float32)
+
+    # Node features intentionally weak: tiny cluster bias, mostly noise.
+    x = _make_node_features(rng, labels, coords, feature_dim=8, cluster_bias=0.04, coord_proj_scale=0.0, noise_scale=1.2)
+
+    extra = {
+        "points_per_cluster": int(points_per),
+        "note": "diagnostic: within/cross mixed graph; within-edge prototypes + cross noise",
+        "graph": "mixed_within_cross(k_within=3,k_cross=7)",
+    }
+    return coords, labels, x, extra
+
 PresetFn = Callable[[int], tuple[np.ndarray, np.ndarray, np.ndarray, dict]]
 
 
@@ -886,6 +1026,16 @@ PRESETS: dict[str, dict] = {
         "edge_dim": 16,
         "knn_k": 10,  # used as random-k for this preset
         "graph_type": "random_k",
+    },
+    "edge_edge_denoise_nonknn": {
+        "category": "rich_edge",
+        "fn": _preset_edge_edge_denoise_nonknn,
+        "edge_dim": 16,
+        "knn_k": 10,  # unused (custom graph builder)
+        "graph_type": "mixed_within_cross",
+        "graph_params": {"k_within": 3, "k_cross": 7},
+        "disable_random_edge_augment": True,
+        "edge_attr_params": {"proto_dim": 8, "within_noise": 0.20, "cross_noise": 1.00, "nuisance_noise": 0.05, "noise0_scale": 0.10},
     },
 }
 
@@ -929,19 +1079,26 @@ def main() -> None:
         edge_dim = int(spec["edge_dim"])
         knn_k = int(spec["knn_k"])
         graph_type = str(spec.get("graph_type", "knn")).strip().lower()
+        disable_random_edge_augment = bool(spec.get("disable_random_edge_augment", False))
 
         coords, labels, x, extra = fn(args.seed)
 
         # Stable per-dataset RNG (independent of Python's hash randomization).
         name_hash = int(zlib.crc32(name.encode("utf-8")) & 0xFFFFFFFF)
         rng = np.random.default_rng(int(args.seed) * 1_000_003 + name_hash)
-        if graph_type in {"random_k", "rand_k", "randomk"}:
+        if graph_type in {"mixed_within_cross", "mixed"}:
+            gp = dict(spec.get("graph_params") or {})
+            k_within = int(gp.get("k_within", 3))
+            k_cross = int(gp.get("k_cross", 7))
+            rows, cols = _make_mixed_within_cross_edges(labels, k_within=k_within, k_cross=k_cross, rng=rng)
+            extra = {**extra, "graph": f"mixed_within_cross(k_within={k_within},k_cross={k_cross})"}
+        elif graph_type in {"random_k", "rand_k", "randomk"}:
             rows, cols = _make_random_k_edges(int(coords.shape[0]), k=knn_k, rng=rng)
             extra = {**extra, "graph": f"random_k(k={knn_k})"}
         else:
             rows, cols = _make_knn_edges(coords, k=knn_k, rng=rng)
 
-        if category == "rich_edge":
+        if category == "rich_edge" and not disable_random_edge_augment:
             rows, cols = _add_random_edges(
                 rows,
                 cols,
@@ -972,6 +1129,17 @@ def main() -> None:
                 extra = {**extra, **extra_edge}
             elif name == "relational_cycle_nonknn":
                 edge_attr, extra_edge = _make_edge_attr_relational_cycle(rng, rows, cols, labels, edge_dim=edge_dim)
+                extra = {**extra, **extra_edge}
+            elif name == "edge_edge_denoise_nonknn":
+                params = dict(spec.get("edge_attr_params") or {})
+                edge_attr, extra_edge = _make_edge_attr_edge_edge_denoise_nonknn(
+                    rng,
+                    rows,
+                    cols,
+                    labels,
+                    edge_dim=edge_dim,
+                    **params,
+                )
                 extra = {**extra, **extra_edge}
             else:
                 edge_attr = _make_edge_attr_rich_profiles(rng, coords, rows, cols, labels, edge_dim=edge_dim)

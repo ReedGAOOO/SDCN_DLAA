@@ -115,7 +115,7 @@ Common knobs:
 Select at import-time via env var (default: `v5edge_pool_residual`):
 
 ```bash
-export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual | ... | v12edge_similarity_denoise | v13edge_context_similarity_denoise | v14edge_pool_concat_fusion | v15edge_ee_aux_context_similarity_denoise
+export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual | ... | v12edge_similarity_denoise | v13edge_context_similarity_denoise | v14edge_pool_concat_fusion | v15edge_ee_aux_context_similarity_denoise | v16edge_ee_residual_aux_fusion
 export SDCN_Q_SOURCE=h4                          # z | h4 | fused
 export SDCN_FINAL_ASSIGN=p                       # pred | q | p (choose which head to output as final clusters)
 export SDCN_SEED=0                              # optional: reproducible runs
@@ -123,6 +123,8 @@ export SDCN_EPOCHS=30                           # optional: override epochs
 export SDCN_EDGE_MESSAGE=1                      # optional: edge_attr as message content
 export SDCN_EE_GRAPH=edge_sim                   # optional: incidence | incidence_sim | edge_sim | hybrid | none (edge↔edge neighborhood); hybrid = incidence ∪ edge_sim
 export SDCN_EE_TOPK=10                          # optional: top-k for edge_sim ee graph
+export SDCN_EE_SIM_MIN_SIM=0.4                  # optional: sim-threshold for *_sim ee graphs (avoid forcing dissimilar edges to connect)
+export SDCN_EE_SIM_MUTUAL=0                     # optional: keep only mutual(topk) sim edges (sparser, more conservative)
 export SDCN_GAT_INPUT_DROPOUT=0.2               # optional: feature dropout before edge↔edge GATConv (backward-compatible default)
 python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
@@ -140,6 +142,7 @@ Variant intent:
 - `v13edge_context_similarity_denoise` (experimental): like v12, but uses node-pair context as a *key* to compute similarity weights for edge↔edge denoise (more conservative than directly rewriting edge_attr).
 - `v14edge_pool_concat_fusion` (experimental): keeps the denoiser idea, and makes the pooled edge statistics an explicit concatenated subspace `W([node_att, pool_raw, pool_upd])` (see report 7.8).
 - `v15edge_ee_aux_context_similarity_denoise` (experimental): v13-style conservative denoise + v6-style edge auxiliary head (enable via `SDCN_EDGE_AUX_WEIGHT>0`) to make edge↔edge more directly optimizable for clustering.
+- `v16edge_ee_residual_aux_fusion` (experimental): v7-style edge_attr fusion + residual edge↔edge update + edge auxiliary head (reduces “washing out” risk; best paired with `SDCN_EE_GRAPH=incidence_sim` + `SDCN_EE_SIM_MIN_SIM`).
 
 ## Other Runs
 
@@ -173,6 +176,32 @@ python tools/benchmark_synthetic_suite.py \
   --variants v2edge_single_layer,v3edge_cross_layers \
   --baselines kmeans_x,spectral_adj_binary,spectral_edge_distance \
   --heads 1
+```
+
+### Edge↔edge diagnostic dataset (recommended for debugging)
+
+This dataset is designed to make edge↔edge effects visible and debuggable: each node has a controlled mix of within-cluster prototype edges and cross-cluster noise edges. Pure incidence ee graphs tend to over-mix, while `incidence_sim + min_sim` is more conservative and often makes edge↔edge updates helpful.
+
+```bash
+# 1) Generate a single diagnostic dataset
+python tools/generate_synthetic_suite.py --output_root /tmp/sdcn_edge_debug_suite --seed 0 --presets edge_edge_denoise_nonknn
+
+# 2) Run an edge↔edge ablation sweep
+python tools/sweep_stability.py \
+  --data_dir /tmp/sdcn_edge_debug_suite/edge_edge_denoise_nonknn \
+  --out_dir /tmp/sweep_edge_edge_denoise \
+  --variants v5edge_pool_residual \
+  --seeds 0,1,2 \
+  --epochs 60 \
+  --q_sources h4 \
+  --sigmas 0.2 \
+  --edge_messages 1 \
+  --edge_ees 0,1 \
+  --ee_graphs incidence_sim \
+  --ee_topks 4 \
+  --ee_sim_min_sims 0.4 \
+  --q_balance_weights 0.1 \
+  --pred_balance_weights 0.1
 ```
 
 Example result tables and deeper explanations live in this README.

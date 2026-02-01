@@ -267,6 +267,18 @@ def main() -> None:
         help="Optional comma-separated ints to set SDCN_EE_TOPK (used when SDCN_EE_GRAPH=edge_sim).",
     )
     parser.add_argument(
+        "--ee_sim_min_sims",
+        type=str,
+        default="",
+        help="Optional comma-separated floats to set SDCN_EE_SIM_MIN_SIM (filters low-sim edges in *_sim ee graphs).",
+    )
+    parser.add_argument(
+        "--ee_sim_mutuals",
+        type=str,
+        default="",
+        help="Optional comma-separated 0/1 to set SDCN_EE_SIM_MUTUAL (keep only mutual sim edges).",
+    )
+    parser.add_argument(
         "--edge_denoise_alphas",
         type=str,
         default="",
@@ -295,6 +307,25 @@ def main() -> None:
         type=str,
         default="",
         help="Optional comma-separated SDCN_POOL_RE_WARMUP_EPOCHS overrides.",
+    )
+    parser.add_argument("--edge_aux_weights", type=str, default="", help="Optional comma-separated SDCN_EDGE_AUX_WEIGHT overrides.")
+    parser.add_argument(
+        "--edge_aux_warmups",
+        type=str,
+        default="",
+        help="Optional comma-separated SDCN_EDGE_AUX_WARMUP_EPOCHS overrides.",
+    )
+    parser.add_argument(
+        "--edge_aux_smooth_weights",
+        type=str,
+        default="",
+        help="Optional comma-separated SDCN_EDGE_AUX_SMOOTH_WEIGHT overrides.",
+    )
+    parser.add_argument(
+        "--gat_input_dropouts",
+        type=str,
+        default="",
+        help="Optional comma-separated SDCN_GAT_INPUT_DROPOUT overrides.",
     )
     parser.add_argument("--ce_warmups", type=str, default="", help="Optional comma-separated SDCN_CE_WARMUP_EPOCHS overrides.")
     parser.add_argument("--p_smoothings", type=str, default="", help="Optional comma-separated SDCN_P_SMOOTHING values.")
@@ -361,6 +392,8 @@ def main() -> None:
     edge_ees = _parse_optional_bool_list(args.edge_ees)
     ee_graphs = _parse_optional_str_list(args.ee_graphs)
     ee_topks = _parse_optional_int_list(args.ee_topks)
+    ee_sim_min_sims = _parse_optional_float_list(args.ee_sim_min_sims)
+    ee_sim_mutuals = _parse_optional_bool_list(args.ee_sim_mutuals)
     edge_denoise_alphas = _parse_optional_float_list(args.edge_denoise_alphas)
     edge_sim_gammas = _parse_optional_float_list(args.edge_sim_gammas)
     enc_dims_list = _parse_enc_dims_list(args.enc_dims_list)
@@ -371,6 +404,10 @@ def main() -> None:
     edge_re_warmups = _parse_optional_int_list(args.edge_re_warmups)
     pool_re_weights = _parse_optional_float_list(args.pool_re_weights)
     pool_re_warmups = _parse_optional_int_list(args.pool_re_warmups)
+    edge_aux_weights = _parse_optional_float_list(args.edge_aux_weights)
+    edge_aux_warmups = _parse_optional_int_list(args.edge_aux_warmups)
+    edge_aux_smooth_weights = _parse_optional_float_list(args.edge_aux_smooth_weights)
+    gat_input_dropouts = _parse_optional_float_list(args.gat_input_dropouts)
     ce_warmups = _parse_optional_int_list(args.ce_warmups)
     p_smoothings = _parse_optional_float_list(args.p_smoothings)
     pred_mi_weights = _parse_optional_float_list(args.pred_mi_weights)
@@ -413,6 +450,8 @@ def main() -> None:
         edge_ee,
         ee_graph,
         ee_topk,
+        ee_sim_min_sim,
+        ee_sim_mutual,
         edge_denoise_alpha,
         edge_sim_gamma,
         kl_w,
@@ -422,6 +461,10 @@ def main() -> None:
         edge_re_warmup,
         pool_re_w,
         pool_re_warmup,
+        edge_aux_w,
+        edge_aux_warmup,
+        edge_aux_smooth_w,
+        gat_in_do,
         ce_warmup,
         p_smoothing,
         pred_mi_w,
@@ -453,6 +496,8 @@ def main() -> None:
         edge_ees,
         ee_graphs,
         ee_topks,
+        ee_sim_min_sims,
+        ee_sim_mutuals,
         edge_denoise_alphas,
         edge_sim_gammas,
         kl_weights,
@@ -462,6 +507,10 @@ def main() -> None:
         edge_re_warmups,
         pool_re_weights,
         pool_re_warmups,
+        edge_aux_weights,
+        edge_aux_warmups,
+        edge_aux_smooth_weights,
+        gat_input_dropouts,
         ce_warmups,
         p_smoothings,
         pred_mi_weights,
@@ -494,6 +543,10 @@ def main() -> None:
             run_name += f"_eeg{str(ee_graph).strip().lower()}"
         if ee_topk is not None:
             run_name += f"_eek{int(ee_topk)}"
+        if ee_sim_min_sim is not None:
+            run_name += f"_eems{ee_sim_min_sim:g}"
+        if ee_sim_mutual is not None:
+            run_name += f"_eemm{1 if ee_sim_mutual else 0}"
         if edge_denoise_alpha is not None:
             run_name += f"_eda{edge_denoise_alpha:g}"
         if edge_sim_gamma is not None:
@@ -512,6 +565,14 @@ def main() -> None:
             run_name += f"_pre{pool_re_w:g}"
         if pool_re_warmup is not None:
             run_name += f"_prew{int(pool_re_warmup)}"
+        if edge_aux_w is not None:
+            run_name += f"_eaux{edge_aux_w:g}"
+        if edge_aux_warmup is not None:
+            run_name += f"_eauxw{int(edge_aux_warmup)}"
+        if edge_aux_smooth_w is not None:
+            run_name += f"_eauxs{edge_aux_smooth_w:g}"
+        if gat_in_do is not None:
+            run_name += f"_gindo{gat_in_do:g}"
         if ce_warmup is not None:
             run_name += f"_cw{int(ce_warmup)}"
         if p_smoothing is not None:
@@ -592,6 +653,14 @@ def main() -> None:
             env["SDCN_EE_TOPK"] = str(int(ee_topk))
         else:
             env.pop("SDCN_EE_TOPK", None)
+        if ee_sim_min_sim is not None:
+            env["SDCN_EE_SIM_MIN_SIM"] = str(float(ee_sim_min_sim))
+        else:
+            env.pop("SDCN_EE_SIM_MIN_SIM", None)
+        if ee_sim_mutual is not None:
+            env["SDCN_EE_SIM_MUTUAL"] = "1" if ee_sim_mutual else "0"
+        else:
+            env.pop("SDCN_EE_SIM_MUTUAL", None)
         if edge_denoise_alpha is not None:
             env["SDCN_EDGE_DENOISE_ALPHA"] = str(float(edge_denoise_alpha))
         else:
@@ -628,6 +697,22 @@ def main() -> None:
             env["SDCN_POOL_RE_WARMUP_EPOCHS"] = str(int(pool_re_warmup))
         else:
             env.pop("SDCN_POOL_RE_WARMUP_EPOCHS", None)
+        if edge_aux_w is not None:
+            env["SDCN_EDGE_AUX_WEIGHT"] = str(float(edge_aux_w))
+        else:
+            env.pop("SDCN_EDGE_AUX_WEIGHT", None)
+        if edge_aux_warmup is not None:
+            env["SDCN_EDGE_AUX_WARMUP_EPOCHS"] = str(int(edge_aux_warmup))
+        else:
+            env.pop("SDCN_EDGE_AUX_WARMUP_EPOCHS", None)
+        if edge_aux_smooth_w is not None:
+            env["SDCN_EDGE_AUX_SMOOTH_WEIGHT"] = str(float(edge_aux_smooth_w))
+        else:
+            env.pop("SDCN_EDGE_AUX_SMOOTH_WEIGHT", None)
+        if gat_in_do is not None:
+            env["SDCN_GAT_INPUT_DROPOUT"] = str(float(gat_in_do))
+        else:
+            env.pop("SDCN_GAT_INPUT_DROPOUT", None)
         if ce_warmup is not None:
             env["SDCN_CE_WARMUP_EPOCHS"] = str(int(ce_warmup))
         else:

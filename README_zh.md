@@ -115,7 +115,7 @@ python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed
 通过环境变量在 import 时选择（默认：`v5edge_pool_residual`）：
 
 ```bash
-export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual | ... | v12edge_similarity_denoise | v13edge_context_similarity_denoise | v14edge_pool_concat_fusion | v15edge_ee_aux_context_similarity_denoise
+export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual | ... | v12edge_similarity_denoise | v13edge_context_similarity_denoise | v14edge_pool_concat_fusion | v15edge_ee_aux_context_similarity_denoise | v16edge_ee_residual_aux_fusion
 export SDCN_Q_SOURCE=h4                          # z | h4 | fused
 export SDCN_FINAL_ASSIGN=p                       # pred | q | p（选择最终聚类输出来自哪个头）
 export SDCN_SEED=0                              # 可选：复现实验
@@ -123,6 +123,8 @@ export SDCN_EPOCHS=30                           # 可选：覆盖训练轮数
 export SDCN_EDGE_MESSAGE=1                      # 可选：edge_attr 作为消息内容注入
 export SDCN_EE_GRAPH=edge_sim                   # 可选：incidence | incidence_sim | edge_sim | hybrid | none（edge↔edge 邻域）；hybrid=incidence∪edge_sim
 export SDCN_EE_TOPK=10                          # 可选：edge_sim 的 top-k
+export SDCN_EE_SIM_MIN_SIM=0.4                  # 可选：*_sim ee_graph 的相似度阈值（建议 incidence_sim/edge_sim 时开启，避免把不相似的边硬连起来）
+export SDCN_EE_SIM_MUTUAL=0                     # 可选：仅保留 mutual(topk) 的相似边（更稀疏、更保守）
 export SDCN_GAT_INPUT_DROPOUT=0.2               # 可选：edge↔edge 的 GATConv 前特征 dropout（默认 0.2，向后兼容）
 python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
@@ -140,6 +142,7 @@ python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed
 - `v13edge_context_similarity_denoise`（实验版）: 在 v12 的相似度去噪基础上，把 node-pair 上下文作为“相似度 key”参与权重计算（比直接把上下文强非线性写进 edge_attr 更保守）。
 - `v14edge_pool_concat_fusion`（实验版）: 继续保守去噪思路，并把 pooled edge 统计量作为可分离子空间显式拼接进节点表征 `W([node_att, pool_raw, pool_upd])`（见报告 7.8）。
 - `v15edge_ee_aux_context_similarity_denoise`（实验版）: v13 的“保守去噪” + v6 的“边级辅助头”（通过 `SDCN_EDGE_AUX_WEIGHT>0` 启用），让 edge↔edge 更直接地被聚类目标驱动。
+- `v16edge_ee_residual_aux_fusion`（实验版）: 在 v7 的 edge_attr 融合路径上加入“edge↔edge residual 更新 + 边级辅助头”，降低 edge↔edge 把原始边表征洗掉的风险（建议结合 `SDCN_EE_GRAPH=incidence_sim` 和 `SDCN_EE_SIM_MIN_SIM` 使用）。
 
 ## 其他运行方式
 
@@ -173,6 +176,32 @@ python tools/benchmark_synthetic_suite.py \
   --variants v2edge_single_layer,v3edge_cross_layers \
   --baselines kmeans_x,spectral_adj_binary,spectral_edge_distance \
   --heads 1
+```
+
+### edge↔edge 调试用“诊断数据集”（推荐）
+
+该数据集专门用于放大/定位 edge↔edge 的作用：每个节点同时含有同簇边（共享 prototype）与跨簇噪声边，`incidence` 的 ee 图容易“误混合”，而 `incidence_sim + min_sim` 能更保守地把相似边连起来，从而让 edge↔edge 更新变得有效。
+
+```bash
+# 1) 生成单个诊断数据集
+python tools/generate_synthetic_suite.py --output_root /tmp/sdcn_edge_debug_suite --seed 0 --presets edge_edge_denoise_nonknn
+
+# 2) 在该数据集上做 edge↔edge 消融（建议：q 用 h4，sigma 偏小，且加 balance 正则防塌缩）
+python tools/sweep_stability.py \
+  --data_dir /tmp/sdcn_edge_debug_suite/edge_edge_denoise_nonknn \
+  --out_dir /tmp/sweep_edge_edge_denoise \
+  --variants v5edge_pool_residual \
+  --seeds 0,1,2 \
+  --epochs 60 \
+  --q_sources h4 \
+  --sigmas 0.2 \
+  --edge_messages 1 \
+  --edge_ees 0,1 \
+  --ee_graphs incidence_sim \
+  --ee_topks 4 \
+  --ee_sim_min_sims 0.4 \
+  --q_balance_weights 0.1 \
+  --pred_balance_weights 0.1
 ```
 
 示例结果表与更详细的说明已整合在本文档中。
