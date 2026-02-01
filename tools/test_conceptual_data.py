@@ -132,6 +132,12 @@ def main() -> None:
     parser.add_argument("--heads", type=int, default=1)
     parser.add_argument("--edge_dim", type=int, default=None, help="If omitted, inferred from edge_attr.npy")
     parser.add_argument(
+        "--edge_noise_std",
+        type=float,
+        default=0.0,
+        help="Optional Gaussian noise std added to edge_attr after normalization/ablation (seeded by SDCN_SEED).",
+    )
+    parser.add_argument(
         "--node_edge_pool",
         type=str,
         default="none",
@@ -174,6 +180,9 @@ def main() -> None:
     ablation_seed = int(seed_env) if seed_env is not None and seed_env.strip() != "" else 0
     edge_attr_np = _apply_edge_ablation(edge_attr_np, args.edge_ablation, seed=ablation_seed)
     edge_attr_np = _normalize_edge_attr(edge_attr_np, args.edge_attr_norm, clip=args.edge_attr_clip)
+    if args.edge_noise_std is not None and float(args.edge_noise_std) > 0:
+        rng = np.random.default_rng(int(ablation_seed) + 1337)
+        edge_attr_np = (edge_attr_np + rng.normal(loc=0.0, scale=float(args.edge_noise_std), size=edge_attr_np.shape)).astype(np.float32)
 
     # Optional node feature augmentation from edge attributes (to help AE/q capture edge-only signal).
     pool_mode = (args.node_edge_pool or "none").strip().lower()
@@ -216,11 +225,18 @@ def main() -> None:
         "sdcn_q_source": os.getenv("SDCN_Q_SOURCE", "").strip(),
         "sdcn_edge_message": os.getenv("SDCN_EDGE_MESSAGE", "").strip(),
         "sdcn_edge_ee": os.getenv("SDCN_EDGE_EE", "").strip(),
+        "sdcn_gat_input_dropout": os.getenv("SDCN_GAT_INPUT_DROPOUT", "").strip(),
         "sdcn_node_att_edge": os.getenv("SDCN_NODE_ATT_EDGE", "").strip(),
         "sdcn_pool_residual": os.getenv("SDCN_POOL_RESIDUAL", "").strip(),
         "sdcn_pool_raw": os.getenv("SDCN_POOL_RAW", "").strip(),
         "sdcn_pool_upd": os.getenv("SDCN_POOL_UPD", "").strip(),
         "sdcn_pool_gate_mode": os.getenv("SDCN_POOL_GATE_MODE", "").strip(),
+        "sdcn_edge_denoise_mode": os.getenv("SDCN_EDGE_DENOISE_MODE", "").strip(),
+        "sdcn_edge_denoise_alpha": os.getenv("SDCN_EDGE_DENOISE_ALPHA", "").strip(),
+        "sdcn_edge_sim_gamma": os.getenv("SDCN_EDGE_SIM_GAMMA", "").strip(),
+        "sdcn_edge_aux_weight": os.getenv("SDCN_EDGE_AUX_WEIGHT", "").strip(),
+        "sdcn_edge_aux_warmup_epochs": os.getenv("SDCN_EDGE_AUX_WARMUP_EPOCHS", "").strip(),
+        "sdcn_edge_aux_smooth_weight": os.getenv("SDCN_EDGE_AUX_SMOOTH_WEIGHT", "").strip(),
         "sdcn_final_assign": os.getenv("SDCN_FINAL_ASSIGN", "").strip(),
         "sdcn_enc_dims": os.getenv("SDCN_ENC_DIMS", "").strip(),
         "sdcn_pretrain_epochs": os.getenv("SDCN_PRETRAIN_EPOCHS", "").strip(),
@@ -246,6 +262,7 @@ def main() -> None:
             "edge_ablation": str(args.edge_ablation),
             "edge_attr_norm": str(args.edge_attr_norm),
             "edge_attr_clip": float(args.edge_attr_clip),
+            "edge_noise_std": float(args.edge_noise_std),
         },
         "n_clusters": int(args.n_clusters),
         "n_nodes": int(dataset.num_nodes),
@@ -254,6 +271,7 @@ def main() -> None:
         "edge_ablation_seed": int(ablation_seed),
         "edge_attr_norm": str(args.edge_attr_norm),
         "edge_attr_clip": float(args.edge_attr_clip),
+        "edge_noise_std": float(args.edge_noise_std),
         "trace_jsonl": os.path.abspath(args.trace_jsonl) if args.trace_jsonl.strip() else "",
         "metrics": {
             "acc": float(final_acc),

@@ -6,7 +6,8 @@ Structural Deep Clustering Network (SDCN) with Dual-Level Attentive Aggregation 
 
 - **Deep edge-aware clustering (SDCN + DLAA)**: dual-level aggregation (node↔edge, edge↔edge) so edge semantics can influence node clustering.
 - **Default best variant (`v5edge_pool_residual`)**: most robust on edge-semantic synthetic benchmarks (see `reports/realistic_synthetic_ablation_zh.md`).
-- **Variant-friendly SpatialConv**: `v1original`, `v2edge_single_layer`, `v3edge_cross_layers`, `v4edge_pool_fusion`, `v5edge_pool_residual` via `SPATIALCONV_VARIANT` for ablation/verification.
+- **Variant-friendly SpatialConv**: `v1original` → `v5edge_pool_residual` via `SPATIALCONV_VARIANT` for ablation/verification.
+- **Experimental variants (research)**: `v6edge_ee_aux` … `v14edge_pool_concat_fusion` (see `reports/realistic_synthetic_ablation_zh.md`).
 - **Edge message injection (optional)**: set `SDCN_EDGE_MESSAGE=1` to let `edge_attr` affect node updates as message content (not just attention weights), helpful when node features are weak.
 - **Experiment tooling**: `SDCN_SEED` / `SDCN_EPOCHS` and `tools/` scripts for conceptual/synthetic comparison.
 
@@ -66,6 +67,7 @@ This is the part that ablation shows to be “structurally necessary” on edge-
 - `SDCN_EDGE_EE=0/1` (disable/enable edge↔edge update)
 - `SDCN_NODE_ATT_EDGE=0/1` (disable/enable raw edge_attr in node attention)
 - `SDCN_POOL_GATE_MODE=learned|one|zero` (gate behavior)
+- `SDCN_GAT_INPUT_DROPOUT=0.2` (optional: feature dropout before edge↔edge GATConv; default is 0.2 for backward-compat)
 
 ## Repo Structure
 
@@ -108,17 +110,20 @@ Common knobs:
 - `--edge_dim`: edge feature dim (must match preprocessing)
 - `--max_edges_per_node`: controls edge-to-edge graph density
 
-## SpatialConv Variants (v1/v2/v3)
+## SpatialConv Variants
 
 Select at import-time via env var (default: `v5edge_pool_residual`):
 
 ```bash
-export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual
+export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual | ... | v12edge_similarity_denoise | v13edge_context_similarity_denoise | v14edge_pool_concat_fusion | v15edge_ee_aux_context_similarity_denoise
 export SDCN_Q_SOURCE=h4                          # z | h4 | fused
 export SDCN_FINAL_ASSIGN=p                       # pred | q | p (choose which head to output as final clusters)
 export SDCN_SEED=0                              # optional: reproducible runs
 export SDCN_EPOCHS=30                           # optional: override epochs
 export SDCN_EDGE_MESSAGE=1                      # optional: edge_attr as message content
+export SDCN_EE_GRAPH=edge_sim                   # optional: incidence | incidence_sim | edge_sim | hybrid | none (edge↔edge neighborhood); hybrid = incidence ∪ edge_sim
+export SDCN_EE_TOPK=10                          # optional: top-k for edge_sim ee graph
+export SDCN_GAT_INPUT_DROPOUT=0.2               # optional: feature dropout before edge↔edge GATConv (backward-compatible default)
 python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
 
@@ -128,6 +133,13 @@ Variant intent:
 - `v3edge_cross_layers`: uses updated edge embeddings as `edge_attr` for node attention.
 - `v4edge_pool_fusion`: v3 + explicit edge→node pooling residual (gated).
 - `v5edge_pool_residual` (recommended): node attention uses raw edge features + explicit edge→node pooling residual; most robust in edge-semantic tests.
+- `v6edge_ee_aux` (experimental): adds an edge-level auxiliary head to “optimize edge↔edge for clustering” (enable via `SDCN_EDGE_AUX_WEIGHT>0`, with `SDCN_EDGE_AUX_WARMUP_EPOCHS` / `SDCN_EDGE_AUX_SMOOTH_WEIGHT`).
+- `v7edge_attr_fusion` (experimental): fuses refined edge embeddings into node-attention edge_attr (sensitive to fusion scale).
+- `v8edge_denoise_attr` (experimental): treats edge↔edge as a denoiser for raw edge_attr (see `SDCN_EDGE_DENOISE_ALPHA`; optional `SDCN_EDGE_DENOISE_MODE=gat|similarity`).
+- `v9edge_context_denoise` / `v10edge_base_denoise_plus_context` / `v11edge_adaptive_denoise_context` / `v12edge_similarity_denoise` (experimental): explore “edge↔edge as conservative denoiser/regularizer” with different gating/similarity constraints.
+- `v13edge_context_similarity_denoise` (experimental): like v12, but uses node-pair context as a *key* to compute similarity weights for edge↔edge denoise (more conservative than directly rewriting edge_attr).
+- `v14edge_pool_concat_fusion` (experimental): keeps the denoiser idea, and makes the pooled edge statistics an explicit concatenated subspace `W([node_att, pool_raw, pool_upd])` (see report 7.8).
+- `v15edge_ee_aux_context_similarity_denoise` (experimental): v13-style conservative denoise + v6-style edge auxiliary head (enable via `SDCN_EDGE_AUX_WEIGHT>0`) to make edge↔edge more directly optimizable for clustering.
 
 ## Other Runs
 

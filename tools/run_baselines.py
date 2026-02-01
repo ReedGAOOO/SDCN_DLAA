@@ -178,6 +178,19 @@ def main() -> None:
     parser.add_argument("--data_dir", type=str, required=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
+        "--edge_attr_norm",
+        type=str,
+        default="none",
+        help="Edge feature normalization: none | zscore | zscore_clip | minmax",
+    )
+    parser.add_argument("--edge_attr_clip", type=float, default=5.0, help="Clip threshold used by zscore_clip.")
+    parser.add_argument(
+        "--edge_noise_std",
+        type=float,
+        default=0.0,
+        help="Optional Gaussian noise std added to edge_attr after normalization (seeded by --seed).",
+    )
+    parser.add_argument(
         "--methods",
         type=str,
         default="kmeans_x,kmeans_edge_mean,kmeans_x_edge_mean,spectral_adj_binary,spectral_edge_distance,spectral_edge_l2,spectral_node_edge_rbf",
@@ -193,6 +206,29 @@ def main() -> None:
     y_true = np.load(os.path.join(args.data_dir, "labels.npy")).astype(np.int64)
     adj = sp.load_npz(os.path.join(args.data_dir, "binary_adj.npz")).tocsr()
     edge_attr = np.load(os.path.join(args.data_dir, "edge_attr.npy")).astype(np.float32)
+
+    # Optional edge normalization (for fair comparison with model pipelines).
+    norm = (args.edge_attr_norm or "none").strip().lower()
+    if norm not in {"none", "zscore", "zscore_clip", "minmax"}:
+        raise SystemExit(f"Unknown --edge_attr_norm={norm!r}. Use one of: none, zscore, zscore_clip, minmax.")
+    if norm in {"zscore", "zscore_clip"}:
+        mean = edge_attr.mean(axis=0, keepdims=True)
+        std = edge_attr.std(axis=0, keepdims=True)
+        std = np.where(std < 1e-6, 1.0, std)
+        edge_attr = (edge_attr - mean) / std
+        if norm == "zscore_clip" and args.edge_attr_clip is not None and float(args.edge_attr_clip) > 0:
+            edge_attr = np.clip(edge_attr, -float(args.edge_attr_clip), float(args.edge_attr_clip))
+        edge_attr = edge_attr.astype(np.float32)
+    elif norm == "minmax":
+        mn = edge_attr.min(axis=0, keepdims=True)
+        mx = edge_attr.max(axis=0, keepdims=True)
+        denom = np.where((mx - mn) < 1e-6, 1.0, (mx - mn))
+        edge_attr = ((edge_attr - mn) / denom).astype(np.float32)
+
+    # Optional Gaussian edge noise (seeded).
+    if args.edge_noise_std is not None and float(args.edge_noise_std) > 0:
+        rng = np.random.default_rng(int(args.seed) if args.seed is not None else 0)
+        edge_attr = (edge_attr + rng.normal(loc=0.0, scale=float(args.edge_noise_std), size=edge_attr.shape)).astype(np.float32)
 
     n_clusters = int(np.unique(y_true).size)
     node_edge = _pool_edge_attr_to_nodes_mean(adj, edge_attr, n_nodes=int(x.shape[0]))
@@ -233,6 +269,9 @@ def main() -> None:
     summary = {
         "data_dir": os.path.abspath(args.data_dir),
         "seed": seed,
+        "edge_attr_norm": norm,
+        "edge_attr_clip": float(args.edge_attr_clip),
+        "edge_noise_std": float(args.edge_noise_std),
         "n_clusters": n_clusters,
         "n_nodes": int(x.shape[0]),
         "baselines": results,

@@ -1,0 +1,15 @@
+{
+  "name": "rich_edge_profiles",
+  "category": "rich_edge",
+  "seed": 0,
+  "n_clusters": 3,
+  "num_nodes": 180,
+  "feature_dim": 6,
+  "edge_dim": 16,
+  "graph_knn_k": 10,
+  "extra": {
+    "points_per_cluster": 60,
+    "note": "weak node features, strong edge profile signal",
+    "edge_attr": "profiles_plus_noise"
+  }
+}

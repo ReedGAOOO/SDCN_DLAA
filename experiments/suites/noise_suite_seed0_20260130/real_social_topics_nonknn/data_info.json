@@ -1,0 +1,19 @@
+{
+  "name": "real_social_topics_nonknn",
+  "category": "rich_edge",
+  "seed": 0,
+  "n_clusters": 4,
+  "num_nodes": 240,
+  "feature_dim": 8,
+  "edge_dim": 32,
+  "graph_knn_k": 10,
+  "extra": {
+    "points_per_cluster": 60,
+    "note": "non-spatial; edge topics/interaction stats",
+    "graph": "random_k(k=10)",
+    "n_clusters": 4,
+    "topic_dim": 8,
+    "edge_attr": "real_social_topics",
+    "edge_attr_note": "edge_attr[:,0] is random noise; remaining channels encode interaction stats/topics"
+  }
+}

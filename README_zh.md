@@ -6,7 +6,8 @@ SDCN + Dual-Level Attentive Aggregation (DLAA)。本仓库在 PyTorch Geometric 
 
 - **边信息融入聚类（SDCN + DLAA）**：通过双层聚合（节点↔边、边↔边）让边语义影响节点表示与聚类。
 - **默认最佳版本（`v5edge_pool_residual`）**：在 edge 语义主导的合成数据上最鲁棒（见 `reports/realistic_synthetic_ablation_zh.md`）。
-- **可切换的 SpatialConv 版本**：`v1original`、`v2edge_single_layer`、`v3edge_cross_layers`、`v4edge_pool_fusion`、`v5edge_pool_residual`，用 `SPATIALCONV_VARIANT` 方便做消融/对比。
+- **可切换的 SpatialConv 版本**：`v1original` → `v5edge_pool_residual`，用 `SPATIALCONV_VARIANT` 方便做消融/对比。
+- **实验版（研究用）**：`v6edge_ee_aux` … `v14edge_pool_concat_fusion`（详见 `reports/realistic_synthetic_ablation_zh.md`）。
 - **可选 edge message 注入**：设置 `SDCN_EDGE_MESSAGE=1`，让 `edge_attr` 以“消息内容”参与节点更新（不仅是调注意力权重），适合 node_features 很弱的场景。
 - **实验辅助工具**：`SDCN_SEED` / `SDCN_EPOCHS` + `tools/` 的概念/合成数据对比脚本。
 
@@ -66,6 +67,7 @@ node_out    = node_att + sigmoid(gate([node_att, pooled])) * proj(pooled)
 - `SDCN_EDGE_EE=0/1`（关闭/开启 edge↔edge 更新）
 - `SDCN_NODE_ATT_EDGE=0/1`（关闭/开启 node attention 的 raw edge_attr）
 - `SDCN_POOL_GATE_MODE=learned|one|zero`（门控行为）
+- `SDCN_GAT_INPUT_DROPOUT=0.2`（可选：edge↔edge 的 GATConv 前特征 dropout；默认 0.2 以保持向后兼容）
 
 ## 目录结构
 
@@ -108,17 +110,20 @@ python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed
 - `--edge_dim`: 边特征维度（需与预处理一致）
 - `--max_edges_per_node`: 控制 edge-to-edge 图的稠密度
 
-## SpatialConv 三个版本（v1/v2/v3）
+## SpatialConv 版本
 
 通过环境变量在 import 时选择（默认：`v5edge_pool_residual`）：
 
 ```bash
-export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual
+export SPATIALCONV_VARIANT=v5edge_pool_residual  # v1original | v2edge_single_layer | v3edge_cross_layers | v4edge_pool_fusion | v5edge_pool_residual | ... | v12edge_similarity_denoise | v13edge_context_similarity_denoise | v14edge_pool_concat_fusion | v15edge_ee_aux_context_similarity_denoise
 export SDCN_Q_SOURCE=h4                          # z | h4 | fused
 export SDCN_FINAL_ASSIGN=p                       # pred | q | p（选择最终聚类输出来自哪个头）
 export SDCN_SEED=0                              # 可选：复现实验
 export SDCN_EPOCHS=30                           # 可选：覆盖训练轮数
 export SDCN_EDGE_MESSAGE=1                      # 可选：edge_attr 作为消息内容注入
+export SDCN_EE_GRAPH=edge_sim                   # 可选：incidence | incidence_sim | edge_sim | hybrid | none（edge↔edge 邻域）；hybrid=incidence∪edge_sim
+export SDCN_EE_TOPK=10                          # 可选：edge_sim 的 top-k
+export SDCN_GAT_INPUT_DROPOUT=0.2               # 可选：edge↔edge 的 GATConv 前特征 dropout（默认 0.2，向后兼容）
 python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed_knn_k10 --heads 1
 ```
 
@@ -128,6 +133,13 @@ python experiments/test_sdcn_dlaa_NEW_sparse_KNN.py --data_dir NEWDATA/processed
 - `v3edge_cross_layers`: 将更新后的 edge embedding 作为 `edge_attr` 参与 node attention。
 - `v4edge_pool_fusion`: 在 v3 基础上加入显式的 edge→node pooling residual（带门控）。
 - `v5edge_pool_residual`（推荐）: 延续 v2 思路（node attention 用 raw edge），同时加入 edge→node pooling residual；在 edge 语义主导任务上更鲁棒。
+- `v6edge_ee_aux`（实验版）: 增加边级辅助头，让 edge↔edge 试图被“聚类目标”直接驱动（通过 `SDCN_EDGE_AUX_WEIGHT>0` 启用，配合 `SDCN_EDGE_AUX_WARMUP_EPOCHS` / `SDCN_EDGE_AUX_SMOOTH_WEIGHT` 稳定训练）。
+- `v7edge_attr_fusion`（实验版）: 把 edge↔edge 学到的边表征融合进 node attention 的 `edge_attr`（对融合尺度敏感）。
+- `v8edge_denoise_attr`（实验版）: 把 edge↔edge 明确当作 raw edge_attr 的去噪/平滑器（见 `SDCN_EDGE_DENOISE_ALPHA`；可选 `SDCN_EDGE_DENOISE_MODE=gat|similarity`）。
+- `v9edge_context_denoise` / `v10edge_base_denoise_plus_context` / `v11edge_adaptive_denoise_context` / `v12edge_similarity_denoise`（实验版）: 继续探索“edge↔edge 作为保守去噪器/正则器”，通过门控/相似度约束减少误混合。
+- `v13edge_context_similarity_denoise`（实验版）: 在 v12 的相似度去噪基础上，把 node-pair 上下文作为“相似度 key”参与权重计算（比直接把上下文强非线性写进 edge_attr 更保守）。
+- `v14edge_pool_concat_fusion`（实验版）: 继续保守去噪思路，并把 pooled edge 统计量作为可分离子空间显式拼接进节点表征 `W([node_att, pool_raw, pool_upd])`（见报告 7.8）。
+- `v15edge_ee_aux_context_similarity_denoise`（实验版）: v13 的“保守去噪” + v6 的“边级辅助头”（通过 `SDCN_EDGE_AUX_WEIGHT>0` 启用），让 edge↔edge 更直接地被聚类目标驱动。
 
 ## 其他运行方式
 

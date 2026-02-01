@@ -102,6 +102,8 @@ class SDCN_DLAA(nn.Module):
         # Cache for graph structures - this is the key optimization
         self.precomputed_edge_index = precomputed_edge_index
         self.precomputed_edge_to_edge_index = precomputed_edge_to_edge_index
+        self.precomputed_edge_to_edge_kind = None
+        self.precomputed_edge_to_edge_sig = None
         self.graph_cache = {}
         
         # Autoencoder for intra information
@@ -135,8 +137,43 @@ class SDCN_DLAA(nn.Module):
         
         # Add edge feature projection layer for initial edge features
         self.initial_edge_proj = None
+        # NOTE: Edge features are already projected inside SpatialConv variants (edge_dim_proj),
+        # so we keep the raw edge_attr stable here. A trainable projection would change edge_attr
+        # over training and break caching for edge-sim ee graphs.
         if edge_dim is not None and edge_dim != n_input:
-            self.initial_edge_proj = nn.Linear(edge_dim, edge_dim)
+            self.initial_edge_proj = nn.Identity()
+
+        # Optional: edge reconstruction head (aligns training objective with edge_attr signal).
+        # Enabled by setting SDCN_EDGE_RE_WEIGHT>0 during training.
+        self.edge_recon_head = nn.Linear(int(n_z), int(self.edge_dim))
+        self._last_edge_recon = None
+        self._last_edge_recon_target = None
+
+        # Optional: reconstruct per-node pooled edge statistics (matches strong kmeans_edge_mean prior).
+        # Enabled by setting SDCN_POOL_RE_WEIGHT>0 during training.
+        self.pool_recon_head = nn.Linear(int(n_z), int(self.edge_dim))
+        self._last_pool_recon = None
+        self._last_pool_target = None
+
+        # Optional: use pooled edge_attr to drive the clustering q-head (bridges to kmeans_edge_mean baseline).
+        self.pool_q_proj = nn.Linear(int(self.edge_dim), int(n_z), bias=False)
+        self.pool_q_scale = nn.Parameter(torch.tensor(0.0))
+
+    @staticmethod
+    def _pool_edges_to_nodes_mean(edge_feat: torch.Tensor, edge_index: torch.Tensor, num_nodes: int) -> torch.Tensor:
+        src = edge_index[0]
+        dst = edge_index[1]
+        node_sum = torch.zeros((num_nodes, edge_feat.size(1)), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_cnt = torch.zeros((num_nodes, 1), device=edge_feat.device, dtype=edge_feat.dtype)
+
+        node_sum.index_add_(0, src, edge_feat)
+        node_sum.index_add_(0, dst, edge_feat)
+
+        ones = torch.ones((edge_feat.size(0), 1), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_cnt.index_add_(0, src, ones)
+        node_cnt.index_add_(0, dst, ones)
+
+        return node_sum / node_cnt.clamp(min=1.0)
 
     def _prepare_pyg_data(self, x, adj, edge_attr, max_edges_per_node=10):
         """
@@ -152,6 +189,20 @@ class SDCN_DLAA(nn.Module):
         Returns:
             data: PyG Data object
         """
+        ee_graph = os.getenv("SDCN_EE_GRAPH", "incidence").strip().lower()
+        if ee_graph in {"", "default"}:
+            ee_graph = "incidence"
+        if ee_graph not in {"incidence", "incidence_sim", "inc_sim", "edge_sim", "sim", "hybrid", "none", "off", "0"}:
+            raise ValueError(
+                f"Unknown SDCN_EE_GRAPH={ee_graph!r}. Use one of: incidence, incidence_sim, edge_sim, hybrid, none."
+            )
+        if ee_graph in {"sim"}:
+            ee_graph = "edge_sim"
+        if ee_graph in {"inc_sim"}:
+            ee_graph = "incidence_sim"
+        if ee_graph in {"none", "off", "0"}:
+            ee_graph = "none"
+
         num_nodes = x.size(0)
         
         # Important fix: Add validation for node count and feature dimensions
@@ -161,28 +212,215 @@ class SDCN_DLAA(nn.Module):
         # Check if x contains valid features
         if not torch.is_floating_point(x) or torch.isnan(x).any():
             raise ValueError("Node features contain invalid values (NaN or non-float numbers)")
+
+        if edge_attr is None:
+            raise ValueError("edge_attr must not be None for SDCN_DLAA SpatialConv variants")
+
+        # Process edge features (including optional initial projection) consistently,
+        # regardless of whether graph indices are cached/precomputed.
+        dist_feat = edge_attr
+        if self.initial_edge_proj is not None:
+            dist_feat = self.initial_edge_proj(dist_feat)
+
+        def _edge_sig(t: torch.Tensor) -> tuple[int, int, float, float]:
+            # Signature for caching edge-dependent ee graphs within a run.
+            # Uses exact sums (not rounded) so repeated calls match.
+            return (int(t.size(0)), int(t.size(1)), float(t.sum().item()), float(t.abs().sum().item()))
+
+        def _build_edge_to_edge_incidence(edge_index: torch.Tensor, num_edges: int) -> torch.Tensor:
+            node_to_edges = defaultdict(list)
+            for i in range(num_edges):
+                src, dst = edge_index[0, i], edge_index[1, i]
+                node_to_edges[src.item()].append(i)
+                node_to_edges[dst.item()].append(i)
+
+            edge_to_edge_list: list[list[int]] = []
+            for _, connected_edges in node_to_edges.items():
+                if len(connected_edges) <= 1:
+                    continue
+                if len(connected_edges) > max_edges_per_node:
+                    sampled_edges = random.sample(connected_edges, max_edges_per_node)
+                else:
+                    sampled_edges = connected_edges
+                for i in range(len(sampled_edges)):
+                    for j in range(i + 1, len(sampled_edges)):
+                        edge_i = sampled_edges[i]
+                        edge_j = sampled_edges[j]
+                        edge_to_edge_list.append([edge_i, edge_j])
+                        edge_to_edge_list.append([edge_j, edge_i])
+            if edge_to_edge_list:
+                return torch.tensor(edge_to_edge_list, dtype=torch.long, device=x.device).t()
+            return torch.zeros((2, 0), dtype=torch.long, device=x.device)
+
+        def _build_edge_to_edge_incidence_sim(edge_index: torch.Tensor, edge_feat: torch.Tensor, num_edges: int) -> torch.Tensor:
+            ee_topk_env = os.getenv("SDCN_EE_TOPK", "").strip()
+            ee_topk = int(ee_topk_env) if ee_topk_env else int(max_edges_per_node)
+            ee_topk = max(1, int(ee_topk))
+
+            mutual = os.getenv("SDCN_EE_SIM_MUTUAL", "").strip().lower() in {"1", "true", "yes", "y", "on"}
+            min_sim_env = os.getenv("SDCN_EE_SIM_MIN_SIM", "").strip()
+            min_sim: float | None = float(min_sim_env) if min_sim_env else None
+
+            # Build node->edges adjacency (incidence).
+            node_to_edges = defaultdict(list)
+            for i in range(num_edges):
+                src, dst = edge_index[0, i], edge_index[1, i]
+                node_to_edges[src.item()].append(i)
+                node_to_edges[dst.item()].append(i)
+
+            # Pre-normalize all edge features for cosine similarity.
+            feat_norm = F.normalize(edge_feat, p=2, dim=1)
+
+            all_src: list[torch.Tensor] = []
+            all_dst: list[torch.Tensor] = []
+            for _, connected_edges in node_to_edges.items():
+                if len(connected_edges) <= 1:
+                    continue
+                # Cap per-node edge set to keep compute bounded and deterministic.
+                if len(connected_edges) > max_edges_per_node:
+                    connected_edges = connected_edges[: int(max_edges_per_node)]
+
+                m = len(connected_edges)
+                if m <= 1:
+                    continue
+                k = min(int(ee_topk), m - 1)
+                if k <= 0:
+                    continue
+
+                idx = torch.tensor(connected_edges, dtype=torch.long, device=edge_feat.device)
+                f = feat_norm.index_select(0, idx)  # [m, d]
+                sims = f @ f.t()  # [m, m]
+                sims.fill_diagonal_(-float("inf"))
+
+                vals, jj = torch.topk(sims, k=k, dim=1)
+                src = idx.unsqueeze(1).expand(-1, k)  # [m, k]
+                dst = idx.index_select(0, jj.reshape(-1)).reshape(m, k)
+
+                if min_sim is not None:
+                    mask = vals >= float(min_sim)
+                    if not bool(mask.any()):
+                        continue
+                    all_src.append(src[mask].reshape(-1))
+                    all_dst.append(dst[mask].reshape(-1))
+                else:
+                    all_src.append(src.reshape(-1))
+                    all_dst.append(dst.reshape(-1))
+
+            if not all_src:
+                return torch.zeros((2, 0), dtype=torch.long, device=edge_feat.device)
+
+            src = torch.cat(all_src, dim=0)
+            dst = torch.cat(all_dst, dim=0)
+
+            ids = src.to(torch.int64) * int(num_edges) + dst.to(torch.int64)
+            ids = torch.unique(ids)
+            src = (ids // int(num_edges)).to(torch.long)
+            dst = (ids % int(num_edges)).to(torch.long)
+            e2e = torch.stack([src, dst], dim=0)
+
+            if mutual:
+                rev = dst.to(torch.int64) * int(num_edges) + src.to(torch.int64)
+                keep = torch.isin(ids, rev)
+                ids = ids[keep]
+                if ids.numel() == 0:
+                    return torch.zeros((2, 0), dtype=torch.long, device=edge_feat.device)
+                src = (ids // int(num_edges)).to(torch.long)
+                dst = (ids % int(num_edges)).to(torch.long)
+                return torch.stack([src, dst], dim=0)
+
+            # Make it effectively undirected (helps stabilize ee message passing).
+            e2e_rev = torch.stack([dst, src], dim=0)
+            merged = torch.cat([e2e, e2e_rev], dim=1)
+            ids = merged[0].to(torch.int64) * int(num_edges) + merged[1].to(torch.int64)
+            ids = torch.unique(ids)
+            return torch.stack([ids // int(num_edges), ids % int(num_edges)], dim=0).to(edge_feat.device)
+
+        def _build_edge_to_edge_edge_sim(edge_feat: torch.Tensor, num_edges: int) -> torch.Tensor:
+            ee_topk_env = os.getenv("SDCN_EE_TOPK", "").strip()
+            ee_topk = int(ee_topk_env) if ee_topk_env else int(max_edges_per_node)
+            ee_topk = max(1, min(int(ee_topk), max(1, num_edges - 1)))
+
+            mutual = os.getenv("SDCN_EE_SIM_MUTUAL", "").strip().lower() in {"1", "true", "yes", "y", "on"}
+            min_sim_env = os.getenv("SDCN_EE_SIM_MIN_SIM", "").strip()
+            min_sim: float | None = float(min_sim_env) if min_sim_env else None
+
+            max_edges_env = os.getenv("SDCN_EE_SIM_MAX_EDGES", "").strip()
+            max_edges = int(max_edges_env) if max_edges_env else 5000
+            if num_edges > max_edges:
+                print(
+                    f"Warning: num_edges={num_edges} exceeds SDCN_EE_SIM_MAX_EDGES={max_edges}; "
+                    "falling back to incidence ee graph."
+                )
+                return _build_edge_to_edge_incidence(edge_index, num_edges)
+
+            chunk_env = os.getenv("SDCN_EE_SIM_CHUNK", "").strip()
+            chunk = int(chunk_env) if chunk_env else 1024
+            chunk = max(16, int(chunk))
+
+            feat = F.normalize(edge_feat, p=2, dim=1)
+            all_src = []
+            all_dst = []
+            for start in range(0, num_edges, chunk):
+                end = min(num_edges, start + chunk)
+                sims = feat[start:end] @ feat.t()  # [B, E]
+                # Mask diagonal for these rows to avoid self-neighbors.
+                row = torch.arange(start, end, device=edge_feat.device)
+                sims[torch.arange(end - start, device=edge_feat.device), row] = -float("inf")
+                vals, idx = torch.topk(sims, k=ee_topk, dim=1)
+                src = row.unsqueeze(1).expand(-1, ee_topk)
+                if min_sim is not None:
+                    mask = vals >= float(min_sim)
+                    if mask.any():
+                        all_src.append(src[mask].reshape(-1))
+                        all_dst.append(idx[mask].reshape(-1))
+                else:
+                    all_src.append(src.reshape(-1))
+                    all_dst.append(idx.reshape(-1))
+            if not all_src:
+                return torch.zeros((2, 0), dtype=torch.long, device=x.device)
+            src = torch.cat(all_src, dim=0)
+            dst = torch.cat(all_dst, dim=0)
+            if mutual:
+                src_cpu = src.detach().cpu().tolist()
+                dst_cpu = dst.detach().cpu().tolist()
+                neigh: dict[int, set[int]] = {}
+                for s, d in zip(src_cpu, dst_cpu):
+                    neigh.setdefault(int(s), set()).add(int(d))
+                undirected: set[tuple[int, int]] = set()
+                for s, d in zip(src_cpu, dst_cpu):
+                    s = int(s)
+                    d = int(d)
+                    if s == d:
+                        continue
+                    if s in neigh.get(d, set()):
+                        a, b = (s, d) if s < d else (d, s)
+                        undirected.add((a, b))
+                if not undirected:
+                    return torch.zeros((2, 0), dtype=torch.long, device=x.device)
+                src_u = torch.tensor([a for a, _ in undirected], dtype=torch.long, device=edge_feat.device)
+                dst_u = torch.tensor([b for _, b in undirected], dtype=torch.long, device=edge_feat.device)
+                e2e = torch.stack([src_u, dst_u], dim=0)
+                e2e_rev = torch.stack([dst_u, src_u], dim=0)
+                return torch.cat([e2e, e2e_rev], dim=1)
+
+            e2e = torch.stack([src, dst], dim=0)
+            # Make it effectively undirected.
+            e2e_rev = torch.stack([dst, src], dim=0)
+            return torch.cat([e2e, e2e_rev], dim=1)
             
-        # Check if we already have precomputed graph structures from initialization
-        if self.precomputed_edge_index is not None and self.precomputed_edge_to_edge_index is not None:
-            # Important fix: Validate precomputed edge indices don't exceed node range
+        # Reuse precomputed edge_index when available (edge_index is adj-dependent).
+        edge_index = None
+        if self.precomputed_edge_index is not None:
             max_node_idx = self.precomputed_edge_index.max().item()
             if max_node_idx >= num_nodes:
-                print(f"Warning: Precomputed edge index ({max_node_idx}) exceeds current node count ({num_nodes}), recalculating...")
-                # Clear precomputed results and recalculate
-                self.precomputed_edge_index = None
-                self.precomputed_edge_to_edge_index = None
-                # Continue with recalculation logic below
-            else:
-                # If precomputed edge indices are valid, use them to create data object
-                data = Data(
-                    x=x,
-                    edge_index=self.precomputed_edge_index,
-                    edge_attr=edge_attr,
-                    dist_feat=edge_attr,
-                    dist_feat_order=edge_attr,
-                    edge_to_edge_index=self.precomputed_edge_to_edge_index
+                print(
+                    f"Warning: Precomputed edge index ({max_node_idx}) exceeds current node count ({num_nodes}), "
+                    "recalculating..."
                 )
-                return data
+                self.precomputed_edge_index = None
+                edge_index = None
+            else:
+                edge_index = self.precomputed_edge_index
         
         # Create a cache key based on adjacency matrix properties and parameters
         # For sparse tensors, use a hash of indices and values
@@ -190,40 +428,62 @@ class SDCN_DLAA(nn.Module):
             adj_id = f"{adj._indices().sum().item()}_{adj._values().sum().item()}"
         else:
             adj_id = f"{adj.sum().item()}"
-            
+
         # Important fix: Include node count and feature dimensions in cache key
-        cache_key = f"{adj_id}_{max_edges_per_node}_{num_nodes}_{x.size(1)}"
+        edge_sig = _edge_sig(dist_feat) if ee_graph in {"edge_sim", "hybrid", "incidence_sim"} else None
+        cache_key = f"{adj_id}_{max_edges_per_node}_{num_nodes}_{x.size(1)}_{ee_graph}"
+        if edge_sig is not None:
+            cache_key = f"{cache_key}_{edge_sig[0]}_{edge_sig[1]}_{edge_sig[2]}_{edge_sig[3]}"
+
+        # If edge indices and edge-to-edge indices were precomputed externally and match the current setting,
+        # reuse them (this is used by training helpers that precompute incidence graphs for speed).
+        pre_kind = self.precomputed_edge_to_edge_kind or "incidence"
+        if (
+            edge_index is not None
+            and self.precomputed_edge_to_edge_index is not None
+            and pre_kind == ee_graph
+            and (ee_graph not in {"edge_sim", "hybrid", "incidence_sim"} or self.precomputed_edge_to_edge_sig == edge_sig)
+        ):
+            data = Data(
+                x=x,
+                edge_index=edge_index,
+                edge_attr=dist_feat,
+                dist_feat=dist_feat,
+                dist_feat_order=dist_feat,
+                edge_to_edge_index=self.precomputed_edge_to_edge_index,
+            )
+            return data
         
         # Check if we have cached this graph structure
         if cache_key in self.graph_cache:
             cached = self.graph_cache[cache_key]
-            
-            # Important fix: Validate cached edge indices don't exceed node range
-            max_node_idx = cached['edge_index'].max().item()
+            max_node_idx = cached["edge_index"].max().item()
             if max_node_idx >= num_nodes:
-                print(f"Warning: Cached edge index ({max_node_idx}) exceeds current node count ({num_nodes}), recalculating...")
-                # Remove invalid cache entry
+                print(
+                    f"Warning: Cached edge index ({max_node_idx}) exceeds current node count ({num_nodes}), "
+                    "recalculating..."
+                )
                 self.graph_cache.pop(cache_key)
-                # Continue with recalculation logic below
             else:
-                # If cached edge indices are valid, use them to create data object
+                edge_index = cached["edge_index"]
+                edge_to_edge_index = cached["edge_to_edge_index"]
                 data = Data(
                     x=x,
-                    edge_index=cached['edge_index'],
-                    edge_attr=edge_attr,
-                    dist_feat=edge_attr,
-                    dist_feat_order=edge_attr,
-                    edge_to_edge_index=cached['edge_to_edge_index']
+                    edge_index=edge_index,
+                    edge_attr=dist_feat,
+                    dist_feat=dist_feat,
+                    dist_feat_order=dist_feat,
+                    edge_to_edge_index=edge_to_edge_index,
                 )
                 return data
             
-        # If not cached, compute the graph structure (first time only)
-        # Convert adjacency matrix to edge_index
-        if adj.is_sparse:
-            adj = adj.coalesce()
-            edge_index = adj.indices()
-        else:
-            edge_index, _ = dense_to_sparse(adj)
+        # If not cached (or cache invalid), compute edge_index if we didn't reuse a precomputed one.
+        if edge_index is None:
+            if adj.is_sparse:
+                adj = adj.coalesce()
+                edge_index = adj.indices()
+            else:
+                edge_index, _ = dense_to_sparse(adj)
         
         # Validate edge indices
         max_index = edge_index.max().item()
@@ -243,51 +503,28 @@ class SDCN_DLAA(nn.Module):
         
         num_edges = edge_index.size(1)
         
-        # Process edge features
-        dist_feat = edge_attr
-        
-        # Apply initial projection if needed
-        if self.initial_edge_proj is not None:
-            dist_feat = self.initial_edge_proj(dist_feat)
-        
         # Create edge-to-edge graph more efficiently
         print("Building edge-to-edge graph (one-time operation)...")
-        
-        # Build a mapping from nodes to their connected edges
-        node_to_edges = defaultdict(list)
-        for i in range(num_edges):
-            src, dst = edge_index[0, i], edge_index[1, i]
-            node_to_edges[src.item()].append(i)
-            node_to_edges[dst.item()].append(i)
-        
-        # Create edge connections based on shared nodes
-        edge_to_edge_list = []
-        
-        # For each node, connect all edges that share this node
-        for node, connected_edges in node_to_edges.items():
-            # Only process if the node connects multiple edges
-            if len(connected_edges) > 1:
-                # If node connects too many edges, randomly sample to limit
-                if len(connected_edges) > max_edges_per_node:
-                    sampled_edges = random.sample(connected_edges, max_edges_per_node)
-                else:
-                    sampled_edges = connected_edges
-                
-                # Connect all pairs of edges that share this node
-                for i in range(len(sampled_edges)):
-                    for j in range(i+1, len(sampled_edges)):
-                        edge_i = sampled_edges[i]
-                        edge_j = sampled_edges[j]
-                        # Add both directions for undirected graph
-                        edge_to_edge_list.append([edge_i, edge_j])
-                        edge_to_edge_list.append([edge_j, edge_i])
-        
-        # Convert to tensor representation
-        if len(edge_to_edge_list) > 0:
-            edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(x.device)
+        if ee_graph == "none":
+            edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long, device=x.device)
+        elif ee_graph == "incidence_sim":
+            edge_to_edge_index = _build_edge_to_edge_incidence_sim(edge_index, dist_feat, num_edges)
+        elif ee_graph == "edge_sim":
+            edge_to_edge_index = _build_edge_to_edge_edge_sim(dist_feat, num_edges)
+        elif ee_graph == "hybrid":
+            inc = _build_edge_to_edge_incidence(edge_index, num_edges)
+            sim = _build_edge_to_edge_edge_sim(dist_feat, num_edges)
+            if inc.numel() == 0:
+                edge_to_edge_index = sim
+            elif sim.numel() == 0:
+                edge_to_edge_index = inc
+            else:
+                merged = torch.cat([inc, sim], dim=1)
+                ids = merged[0].to(torch.int64) * int(num_edges) + merged[1].to(torch.int64)
+                uniq = torch.unique(ids)
+                edge_to_edge_index = torch.stack([uniq // int(num_edges), uniq % int(num_edges)], dim=0).to(x.device)
         else:
-            # If no edge-to-edge connections, create empty tensor
-            edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(x.device)
+            edge_to_edge_index = _build_edge_to_edge_incidence(edge_index, num_edges)
         
         # Store in cache for future use
         self.graph_cache[cache_key] = {
@@ -308,6 +545,8 @@ class SDCN_DLAA(nn.Module):
         # Also store as precomputed values for future use
         self.precomputed_edge_index = edge_index
         self.precomputed_edge_to_edge_index = edge_to_edge_index
+        self.precomputed_edge_to_edge_kind = ee_graph
+        self.precomputed_edge_to_edge_sig = edge_sig
         
         return data
 
@@ -334,6 +573,9 @@ class SDCN_DLAA(nn.Module):
         
         # Prepare PyG Data object (using cached graph structure if available)
         data = self._prepare_pyg_data(x, adj, edge_attr)
+        # Expose graph indices for optional auxiliary losses/diagnostics.
+        self._last_edge_index = data.edge_index
+        self._last_edge_to_edge_index = data.edge_to_edge_index
         
         # Store shapes for logging
         spatial_shapes = {}
@@ -369,6 +611,30 @@ class SDCN_DLAA(nn.Module):
         node_edge_feat4 = self.spatial_conv4(data)
         h4 = node_edge_feat4[:original_nodes]
         spatial_shapes['Layer 4'] = h4.shape
+        # Expose optional edge auxiliary logits from SpatialConv variants that support it (e.g., v6edge_ee_aux).
+        self._last_edge_within_logit = getattr(self.spatial_conv4, "_last_edge_within_logit", None)
+
+        # Optional edge reconstruction signal (from edge latents at layer-4).
+        edge_re_w_env = os.getenv("SDCN_EDGE_RE_WEIGHT", "").strip()
+        edge_re_w = float(edge_re_w_env) if edge_re_w_env else 0.0
+        if edge_re_w != 0.0:
+            edge_latent = node_edge_feat4[original_nodes:]  # [E, n_z]
+            self._last_edge_recon = self.edge_recon_head(edge_latent)  # [E, edge_dim]
+            self._last_edge_recon_target = data.dist_feat  # [E, edge_dim]
+        else:
+            self._last_edge_recon = None
+            self._last_edge_recon_target = None
+
+        # Optional per-node pooled edge_attr reconstruction (node-level edge statistics).
+        pool_re_w_env = os.getenv("SDCN_POOL_RE_WEIGHT", "").strip()
+        pool_re_w = float(pool_re_w_env) if pool_re_w_env else 0.0
+        if pool_re_w != 0.0:
+            pool_target = self._pool_edges_to_nodes_mean(data.dist_feat, data.edge_index, num_nodes=original_nodes)  # [N, edge_dim]
+            self._last_pool_target = pool_target
+            self._last_pool_recon = self.pool_recon_head(h4)  # [N, edge_dim]
+        else:
+            self._last_pool_target = None
+            self._last_pool_recon = None
         
         # Layer 5 (no activation for final layer)
         data.x = (1 - sigma) * h4 + sigma * z   # data.x.shape = [original_nodes, n_z]
@@ -421,10 +687,16 @@ class SDCN_DLAA(nn.Module):
             q_input = z
         elif q_source in {"h4", "graph", "gnn", "spatial"}:
             q_input = h4
+        elif q_source in {"pool", "edge_mean", "edge"}:
+            pool_raw = self._pool_edges_to_nodes_mean(data.dist_feat, data.edge_index, num_nodes=original_nodes)  # [N, edge_dim]
+            q_input = self.pool_q_proj(pool_raw)  # [N, n_z]
+        elif q_source in {"h4_pool", "h4pool", "mix_pool"}:
+            pool_raw = self._pool_edges_to_nodes_mean(data.dist_feat, data.edge_index, num_nodes=original_nodes)  # [N, edge_dim]
+            q_input = h4 + self.pool_q_scale * self.pool_q_proj(pool_raw)  # [N, n_z]
         elif q_source in {"fused", "mix", "datax", "x"}:
             q_input = data.x  # [(1-sigma)*h4 + sigma*z] with shape [N, n_z]
         else:
-            raise ValueError(f"Unknown SDCN_Q_SOURCE={q_source!r}. Use one of: z, h4, fused.")
+            raise ValueError(f"Unknown SDCN_Q_SOURCE={q_source!r}. Use one of: z, h4, h4_pool, pool, fused.")
 
         # Expose the q-input embedding for initialization/diagnostics (no graph retained).
         self._last_q_input = q_input.detach()
@@ -510,29 +782,47 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
         node_to_edges[src].append(i)
         node_to_edges[dst].append(i)
     
-    # Build edge-to-edge connections
-    print("Building edge-to-edge connections...")
-    edge_to_edge_list = []
-    max_edges_per_node = args.max_edges_per_node if hasattr(args, 'max_edges_per_node') else 10
-    
-    for node, connected_edges in node_to_edges.items():
-        if len(connected_edges) > 1:
+    ee_graph = os.getenv("SDCN_EE_GRAPH", "incidence").strip().lower()
+    if ee_graph in {"", "default"}:
+        ee_graph = "incidence"
+    if ee_graph in {"sim"}:
+        ee_graph = "edge_sim"
+    if ee_graph in {"inc_sim"}:
+        ee_graph = "incidence_sim"
+    if ee_graph in {"none", "off", "0"}:
+        ee_graph = "none"
+    if ee_graph not in {"incidence", "incidence_sim", "edge_sim", "hybrid", "none"}:
+        raise ValueError(
+            f"Unknown SDCN_EE_GRAPH={ee_graph!r}. Use one of: incidence, incidence_sim, edge_sim, hybrid, none."
+        )
+
+    edge_to_edge_index = None
+    if ee_graph in {"edge_sim", "hybrid", "incidence_sim"}:
+        # Build inside the model from edge features (it depends on edge_attr).
+        print(f"Skipping incidence edge-to-edge precompute (SDCN_EE_GRAPH={ee_graph}).")
+    elif ee_graph == "none":
+        edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
+    else:
+        print("Building edge-to-edge connections (incidence)...")
+        edge_to_edge_list = []
+        max_edges_per_node = args.max_edges_per_node if hasattr(args, "max_edges_per_node") else 10
+        for _, connected_edges in node_to_edges.items():
+            if len(connected_edges) <= 1:
+                continue
             if len(connected_edges) > max_edges_per_node:
                 sampled_edges = random.sample(connected_edges, max_edges_per_node)
             else:
                 sampled_edges = connected_edges
-            
             for i in range(len(sampled_edges)):
-                for j in range(i+1, len(sampled_edges)):
+                for j in range(i + 1, len(sampled_edges)):
                     edge_i = sampled_edges[i]
                     edge_j = sampled_edges[j]
                     edge_to_edge_list.append([edge_i, edge_j])
                     edge_to_edge_list.append([edge_j, edge_i])
-    
-    if len(edge_to_edge_list) > 0:
-        edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
-    else:
-        edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
+        if edge_to_edge_list:
+            edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
+        else:
+            edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
     
     # Create model with precomputed graph structures
     model = SDCN_DLAA(
@@ -548,6 +838,7 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
         precomputed_edge_index=edge_index,
         precomputed_edge_to_edge_index=edge_to_edge_index
     ).to(args.device)
+    model.precomputed_edge_to_edge_kind = ee_graph
     
     print(model)
     
@@ -565,7 +856,9 @@ def train_sdcn_dlaa(dataset, args, edge_attr=None):
         _, _, _, _, z = model.ae(data)
     model.train() # Switch back to train mode
 
-    kmeans_kwargs = {"n_clusters": args.n_clusters, "n_init": 20}
+    n_init_env = os.getenv("SDCN_KMEANS_N_INIT", "").strip()
+    n_init = int(n_init_env) if n_init_env else 20
+    kmeans_kwargs = {"n_clusters": args.n_clusters, "n_init": n_init}
     if seed is not None:
         kmeans_kwargs["random_state"] = seed
     kmeans = KMeans(**kmeans_kwargs)
@@ -839,44 +1132,57 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
             if edge_attr is not None:
                 edge_attr = torch.ones(1, args.edge_dim).to(args.device)
     
-    # Build edge-to-edge connections
-    print("Building edge-to-edge connections...")
-    num_edges = edge_index.size(1)
-    
-    # Build node-to-edge mapping
-    node_to_edges = defaultdict(list)
-    for i in range(num_edges):
-        src, dst = edge_index[0, i].item(), edge_index[1, i].item()
-        node_to_edges[src].append(i)
-        node_to_edges[dst].append(i)
-    
-    # Create edge-to-edge connections
-    edge_to_edge_list = []
-    for node, connected_edges in node_to_edges.items():
-        if len(connected_edges) > 1:
-            # Random sampling when exceeding max edges per node
+    ee_graph = os.getenv("SDCN_EE_GRAPH", "incidence").strip().lower()
+    if ee_graph in {"", "default"}:
+        ee_graph = "incidence"
+    if ee_graph in {"sim"}:
+        ee_graph = "edge_sim"
+    if ee_graph in {"inc_sim"}:
+        ee_graph = "incidence_sim"
+    if ee_graph in {"none", "off", "0"}:
+        ee_graph = "none"
+    if ee_graph not in {"incidence", "incidence_sim", "edge_sim", "hybrid", "none"}:
+        raise ValueError(
+            f"Unknown SDCN_EE_GRAPH={ee_graph!r}. Use one of: incidence, incidence_sim, edge_sim, hybrid, none."
+        )
+
+    edge_to_edge_index = None
+    if ee_graph in {"edge_sim", "hybrid", "incidence_sim"}:
+        print(f"Skipping incidence edge-to-edge precompute (SDCN_EE_GRAPH={ee_graph}).")
+    elif ee_graph == "none":
+        edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
+    else:
+        # Build edge-to-edge connections (incidence)
+        print("Building edge-to-edge connections (incidence)...")
+        num_edges = edge_index.size(1)
+        node_to_edges = defaultdict(list)
+        for i in range(num_edges):
+            src, dst = edge_index[0, i].item(), edge_index[1, i].item()
+            node_to_edges[src].append(i)
+            node_to_edges[dst].append(i)
+        edge_to_edge_list = []
+        for _, connected_edges in node_to_edges.items():
+            if len(connected_edges) <= 1:
+                continue
             if len(connected_edges) > args.max_edges_per_node:
                 sampled_edges = random.sample(connected_edges, args.max_edges_per_node)
             else:
                 sampled_edges = connected_edges
-            
-            # Connect all edge pairs sharing the same node
             for i in range(len(sampled_edges)):
-                for j in range(i+1, len(sampled_edges)):
+                for j in range(i + 1, len(sampled_edges)):
                     edge_i = sampled_edges[i]
                     edge_j = sampled_edges[j]
-                    # Add bidirectional connections for undirected graph
                     edge_to_edge_list.append([edge_i, edge_j])
                     edge_to_edge_list.append([edge_j, edge_i])
-    
-    # Convert to tensor format
-    if len(edge_to_edge_list) > 0:
-        edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
-    else:
-        # Create empty tensor if no edge-to-edge connections
-        edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
+        if edge_to_edge_list:
+            edge_to_edge_index = torch.tensor(edge_to_edge_list, dtype=torch.long).t().to(args.device)
+        else:
+            edge_to_edge_index = torch.zeros((2, 0), dtype=torch.long).to(args.device)
         
-    print(f"Precomputation complete: node-to-node edges: {edge_index.shape[1]}, edge-to-edge connections: {edge_to_edge_index.shape[1]}")
+    if edge_to_edge_index is None:
+        print(f"Precomputation complete: node-to-node edges: {edge_index.shape[1]}, edge-to-edge: deferred ({ee_graph})")
+    else:
+        print(f"Precomputation complete: node-to-node edges: {edge_index.shape[1]}, edge-to-edge connections: {edge_to_edge_index.shape[1]}")
 
     # Optional AE hidden size override for small-graph stability experiments.
     # Format: "500,500,2000" (n_enc_1,n_enc_2,n_enc_3); decoder dims are mirrored.
@@ -903,6 +1209,7 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
         precomputed_edge_index=edge_index,
         precomputed_edge_to_edge_index=edge_to_edge_index
     ).to(args.device)
+    model.precomputed_edge_to_edge_kind = ee_graph
     
     print(model)
 
@@ -949,13 +1256,46 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                 raise RuntimeError("Expected model._last_q_input to be set in forward() when using non-z SDCN_Q_SOURCE")
     model.train()  # Switch back to train mode
 
-    # Perform initial clustering using K-means (on the embedding used to compute q).
-    kmeans_kwargs = {"n_clusters": args.n_clusters, "n_init": 20}
+    def _pool_edges_to_nodes_mean(edge_feat: torch.Tensor, ei: torch.Tensor, n: int) -> torch.Tensor:
+        src = ei[0]
+        dst = ei[1]
+        node_sum = torch.zeros((n, edge_feat.size(1)), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_cnt = torch.zeros((n, 1), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_sum.index_add_(0, src, edge_feat)
+        node_sum.index_add_(0, dst, edge_feat)
+        ones = torch.ones((edge_feat.size(0), 1), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_cnt.index_add_(0, src, ones)
+        node_cnt.index_add_(0, dst, ones)
+        return node_sum / node_cnt.clamp(min=1.0)
+
+    init_method = os.getenv("SDCN_INIT_METHOD", "kmeans_q").strip().lower()
+
+    # Perform initial clustering using K-means.
+    n_init_env = os.getenv("SDCN_KMEANS_N_INIT", "").strip()
+    n_init = int(n_init_env) if n_init_env else 20
+    kmeans_kwargs = {"n_clusters": args.n_clusters, "n_init": n_init}
     if seed is not None:
         kmeans_kwargs["random_state"] = seed
-    kmeans = KMeans(**kmeans_kwargs)
-    y_pred = kmeans.fit_predict(q_embed.data.cpu().numpy())
-    model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
+
+    if init_method in {"edge_mean", "kmeans_edge_mean", "edge"}:
+        # Initialize clusters from baseline-style per-node mean(edge_attr), then map labels into q-embedding space.
+        edge_pool = _pool_edges_to_nodes_mean(edge_attr, edge_index, int(data.size(0)))
+        kmeans = KMeans(**kmeans_kwargs)
+        y_pred = kmeans.fit_predict(edge_pool.detach().cpu().numpy())
+
+        centers = []
+        for k in range(int(args.n_clusters)):
+            mask = torch.as_tensor(y_pred == k, device=q_embed.device)
+            if int(mask.sum().item()) == 0:
+                centers.append(q_embed.mean(dim=0))
+            else:
+                centers.append(q_embed[mask].mean(dim=0))
+        model.cluster_layer.data = torch.stack(centers, dim=0).to(args.device)
+    else:
+        # Default: initialize in the same embedding space used to compute q.
+        kmeans = KMeans(**kmeans_kwargs)
+        y_pred = kmeans.fit_predict(q_embed.data.cpu().numpy())
+        model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(args.device)
 
     # Evaluate initial clustering results
     if len(np.unique(y)) > 1:  # If ground truth labels exist
@@ -1137,6 +1477,70 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                 ce_scale = min(1.0, float(epoch + 1) / float(ce_warmup))
 
             loss = kl_w * kl_loss + (ce_w * ce_scale) * ce_loss + re_w * re_loss
+
+            # Optional: edge reconstruction loss (stabilizes edge-utilization; aligns with strong edge-mean baselines).
+            edge_re_w_env = os.getenv("SDCN_EDGE_RE_WEIGHT", "").strip()
+            edge_re_w = float(edge_re_w_env) if edge_re_w_env else 0.0
+            if edge_re_w != 0.0:
+                edge_pred = getattr(model, "_last_edge_recon", None)
+                edge_tgt = getattr(model, "_last_edge_recon_target", None)
+                if edge_pred is not None and edge_tgt is not None:
+                    edge_re_loss = F.mse_loss(edge_pred, edge_tgt)
+                    warm_env = os.getenv("SDCN_EDGE_RE_WARMUP_EPOCHS", "").strip()
+                    warm = int(warm_env) if warm_env else 0
+                    scale = 1.0
+                    if warm > 0:
+                        scale = min(1.0, float(epoch + 1) / float(warm))
+                    loss = loss + (edge_re_w * scale) * edge_re_loss
+
+            # Optional: node-level pooled edge_attr reconstruction loss (aligns to kmeans_edge_mean-style signal).
+            pool_re_w_env = os.getenv("SDCN_POOL_RE_WEIGHT", "").strip()
+            pool_re_w = float(pool_re_w_env) if pool_re_w_env else 0.0
+            if pool_re_w != 0.0:
+                pool_pred = getattr(model, "_last_pool_recon", None)
+                pool_tgt = getattr(model, "_last_pool_target", None)
+                if pool_pred is not None and pool_tgt is not None:
+                    pool_re_loss = F.mse_loss(pool_pred, pool_tgt)
+                    warm_env = os.getenv("SDCN_POOL_RE_WARMUP_EPOCHS", "").strip()
+                    warm = int(warm_env) if warm_env else 0
+                    scale = 1.0
+                    if warm > 0:
+                        scale = min(1.0, float(epoch + 1) / float(warm))
+                    loss = loss + (pool_re_w * scale) * pool_re_loss
+
+            # Optional: edge-edge auxiliary loss (v6 / EE-aux). This ties edge↔edge modeling to clustering.
+            edge_aux_w_env = os.getenv("SDCN_EDGE_AUX_WEIGHT", "").strip()
+            edge_aux_w = float(edge_aux_w_env) if edge_aux_w_env else 0.0
+            edge_aux_smooth_env = os.getenv("SDCN_EDGE_AUX_SMOOTH_WEIGHT", "").strip()
+            edge_aux_smooth_w = float(edge_aux_smooth_env) if edge_aux_smooth_env else 0.0
+            if edge_aux_w != 0.0 or edge_aux_smooth_w != 0.0:
+                edge_logit = getattr(model, "_last_edge_within_logit", None)
+                edge_index = getattr(model, "_last_edge_index", None)
+                edge_to_edge_index = getattr(model, "_last_edge_to_edge_index", None)
+                if edge_logit is not None and edge_index is not None:
+                    src = edge_index[0]
+                    dst = edge_index[1]
+                    same_prob = (p[src] * p[dst]).sum(dim=1).detach()  # [E]
+
+                    # BCE on soft targets: edge head predicts within-cluster probability per edge.
+                    edge_bce = F.binary_cross_entropy_with_logits(edge_logit, same_prob)
+
+                    # Warmup to avoid destabilizing early clustering.
+                    warm_env = os.getenv("SDCN_EDGE_AUX_WARMUP_EPOCHS", "").strip()
+                    warm = int(warm_env) if warm_env else 0
+                    scale = 1.0
+                    if warm > 0:
+                        scale = min(1.0, float(epoch + 1) / float(warm))
+
+                    loss = loss + float(edge_aux_w) * float(scale) * edge_bce
+
+                    # Optional: smooth edge head predictions along the edge↔edge graph.
+                    if edge_aux_smooth_w != 0.0 and edge_to_edge_index is not None and edge_to_edge_index.numel() > 0:
+                        ee_src = edge_to_edge_index[0]
+                        ee_dst = edge_to_edge_index[1]
+                        edge_prob = torch.sigmoid(edge_logit)
+                        smooth = (edge_prob[ee_src] - edge_prob[ee_dst]).pow(2).mean()
+                        loss = loss + float(edge_aux_smooth_w) * float(scale) * smooth
 
             # Optional entropy penalty on q (discourage uniform assignments).
             q_ent_env = os.getenv("SDCN_Q_ENTROPY_WEIGHT", "").strip()

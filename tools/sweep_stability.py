@@ -230,7 +230,12 @@ def main() -> None:
     parser.add_argument("--heads", type=str, default="1")
     parser.add_argument("--n_z", type=str, default="10")
     parser.add_argument("--sigmas", type=str, default="", help="Optional comma-separated SDCN_SIGMA values (env override).")
-    parser.add_argument("--q_sources", type=str, default="", help="Optional comma-separated SDCN_Q_SOURCE values (z|h4|fused).")
+    parser.add_argument(
+        "--q_sources",
+        type=str,
+        default="",
+        help="Optional comma-separated SDCN_Q_SOURCE values (z|h4|h4_pool|pool|fused).",
+    )
     parser.add_argument(
         "--edge_messages",
         type=str,
@@ -249,10 +254,48 @@ def main() -> None:
         default="",
         help="Optional comma-separated 0/1 (or true/false) to set SDCN_EDGE_EE (edge-edge update on/off).",
     )
+    parser.add_argument(
+        "--ee_graphs",
+        type=str,
+        default="",
+        help="Optional comma-separated SDCN_EE_GRAPH values (incidence|incidence_sim|edge_sim|hybrid|none).",
+    )
+    parser.add_argument(
+        "--ee_topks",
+        type=str,
+        default="",
+        help="Optional comma-separated ints to set SDCN_EE_TOPK (used when SDCN_EE_GRAPH=edge_sim).",
+    )
+    parser.add_argument(
+        "--edge_denoise_alphas",
+        type=str,
+        default="",
+        help="Optional comma-separated floats to set SDCN_EDGE_DENOISE_ALPHA (for v8/v10/v11/v12-style denoisers).",
+    )
+    parser.add_argument(
+        "--edge_sim_gammas",
+        type=str,
+        default="",
+        help="Optional comma-separated floats to set SDCN_EDGE_SIM_GAMMA (for v12 similarity denoiser).",
+    )
     parser.add_argument("--enc_dims_list", type=str, default="", help="Optional AE encoder dims list: '256,256,256;500,500,512'.")
     parser.add_argument("--kl_weights", type=str, default="", help="Optional comma-separated SDCN_KL_WEIGHT overrides.")
     parser.add_argument("--ce_weights", type=str, default="", help="Optional comma-separated SDCN_CE_WEIGHT overrides.")
     parser.add_argument("--re_weights", type=str, default="", help="Optional comma-separated SDCN_RE_WEIGHT overrides.")
+    parser.add_argument("--edge_re_weights", type=str, default="", help="Optional comma-separated SDCN_EDGE_RE_WEIGHT overrides.")
+    parser.add_argument(
+        "--edge_re_warmups",
+        type=str,
+        default="",
+        help="Optional comma-separated SDCN_EDGE_RE_WARMUP_EPOCHS overrides.",
+    )
+    parser.add_argument("--pool_re_weights", type=str, default="", help="Optional comma-separated SDCN_POOL_RE_WEIGHT overrides.")
+    parser.add_argument(
+        "--pool_re_warmups",
+        type=str,
+        default="",
+        help="Optional comma-separated SDCN_POOL_RE_WARMUP_EPOCHS overrides.",
+    )
     parser.add_argument("--ce_warmups", type=str, default="", help="Optional comma-separated SDCN_CE_WARMUP_EPOCHS overrides.")
     parser.add_argument("--p_smoothings", type=str, default="", help="Optional comma-separated SDCN_P_SMOOTHING values.")
     parser.add_argument("--pred_mi_weights", type=str, default="", help="Optional comma-separated SDCN_PRED_MI_WEIGHT values.")
@@ -275,6 +318,12 @@ def main() -> None:
         help="Comma-separated list for --edge_attr_norm (none|zscore|zscore_clip|minmax).",
     )
     parser.add_argument("--edge_attr_clip", type=float, default=5.0, help="Clip used by zscore_clip.")
+    parser.add_argument(
+        "--edge_noise_stds",
+        type=str,
+        default="0.0",
+        help="Comma-separated list for --edge_noise_std passed to test script (Gaussian noise added to edge_attr).",
+    )
     parser.add_argument("--max_edges_per_node", type=int, default=10)
     parser.add_argument("--final_assign", type=str, default="pred", help="Final clustering source: pred|q|p (sets SDCN_FINAL_ASSIGN).")
     parser.add_argument("--pool_residuals", type=str, default="", help="Optional comma-separated 0/1 to set SDCN_POOL_RESIDUAL.")
@@ -285,6 +334,11 @@ def main() -> None:
         type=str,
         default="",
         help="Optional comma-separated SDCN_POOL_GATE_MODE values (learned|one|zero).",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Reuse existing run_dir outputs (summary.json/trace.jsonl) and skip re-running.",
     )
     parser.add_argument("--cpu", action="store_true")
     args = parser.parse_args()
@@ -305,10 +359,18 @@ def main() -> None:
     edge_messages = _parse_optional_bool_list(args.edge_messages)
     node_att_edges = _parse_optional_bool_list(args.node_att_edges)
     edge_ees = _parse_optional_bool_list(args.edge_ees)
+    ee_graphs = _parse_optional_str_list(args.ee_graphs)
+    ee_topks = _parse_optional_int_list(args.ee_topks)
+    edge_denoise_alphas = _parse_optional_float_list(args.edge_denoise_alphas)
+    edge_sim_gammas = _parse_optional_float_list(args.edge_sim_gammas)
     enc_dims_list = _parse_enc_dims_list(args.enc_dims_list)
     kl_weights = _parse_optional_float_list(args.kl_weights)
     ce_weights = _parse_optional_float_list(args.ce_weights)
     re_weights = _parse_optional_float_list(args.re_weights)
+    edge_re_weights = _parse_optional_float_list(args.edge_re_weights)
+    edge_re_warmups = _parse_optional_int_list(args.edge_re_warmups)
+    pool_re_weights = _parse_optional_float_list(args.pool_re_weights)
+    pool_re_warmups = _parse_optional_int_list(args.pool_re_warmups)
     ce_warmups = _parse_optional_int_list(args.ce_warmups)
     p_smoothings = _parse_optional_float_list(args.p_smoothings)
     pred_mi_weights = _parse_optional_float_list(args.pred_mi_weights)
@@ -319,6 +381,7 @@ def main() -> None:
     pred_entropy_weights = _parse_optional_float_list(args.pred_entropy_weights)
     node_edge_pools = _parse_str_list(args.node_edge_pools) if args.node_edge_pools.strip() else ["none"]
     edge_attr_norms = _parse_str_list(args.edge_attr_norms) if args.edge_attr_norms.strip() else ["none"]
+    edge_noise_stds = _parse_float_list(args.edge_noise_stds) if args.edge_noise_stds.strip() else [0.0]
     edge_ablation = (args.edge_ablation or "none").strip()
     final_assign = (args.final_assign or "pred").strip().lower()
     if final_assign not in {"pred", "q", "p"}:
@@ -348,9 +411,17 @@ def main() -> None:
         edge_message,
         node_att_edge,
         edge_ee,
+        ee_graph,
+        ee_topk,
+        edge_denoise_alpha,
+        edge_sim_gamma,
         kl_w,
         ce_w,
         re_w,
+        edge_re_w,
+        edge_re_warmup,
+        pool_re_w,
+        pool_re_warmup,
         ce_warmup,
         p_smoothing,
         pred_mi_w,
@@ -361,6 +432,7 @@ def main() -> None:
         pred_ent_w,
         pool_mode,
         edge_norm,
+        edge_noise_std,
         enc_dims,
         pool_residual,
         pool_raw,
@@ -379,9 +451,17 @@ def main() -> None:
         edge_messages,
         node_att_edges,
         edge_ees,
+        ee_graphs,
+        ee_topks,
+        edge_denoise_alphas,
+        edge_sim_gammas,
         kl_weights,
         ce_weights,
         re_weights,
+        edge_re_weights,
+        edge_re_warmups,
+        pool_re_weights,
+        pool_re_warmups,
         ce_warmups,
         p_smoothings,
         pred_mi_weights,
@@ -392,6 +472,7 @@ def main() -> None:
         pred_entropy_weights,
         node_edge_pools,
         edge_attr_norms,
+        edge_noise_stds,
         enc_dims_list,
         pool_residuals,
         pool_raws,
@@ -409,12 +490,28 @@ def main() -> None:
             run_name += f"_nae{1 if node_att_edge else 0}"
         if edge_ee is not None:
             run_name += f"_ee{1 if edge_ee else 0}"
+        if ee_graph is not None:
+            run_name += f"_eeg{str(ee_graph).strip().lower()}"
+        if ee_topk is not None:
+            run_name += f"_eek{int(ee_topk)}"
+        if edge_denoise_alpha is not None:
+            run_name += f"_eda{edge_denoise_alpha:g}"
+        if edge_sim_gamma is not None:
+            run_name += f"_esg{edge_sim_gamma:g}"
         if kl_w is not None:
             run_name += f"_kl{kl_w:g}"
         if ce_w is not None:
             run_name += f"_ce{ce_w:g}"
         if re_w is not None:
             run_name += f"_re{re_w:g}"
+        if edge_re_w is not None:
+            run_name += f"_ere{edge_re_w:g}"
+        if edge_re_warmup is not None:
+            run_name += f"_erew{int(edge_re_warmup)}"
+        if pool_re_w is not None:
+            run_name += f"_pre{pool_re_w:g}"
+        if pool_re_warmup is not None:
+            run_name += f"_prew{int(pool_re_warmup)}"
         if ce_warmup is not None:
             run_name += f"_cw{int(ce_warmup)}"
         if p_smoothing is not None:
@@ -437,6 +534,8 @@ def main() -> None:
             run_name += f"_abl{edge_ablation}"
         if edge_norm and edge_norm != "none":
             run_name += f"_norm{edge_norm}"
+        if edge_noise_std is not None and float(edge_noise_std) != 0.0:
+            run_name += f"_enoise{float(edge_noise_std):g}"
         if enc_dims:
             run_name += f"_enc{enc_dims.replace(',', '-')}"
         if final_assign != "pred":
@@ -455,6 +554,12 @@ def main() -> None:
 
         env = os.environ.copy()
         env["PYTHONDONTWRITEBYTECODE"] = "1"
+        # Reduce thread-induced instability across many subprocess runs.
+        env.setdefault("OMP_NUM_THREADS", "1")
+        env.setdefault("MKL_NUM_THREADS", "1")
+        env.setdefault("OPENBLAS_NUM_THREADS", "1")
+        env.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+        env.setdefault("NUMEXPR_NUM_THREADS", "1")
         env["SPATIALCONV_VARIANT"] = variant
         env["SDCN_SEED"] = str(seed)
         env["SDCN_EPOCHS"] = str(epochs)
@@ -479,6 +584,22 @@ def main() -> None:
             env["SDCN_EDGE_EE"] = "1" if edge_ee else "0"
         else:
             env.pop("SDCN_EDGE_EE", None)
+        if ee_graph is not None:
+            env["SDCN_EE_GRAPH"] = str(ee_graph)
+        else:
+            env.pop("SDCN_EE_GRAPH", None)
+        if ee_topk is not None:
+            env["SDCN_EE_TOPK"] = str(int(ee_topk))
+        else:
+            env.pop("SDCN_EE_TOPK", None)
+        if edge_denoise_alpha is not None:
+            env["SDCN_EDGE_DENOISE_ALPHA"] = str(float(edge_denoise_alpha))
+        else:
+            env.pop("SDCN_EDGE_DENOISE_ALPHA", None)
+        if edge_sim_gamma is not None:
+            env["SDCN_EDGE_SIM_GAMMA"] = str(float(edge_sim_gamma))
+        else:
+            env.pop("SDCN_EDGE_SIM_GAMMA", None)
         if kl_w is not None:
             env["SDCN_KL_WEIGHT"] = str(kl_w)
         else:
@@ -491,6 +612,22 @@ def main() -> None:
             env["SDCN_RE_WEIGHT"] = str(re_w)
         else:
             env.pop("SDCN_RE_WEIGHT", None)
+        if edge_re_w is not None:
+            env["SDCN_EDGE_RE_WEIGHT"] = str(float(edge_re_w))
+        else:
+            env.pop("SDCN_EDGE_RE_WEIGHT", None)
+        if edge_re_warmup is not None:
+            env["SDCN_EDGE_RE_WARMUP_EPOCHS"] = str(int(edge_re_warmup))
+        else:
+            env.pop("SDCN_EDGE_RE_WARMUP_EPOCHS", None)
+        if pool_re_w is not None:
+            env["SDCN_POOL_RE_WEIGHT"] = str(float(pool_re_w))
+        else:
+            env.pop("SDCN_POOL_RE_WEIGHT", None)
+        if pool_re_warmup is not None:
+            env["SDCN_POOL_RE_WARMUP_EPOCHS"] = str(int(pool_re_warmup))
+        else:
+            env.pop("SDCN_POOL_RE_WARMUP_EPOCHS", None)
         if ce_warmup is not None:
             env["SDCN_CE_WARMUP_EPOCHS"] = str(int(ce_warmup))
         else:
@@ -566,6 +703,8 @@ def main() -> None:
             str(edge_norm),
             "--edge_attr_clip",
             str(args.edge_attr_clip),
+            "--edge_noise_std",
+            str(float(edge_noise_std)),
             "--max_edges_per_node",
             str(args.max_edges_per_node),
             "--summary_json",
@@ -576,39 +715,50 @@ def main() -> None:
         if args.cpu:
             cmd.append("--cpu")
 
-        log_path = run_dir / "run.log"
-        with open(log_path, "w", encoding="utf-8") as log_f:
-            log_f.write(f"$ {' '.join(cmd)}\n")
-            log_f.write(
-                f"SPATIALCONV_VARIANT={variant} SDCN_SEED={seed} SDCN_EPOCHS={epochs} "
-                f"SDCN_SIGMA={(sigma if sigma is not None else '')} "
-                f"SDCN_Q_SOURCE={(q_source if q_source is not None else '')} "
-                f"SDCN_EDGE_MESSAGE={(edge_message if edge_message is not None else '')} "
-                f"SDCN_NODE_ATT_EDGE={(node_att_edge if node_att_edge is not None else '')} "
-                f"SDCN_EDGE_EE={(edge_ee if edge_ee is not None else '')} "
-                f"SDCN_FINAL_ASSIGN={final_assign} "
-                f"SDCN_KL_WEIGHT={(kl_w if kl_w is not None else '')} "
-                f"SDCN_CE_WEIGHT={(ce_w if ce_w is not None else '')} "
-                f"SDCN_RE_WEIGHT={(re_w if re_w is not None else '')} "
-                f"SDCN_CE_WARMUP_EPOCHS={(ce_warmup if ce_warmup is not None else '')} "
-                f"SDCN_P_SMOOTHING={(p_smoothing if p_smoothing is not None else '')} "
-                f"SDCN_PRED_MI_WEIGHT={(pred_mi_w if pred_mi_w is not None else '')} "
-                f"SDCN_Q_MI_WEIGHT={(q_mi_w if q_mi_w is not None else '')} "
-                f"SDCN_Q_BALANCE_WEIGHT={(q_bal_w if q_bal_w is not None else '')} "
-                f"SDCN_PRED_BALANCE_WEIGHT={(pred_bal_w if pred_bal_w is not None else '')} "
-                f"SDCN_Q_ENTROPY_WEIGHT={(q_ent_w if q_ent_w is not None else '')} "
-                f"SDCN_PRED_ENTROPY_WEIGHT={(pred_ent_w if pred_ent_w is not None else '')} "
-                f"SDCN_ENC_DIMS={enc_dims}\n"
-                f"SDCN_POOL_RESIDUAL={(pool_residual if pool_residual is not None else '')} "
-                f"SDCN_POOL_RAW={(pool_raw if pool_raw is not None else '')} "
-                f"SDCN_POOL_UPD={(pool_upd if pool_upd is not None else '')} "
-                f"SDCN_POOL_GATE_MODE={(pool_gate_mode if pool_gate_mode is not None else '')}\n"
-                f"node_edge_pool={pool_mode} edge_ablation={edge_ablation} edge_attr_norm={edge_norm} edge_attr_clip={args.edge_attr_clip}\n\n"
-            )
-            log_f.flush()
-            subprocess.run(cmd, cwd=str(run_dir), env=env, stdout=log_f, stderr=subprocess.STDOUT, check=True)
-
         summary_path = run_dir / "summary.json"
+        trace_path = run_dir / "trace.jsonl"
+        log_path = run_dir / "run.log"
+
+        if not (args.resume and summary_path.exists() and trace_path.exists()):
+            with open(log_path, "w", encoding="utf-8") as log_f:
+                log_f.write(f"$ {' '.join(cmd)}\n")
+                log_f.write(
+                    f"SPATIALCONV_VARIANT={variant} SDCN_SEED={seed} SDCN_EPOCHS={epochs} "
+                    f"SDCN_SIGMA={(sigma if sigma is not None else '')} "
+                    f"SDCN_Q_SOURCE={(q_source if q_source is not None else '')} "
+                    f"SDCN_EDGE_MESSAGE={(edge_message if edge_message is not None else '')} "
+                    f"SDCN_NODE_ATT_EDGE={(node_att_edge if node_att_edge is not None else '')} "
+                    f"SDCN_EDGE_EE={(edge_ee if edge_ee is not None else '')} "
+                    f"SDCN_EE_GRAPH={(ee_graph if ee_graph is not None else '')} "
+                    f"SDCN_EE_TOPK={(ee_topk if ee_topk is not None else '')} "
+                    f"SDCN_EDGE_DENOISE_ALPHA={(edge_denoise_alpha if edge_denoise_alpha is not None else '')} "
+                    f"SDCN_EDGE_SIM_GAMMA={(edge_sim_gamma if edge_sim_gamma is not None else '')} "
+                    f"SDCN_FINAL_ASSIGN={final_assign} "
+                    f"SDCN_KL_WEIGHT={(kl_w if kl_w is not None else '')} "
+                    f"SDCN_CE_WEIGHT={(ce_w if ce_w is not None else '')} "
+                    f"SDCN_RE_WEIGHT={(re_w if re_w is not None else '')} "
+                    f"SDCN_EDGE_RE_WEIGHT={(edge_re_w if edge_re_w is not None else '')} "
+                    f"SDCN_EDGE_RE_WARMUP_EPOCHS={(edge_re_warmup if edge_re_warmup is not None else '')} "
+                    f"SDCN_POOL_RE_WEIGHT={(pool_re_w if pool_re_w is not None else '')} "
+                    f"SDCN_POOL_RE_WARMUP_EPOCHS={(pool_re_warmup if pool_re_warmup is not None else '')} "
+                    f"SDCN_CE_WARMUP_EPOCHS={(ce_warmup if ce_warmup is not None else '')} "
+                    f"SDCN_P_SMOOTHING={(p_smoothing if p_smoothing is not None else '')} "
+                    f"SDCN_PRED_MI_WEIGHT={(pred_mi_w if pred_mi_w is not None else '')} "
+                    f"SDCN_Q_MI_WEIGHT={(q_mi_w if q_mi_w is not None else '')} "
+                    f"SDCN_Q_BALANCE_WEIGHT={(q_bal_w if q_bal_w is not None else '')} "
+                    f"SDCN_PRED_BALANCE_WEIGHT={(pred_bal_w if pred_bal_w is not None else '')} "
+                    f"SDCN_Q_ENTROPY_WEIGHT={(q_ent_w if q_ent_w is not None else '')} "
+                    f"SDCN_PRED_ENTROPY_WEIGHT={(pred_ent_w if pred_ent_w is not None else '')} "
+                    f"SDCN_ENC_DIMS={enc_dims}\n"
+                    f"SDCN_POOL_RESIDUAL={(pool_residual if pool_residual is not None else '')} "
+                    f"SDCN_POOL_RAW={(pool_raw if pool_raw is not None else '')} "
+                    f"SDCN_POOL_UPD={(pool_upd if pool_upd is not None else '')} "
+                    f"SDCN_POOL_GATE_MODE={(pool_gate_mode if pool_gate_mode is not None else '')}\n"
+                    f"node_edge_pool={pool_mode} edge_ablation={edge_ablation} edge_attr_norm={edge_norm} edge_attr_clip={args.edge_attr_clip} edge_noise_std={edge_noise_std}\n\n"
+                )
+                log_f.flush()
+                subprocess.run(cmd, cwd=str(run_dir), env=env, stdout=log_f, stderr=subprocess.STDOUT, check=True)
+
         with open(summary_path, "r", encoding="utf-8") as f:
             summary = json.load(f)
 
@@ -617,7 +767,6 @@ def main() -> None:
         cluster_dist = summary.get("cluster_distribution") or {}
         collapse_final = bool(_collapse_flag(_as_int_dict(cluster_dist), n_nodes=n_nodes, n_clusters=n_clusters))
 
-        trace_path = run_dir / "trace.jsonl"
         trace_stats = _analyze_trace(trace_path, n_nodes=n_nodes, n_clusters=n_clusters)
 
         all_runs.append(
@@ -636,9 +785,17 @@ def main() -> None:
                 "edge_message": None if edge_message is None else bool(edge_message),
                 "node_att_edge": None if node_att_edge is None else bool(node_att_edge),
                 "edge_ee": None if edge_ee is None else bool(edge_ee),
+                "ee_graph": ee_graph,
+                "ee_topk": None if ee_topk is None else int(ee_topk),
+                "edge_denoise_alpha": None if edge_denoise_alpha is None else float(edge_denoise_alpha),
+                "edge_sim_gamma": None if edge_sim_gamma is None else float(edge_sim_gamma),
                 "kl_weight": None if kl_w is None else float(kl_w),
                 "ce_weight": None if ce_w is None else float(ce_w),
                 "re_weight": None if re_w is None else float(re_w),
+                "edge_re_weight": None if edge_re_w is None else float(edge_re_w),
+                "edge_re_warmup_epochs": None if edge_re_warmup is None else int(edge_re_warmup),
+                "pool_re_weight": None if pool_re_w is None else float(pool_re_w),
+                "pool_re_warmup_epochs": None if pool_re_warmup is None else int(pool_re_warmup),
                 "ce_warmup_epochs": None if ce_warmup is None else int(ce_warmup),
                 "p_smoothing": None if p_smoothing is None else float(p_smoothing),
                 "pred_mi_weight": None if pred_mi_w is None else float(pred_mi_w),
@@ -651,6 +808,7 @@ def main() -> None:
                 "edge_ablation": str(edge_ablation),
                 "edge_attr_norm": str(edge_norm),
                 "edge_attr_clip": float(args.edge_attr_clip),
+                "edge_noise_std": float(edge_noise_std),
                 "enc_dims": enc_dims,
                 "final_assign": str(final_assign),
                 "pool_residual": None if pool_residual is None else bool(pool_residual),
@@ -675,7 +833,8 @@ def main() -> None:
             f"{data_dir.name}, {variant}, seed={seed}, ep={epochs}, lr={lr:g}, do={dropout:g}, heads={heads}, nz={n_z}, "
             f"sigma={(sigma if sigma is not None else 'default')}, q={(q_source if q_source is not None else 'default')}, "
             f"edge_msg={(edge_message if edge_message is not None else 'default')}, edge_ee={(edge_ee if edge_ee is not None else 'default')}, "
-            f"pool={pool_mode}, norm={edge_norm}, "
+            f"ee_graph={(ee_graph if ee_graph is not None else 'default')}, "
+            f"pool={pool_mode}, norm={edge_norm}, edge_noise_std={float(edge_noise_std):g}, "
             f"enc_dims={(enc_dims if enc_dims else 'default')}: "
             f"acc={acc:.4f} nmi={nmi:.4f} ari={ari:.4f} f1={f1:.4f} collapse_final={collapse_final}"
         )
