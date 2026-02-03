@@ -327,6 +327,24 @@ def main() -> None:
         default="",
         help="Optional comma-separated SDCN_GAT_INPUT_DROPOUT overrides.",
     )
+    parser.add_argument(
+        "--edge_attr_fuses",
+        type=str,
+        default="",
+        help="Optional comma-separated 0/1 to set SDCN_EDGE_ATTR_FUSE (for v7/v16-style fusion).",
+    )
+    parser.add_argument(
+        "--edge_attr_fuse_scales",
+        type=str,
+        default="",
+        help="Optional comma-separated floats to set SDCN_EDGE_ATTR_FUSE_SCALE (for v7/v16-style fusion).",
+    )
+    parser.add_argument(
+        "--edge_attr_fuse_detaches",
+        type=str,
+        default="",
+        help="Optional comma-separated 0/1 to set SDCN_EDGE_ATTR_FUSE_DETACH (for v7/v16-style fusion).",
+    )
     parser.add_argument("--ce_warmups", type=str, default="", help="Optional comma-separated SDCN_CE_WARMUP_EPOCHS overrides.")
     parser.add_argument("--p_smoothings", type=str, default="", help="Optional comma-separated SDCN_P_SMOOTHING values.")
     parser.add_argument("--pred_mi_weights", type=str, default="", help="Optional comma-separated SDCN_PRED_MI_WEIGHT values.")
@@ -408,6 +426,9 @@ def main() -> None:
     edge_aux_warmups = _parse_optional_int_list(args.edge_aux_warmups)
     edge_aux_smooth_weights = _parse_optional_float_list(args.edge_aux_smooth_weights)
     gat_input_dropouts = _parse_optional_float_list(args.gat_input_dropouts)
+    edge_attr_fuses = _parse_optional_bool_list(args.edge_attr_fuses)
+    edge_attr_fuse_scales = _parse_optional_float_list(args.edge_attr_fuse_scales)
+    edge_attr_fuse_detaches = _parse_optional_bool_list(args.edge_attr_fuse_detaches)
     ce_warmups = _parse_optional_int_list(args.ce_warmups)
     p_smoothings = _parse_optional_float_list(args.p_smoothings)
     pred_mi_weights = _parse_optional_float_list(args.pred_mi_weights)
@@ -465,6 +486,9 @@ def main() -> None:
         edge_aux_warmup,
         edge_aux_smooth_w,
         gat_in_do,
+        edge_attr_fuse,
+        edge_attr_fuse_scale,
+        edge_attr_fuse_detach,
         ce_warmup,
         p_smoothing,
         pred_mi_w,
@@ -511,6 +535,9 @@ def main() -> None:
         edge_aux_warmups,
         edge_aux_smooth_weights,
         gat_input_dropouts,
+        edge_attr_fuses,
+        edge_attr_fuse_scales,
+        edge_attr_fuse_detaches,
         ce_warmups,
         p_smoothings,
         pred_mi_weights,
@@ -573,6 +600,12 @@ def main() -> None:
             run_name += f"_eauxs{edge_aux_smooth_w:g}"
         if gat_in_do is not None:
             run_name += f"_gindo{gat_in_do:g}"
+        if edge_attr_fuse is not None:
+            run_name += f"_eaf{1 if edge_attr_fuse else 0}"
+        if edge_attr_fuse_scale is not None:
+            run_name += f"_eafs{edge_attr_fuse_scale:g}"
+        if edge_attr_fuse_detach is not None:
+            run_name += f"_eafd{1 if edge_attr_fuse_detach else 0}"
         if ce_warmup is not None:
             run_name += f"_cw{int(ce_warmup)}"
         if p_smoothing is not None:
@@ -713,6 +746,18 @@ def main() -> None:
             env["SDCN_GAT_INPUT_DROPOUT"] = str(float(gat_in_do))
         else:
             env.pop("SDCN_GAT_INPUT_DROPOUT", None)
+        if edge_attr_fuse is not None:
+            env["SDCN_EDGE_ATTR_FUSE"] = "1" if edge_attr_fuse else "0"
+        else:
+            env.pop("SDCN_EDGE_ATTR_FUSE", None)
+        if edge_attr_fuse_scale is not None:
+            env["SDCN_EDGE_ATTR_FUSE_SCALE"] = str(float(edge_attr_fuse_scale))
+        else:
+            env.pop("SDCN_EDGE_ATTR_FUSE_SCALE", None)
+        if edge_attr_fuse_detach is not None:
+            env["SDCN_EDGE_ATTR_FUSE_DETACH"] = "1" if edge_attr_fuse_detach else "0"
+        else:
+            env.pop("SDCN_EDGE_ATTR_FUSE_DETACH", None)
         if ce_warmup is not None:
             env["SDCN_CE_WARMUP_EPOCHS"] = str(int(ce_warmup))
         else:
@@ -872,6 +917,8 @@ def main() -> None:
                 "edge_ee": None if edge_ee is None else bool(edge_ee),
                 "ee_graph": ee_graph,
                 "ee_topk": None if ee_topk is None else int(ee_topk),
+                "ee_sim_min_sim": None if ee_sim_min_sim is None else float(ee_sim_min_sim),
+                "ee_sim_mutual": None if ee_sim_mutual is None else bool(ee_sim_mutual),
                 "edge_denoise_alpha": None if edge_denoise_alpha is None else float(edge_denoise_alpha),
                 "edge_sim_gamma": None if edge_sim_gamma is None else float(edge_sim_gamma),
                 "kl_weight": None if kl_w is None else float(kl_w),
@@ -881,6 +928,13 @@ def main() -> None:
                 "edge_re_warmup_epochs": None if edge_re_warmup is None else int(edge_re_warmup),
                 "pool_re_weight": None if pool_re_w is None else float(pool_re_w),
                 "pool_re_warmup_epochs": None if pool_re_warmup is None else int(pool_re_warmup),
+                "edge_aux_weight": None if edge_aux_w is None else float(edge_aux_w),
+                "edge_aux_warmup_epochs": None if edge_aux_warmup is None else int(edge_aux_warmup),
+                "edge_aux_smooth_weight": None if edge_aux_smooth_w is None else float(edge_aux_smooth_w),
+                "gat_input_dropout": None if gat_in_do is None else float(gat_in_do),
+                "edge_attr_fuse": None if edge_attr_fuse is None else bool(edge_attr_fuse),
+                "edge_attr_fuse_scale": None if edge_attr_fuse_scale is None else float(edge_attr_fuse_scale),
+                "edge_attr_fuse_detach": None if edge_attr_fuse_detach is None else bool(edge_attr_fuse_detach),
                 "ce_warmup_epochs": None if ce_warmup is None else int(ce_warmup),
                 "p_smoothing": None if p_smoothing is None else float(p_smoothing),
                 "pred_mi_weight": None if pred_mi_w is None else float(pred_mi_w),

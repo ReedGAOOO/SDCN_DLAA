@@ -1009,6 +1009,8 @@ class SpatialConvV16EdgeEeResidualAuxFusion(nn.Module):
 
         self.edge_fc = nn.Linear(hidden_size * 3, hidden_size)
         self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout, activation=activation)
+        # Residual scale for edge↔edge update (init ~0 for stability; tanh-bounded).
+        self.ee_residual_scale = nn.Parameter(torch.tensor(0.0))
 
         self.en_gat = SGATLayer(
             hidden_size,
@@ -1065,7 +1067,8 @@ class SpatialConvV16EdgeEeResidualAuxFusion(nn.Module):
         # Edge embedding and edge↔edge refinement (residual).
         edge_feat_0 = F.relu(self.edge_fc(torch.cat([x[srcs], x[dsts], dist_feat_order], dim=1)))
         if self.edge_ee:
-            edge_feat_1 = edge_feat_0 + self.ee_gat(edge_feat_0, edge_to_edge_index)
+            ee = self.ee_gat(edge_feat_0, edge_to_edge_index)
+            edge_feat_1 = edge_feat_0 + torch.tanh(self.ee_residual_scale) * ee
         else:
             edge_feat_1 = edge_feat_0
 
