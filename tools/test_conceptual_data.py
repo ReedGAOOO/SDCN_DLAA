@@ -19,6 +19,7 @@ import sys
 import numpy as np
 import scipy.sparse as sp
 import torch
+from scipy.sparse.csgraph import connected_components
 
 # Ensure repo root is importable when running from an arbitrary cwd.
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,6 +43,120 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx: sp.spmatrix) -> torch.Tensor:
     values = torch.from_numpy(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse_coo_tensor(indices, values, shape)
+
+
+def _symmetrize_binary_adj(adj_sp: sp.spmatrix) -> sp.csr_matrix:
+    """Return a CSR 0/1, symmetric, zero-diagonal adjacency."""
+    adj = adj_sp.tocsr(copy=True)
+    if adj.nnz:
+        adj.data = np.ones_like(adj.data, dtype=np.float32)
+    adj.setdiag(0)
+    adj.eliminate_zeros()
+    sym = adj.maximum(adj.transpose()).tocsr()
+    if sym.nnz:
+        sym.data = np.ones_like(sym.data, dtype=np.float32)
+    sym.setdiag(0)
+    sym.eliminate_zeros()
+    return sym
+
+
+def _cluster_entropy_norm(labels: np.ndarray, n_clusters: int) -> float:
+    if labels.size == 0:
+        return 0.0
+    k = int(n_clusters)
+    if k <= 1:
+        return 0.0
+    counts = np.bincount(labels.astype(np.int64, copy=False), minlength=k).astype(np.float64)
+    p = counts / float(labels.size)
+    p = p[p > 0]
+    if p.size == 0:
+        return 0.0
+    ent = float(-(p * np.log(p)).sum())
+    return float(ent / np.log(float(k)))
+
+
+def _graph_partition_metrics(
+    adj_sp: sp.spmatrix,
+    labels: np.ndarray,
+    n_clusters: int,
+) -> dict[str, float]:
+    """
+    Unsupervised metrics for graph-based clustering.
+    All metrics are computed on the (symmetrized) binary graph and the predicted cluster labels.
+    """
+    labels = labels.astype(np.int64, copy=False)
+    k = int(n_clusters)
+    if labels.size == 0 or k <= 0:
+        return {}
+    if labels.min(initial=0) < 0 or labels.max(initial=0) >= k:
+        # Fallback: remap arbitrary labels to a compact range.
+        uniq = np.unique(labels)
+        remap = {int(v): i for i, v in enumerate(uniq.tolist())}
+        labels = np.asarray([remap[int(v)] for v in labels], dtype=np.int64)
+        k = int(len(uniq))
+
+    adj = _symmetrize_binary_adj(adj_sp)
+    n = int(adj.shape[0])
+    if int(labels.size) != n:
+        raise ValueError(f"labels length ({labels.size}) != n_nodes ({n})")
+
+    deg = np.asarray(adj.sum(axis=1)).reshape(-1).astype(np.float64)
+    two_m = float(deg.sum())
+    if two_m <= 0.0:
+        return {
+            "modularity": 0.0,
+            "within_edge_ratio": 0.0,
+            "conductance_mean": 0.0,
+            "ncut_mean": 0.0,
+            "cluster_entropy_norm": float(_cluster_entropy_norm(labels, n_clusters=k)),
+            "largest_cc_ratio_mean": 0.0,
+        }
+
+    sizes = np.bincount(labels, minlength=k).astype(np.int64)
+    vol = np.bincount(labels, weights=deg, minlength=k).astype(np.float64)
+
+    coo = adj.tocoo()
+    same = labels[coo.row] == labels[coo.col]
+    w_in = np.bincount(labels[coo.row[same]], weights=coo.data[same], minlength=k).astype(np.float64)
+
+    cut = vol - w_in  # For symmetric adj, this equals undirected cut size.
+    within_edge_ratio = float(w_in.sum() / two_m)
+    modularity = float((w_in / two_m - (vol / two_m) ** 2).sum())
+
+    valid = sizes > 0
+    ncut = np.zeros(k, dtype=np.float64)
+    ncut[valid] = cut[valid] / np.maximum(vol[valid], 1e-12)
+    ncut_mean = float(ncut[valid].mean()) if bool(valid.any()) else 0.0
+
+    denom = np.minimum(vol, two_m - vol)
+    cond = np.zeros(k, dtype=np.float64)
+    valid_cond = valid & (denom > 1e-12)
+    cond[valid_cond] = cut[valid_cond] / denom[valid_cond]
+    conductance_mean = float(cond[valid_cond].mean()) if bool(valid_cond.any()) else 0.0
+
+    # Connectivity diagnostics: how connected each predicted cluster is on the graph.
+    largest_ratios: list[float] = []
+    for c in range(k):
+        idx = np.flatnonzero(labels == c)
+        if idx.size <= 1:
+            if idx.size == 1:
+                largest_ratios.append(1.0)
+            continue
+        sub = adj[idx][:, idx]
+        _, comp = connected_components(sub, directed=False, connection="weak")
+        counts = np.bincount(comp)
+        largest_ratios.append(float(counts.max() / float(idx.size)))
+    largest_cc_ratio_mean = float(np.mean(largest_ratios)) if largest_ratios else 0.0
+
+    return {
+        "modularity": modularity,
+        "within_edge_ratio": within_edge_ratio,
+        "conductance_mean": conductance_mean,
+        "ncut_mean": ncut_mean,
+        "cluster_entropy_norm": float(_cluster_entropy_norm(labels, n_clusters=k)),
+        "largest_cc_ratio_mean": largest_cc_ratio_mean,
+    }
+
 
 def _pool_edge_attr_to_nodes_mean(adj_sp: sp.spmatrix, edge_attr: np.ndarray, n_nodes: int) -> np.ndarray:
     adj = adj_sp.tocoo()
@@ -217,6 +332,7 @@ def main() -> None:
     final_acc, final_f1, final_nmi, final_ari = eva(dataset.y, clusters, epoch="final")
     unique, counts = np.unique(clusters, return_counts=True)
     cluster_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
+    graph_metrics = _graph_partition_metrics(adj_sp, clusters, n_clusters=int(args.n_clusters))
 
     summary = {
         "data_dir": os.path.abspath(args.data_dir),
@@ -286,6 +402,7 @@ def main() -> None:
             "f1": float(final_f1),
             "nmi": float(final_nmi),
             "ari": float(final_ari),
+            **{k: float(v) for k, v in graph_metrics.items()},
         },
         "cluster_distribution": cluster_distribution,
         "cuda": bool(use_cuda),

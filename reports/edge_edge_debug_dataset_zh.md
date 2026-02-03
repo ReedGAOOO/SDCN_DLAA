@@ -279,3 +279,124 @@ python tools/sweep_stability.py \
 - 与 6.3 的观察一致：**final_assign=q 明显更稳**（本组里所有 variant 都是 0/3 collapse）。
 - v16 依然是该诊断集上的强基线（mean acc≈0.544）。
 - v20（标量门控）在 q 指标下变得更有竞争力（acc≈0.504 且 std 更小），但 pred 指标不占优，说明它更偏向“提升图分支聚类”而非 pred head。
+
+## 8. 评价指标反思：更贴合 self-supervised graph clustering 的指标 + 全量复测（v1~v21）
+
+在“深度 self-supervised graph-based 聚类”语境下，`ACC/NMI/ARI/F1`（需要真值标签）依然有参考价值，但不足以刻画 **图划分质量** 与 **训练稳定性**。因此补充一组**无需标签**的图聚类指标，用于辅助判断“分数提升是否真来自更合理的图划分”。
+
+### 8.1 新增无标签指标（本仓库实现）
+
+在 `tools/test_conceptual_data.py` 中加入并写入 `summary.json -> metrics`：
+
+- `modularity`：图划分模块度（越大越好）。
+- `conductance_mean`：各簇 conductance 的均值（越小越好；反映 cut/volume 的坏程度）。
+- `within_edge_ratio`：簇内边比例（越大越好，但**会被塌缩“作弊”**：单簇会接近 1.0，因此必须结合熵/塌缩一起看）。
+- `cluster_entropy_norm`：簇规模分布的归一化熵（0=极端塌缩，1=均匀；越大通常越稳）。
+- `largest_cc_ratio_mean`：每个簇诱导子图中“最大连通分量占比”的均值（越大越好；反映簇是否在图上连通）。
+- `stability_nmi`：同一 recipe、不同 seed 的最终聚类结果两两 NMI 均值（越大越稳）。
+
+### 8.2 全量复测命令（edge_edge_denoise_nonknn, v1~v21）
+
+先生成诊断集（若已存在可跳过）：
+
+```bash
+python tools/generate_synthetic_suite.py \
+  --output_root /tmp/sdcn_edge_debug_suite \
+  --seed 0 \
+  --presets edge_edge_denoise_nonknn
+```
+
+全量 sweep（`final_assign=pred`）：
+
+```bash
+python tools/sweep_stability.py \
+  --data_dir /tmp/sdcn_edge_debug_suite/edge_edge_denoise_nonknn \
+  --out_dir /tmp/sweep_all_variants_pred_metrics \
+  --variants v1original,v2edge_single_layer,v3edge_cross_layers,v4edge_pool_fusion,v5edge_pool_residual,v6edge_ee_aux,v7edge_attr_fusion,v8edge_denoise_attr,v9edge_context_denoise,v10edge_base_denoise_plus_context,v11edge_adaptive_denoise_context,v12edge_similarity_denoise,v13edge_context_similarity_denoise,v14edge_pool_concat_fusion,v15edge_ee_aux_context_similarity_denoise,v16edge_ee_residual_aux_fusion,v17edge_attr_gate,v18edge_attr_mlp_fuse,v19edge_attn_pool,v20edge_attr_scalar_gate,v21dual_sgat_edge_attr \
+  --seeds 0,1,2 --epochs 60 \
+  --q_sources h4 --sigmas 0.2 \
+  --edge_messages 1 \
+  --edge_ees 1 \
+  --ee_graphs incidence_sim --ee_topks 4 --ee_sim_min_sims 0.4 \
+  --q_balance_weights 0.1 --pred_balance_weights 0.1 \
+  --edge_attr_fuses 1 --edge_attr_fuse_scales 0.1 --edge_attr_fuse_detaches 0 \
+  --edge_aux_weights 0.0 \
+  --gat_input_dropouts 0.1
+```
+
+全量 sweep（`final_assign=q`）：
+
+```bash
+python tools/sweep_stability.py \
+  --data_dir /tmp/sdcn_edge_debug_suite/edge_edge_denoise_nonknn \
+  --out_dir /tmp/sweep_all_variants_q_metrics \
+  --variants v1original,v2edge_single_layer,v3edge_cross_layers,v4edge_pool_fusion,v5edge_pool_residual,v6edge_ee_aux,v7edge_attr_fusion,v8edge_denoise_attr,v9edge_context_denoise,v10edge_base_denoise_plus_context,v11edge_adaptive_denoise_context,v12edge_similarity_denoise,v13edge_context_similarity_denoise,v14edge_pool_concat_fusion,v15edge_ee_aux_context_similarity_denoise,v16edge_ee_residual_aux_fusion,v17edge_attr_gate,v18edge_attr_mlp_fuse,v19edge_attn_pool,v20edge_attr_scalar_gate,v21dual_sgat_edge_attr \
+  --seeds 0,1,2 --epochs 60 \
+  --q_sources h4 --sigmas 0.2 \
+  --edge_messages 1 \
+  --edge_ees 1 \
+  --ee_graphs incidence_sim --ee_topks 4 --ee_sim_min_sims 0.4 \
+  --q_balance_weights 0.1 --pred_balance_weights 0.1 \
+  --edge_attr_fuses 1 --edge_attr_fuse_scales 0.1 --edge_attr_fuse_detaches 0 \
+  --edge_aux_weights 0.0 \
+  --gat_input_dropouts 0.1 \
+  --final_assign q
+```
+
+### 8.3 全量结果（final_assign=pred）
+
+| variant | acc | modularity | conductance↓ | within_edge | entropy | largest_cc | stability_nmi | collapse |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| v10edge_base_denoise_plus_context | 0.4389±0.0735 | 0.0174 | 0.7779 | 0.5006 | 0.6555 | 0.7796 | 0.1201 | 1/3 |
+| v11edge_adaptive_denoise_context | 0.4542±0.1455 | 0.0119 | 0.7959 | 0.4563 | 0.7518 | 0.8914 | 0.1023 | 0/3 |
+| v12edge_similarity_denoise | 0.5458±0.0480 | 0.0255 | 0.7276 | 0.3141 | 0.9354 | 0.9501 | 0.2346 | 0/3 |
+| v13edge_context_similarity_denoise | 0.5444±0.0462 | 0.0231 | 0.7298 | 0.3110 | 0.9367 | 0.9503 | 0.2356 | 0/3 |
+| v14edge_pool_concat_fusion | 0.5653±0.0685 | 0.0273 | 0.7307 | 0.3443 | 0.8592 | 0.9257 | 0.2272 | 0/3 |
+| v15edge_ee_aux_context_similarity_denoise | 0.5861±0.0847 | 0.0270 | 0.7009 | 0.3687 | 0.8126 | 0.9000 | 0.3211 | 1/3 |
+| v16edge_ee_residual_aux_fusion | 0.4181±0.0423 | 0.0220 | 0.7473 | 0.4472 | 0.7301 | 0.7762 | 0.1566 | 1/3 |
+| v17edge_attr_gate | 0.4236±0.0412 | 0.0162 | 0.7458 | 0.3882 | 0.7877 | 0.7639 | 0.0985 | 0/3 |
+| v18edge_attr_mlp_fuse | 0.3181±0.0599 | 0.0081 | 0.4948 | 0.5549 | 0.5923 | 0.9194 | 0.0815 | 1/3 |
+| v19edge_attn_pool | 0.3722±0.0656 | 0.0147 | 0.7377 | 0.4448 | 0.7087 | 0.8952 | 0.1107 | 1/3 |
+| v1original | 0.3194±0.0785 | 0.0012 | 0.5566 | 0.6778 | 0.4497 | 0.8320 | 0.0142 | 1/3 |
+| v20edge_attr_scalar_gate | 0.3472±0.0431 | -0.0003 | 0.8149 | 0.5036 | 0.6525 | 0.7846 | 0.0687 | 0/3 |
+| v21dual_sgat_edge_attr | 0.4556±0.0216 | 0.0206 | 0.7389 | 0.3557 | 0.8814 | 0.9517 | 0.2098 | 0/3 |
+| v2edge_single_layer | 0.3181±0.0534 | 0.0047 | 0.8343 | 0.5673 | 0.5846 | 0.7656 | 0.0204 | 1/3 |
+| v3edge_cross_layers | 0.2903±0.0297 | 0.0046 | 0.5079 | 0.6132 | 0.4968 | 0.9087 | 0.0146 | 1/3 |
+| v4edge_pool_fusion | 0.3931±0.0104 | 0.0312 | 0.7366 | 0.4237 | 0.7711 | 0.7991 | 0.1738 | 0/3 |
+| v5edge_pool_residual | 0.4069±0.0205 | 0.0215 | 0.7507 | 0.4023 | 0.8068 | 0.8711 | 0.1805 | 0/3 |
+| v6edge_ee_aux | 0.3194±0.0520 | 0.0058 | 0.5335 | 0.6515 | 0.4525 | 0.7875 | 0.0417 | 1/3 |
+| v7edge_attr_fusion | 0.3986±0.0449 | 0.0137 | 0.7737 | 0.4294 | 0.7681 | 0.9004 | 0.1129 | 1/3 |
+| v8edge_denoise_attr | 0.4292±0.0503 | 0.0233 | 0.6778 | 0.4362 | 0.7082 | 0.9158 | 0.0793 | 2/3 |
+| v9edge_context_denoise | 0.4181±0.0347 | 0.0108 | 0.8137 | 0.5075 | 0.6575 | 0.7476 | 0.1641 | 0/3 |
+
+### 8.4 全量结果（final_assign=q）
+
+| variant | acc | modularity | conductance↓ | within_edge | entropy | largest_cc | stability_nmi | collapse |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| v10edge_base_denoise_plus_context | 0.6083±0.0535 | 0.0268 | 0.7352 | 0.4230 | 0.7380 | 0.8144 | 0.7062 | 0/3 |
+| v11edge_adaptive_denoise_context | 0.8736±0.0649 | 0.0415 | 0.7071 | 0.3042 | 0.9801 | 0.9974 | 0.6537 | 0/3 |
+| v12edge_similarity_denoise | 0.8472±0.0840 | 0.0437 | 0.7097 | 0.3267 | 0.9465 | 0.9526 | 0.6166 | 0/3 |
+| v13edge_context_similarity_denoise | 0.8472±0.0840 | 0.0438 | 0.7094 | 0.3269 | 0.9462 | 0.9525 | 0.6259 | 0/3 |
+| v14edge_pool_concat_fusion | 0.9444±0.0241 | 0.0431 | 0.7069 | 0.2935 | 0.9993 | 1.0000 | 0.8273 | 0/3 |
+| v15edge_ee_aux_context_similarity_denoise | 0.8458±0.0969 | 0.0392 | 0.7129 | 0.3203 | 0.9478 | 0.9394 | 0.6307 | 0/3 |
+| v16edge_ee_residual_aux_fusion | 0.5389±0.0510 | 0.0149 | 0.7407 | 0.3241 | 0.9085 | 0.9153 | 0.2379 | 0/3 |
+| v17edge_attr_gate | 0.4972±0.0505 | 0.0131 | 0.7385 | 0.3623 | 0.8323 | 0.8644 | 0.1551 | 0/3 |
+| v18edge_attr_mlp_fuse | 0.4417±0.0312 | 0.0134 | 0.7389 | 0.3817 | 0.7970 | 0.8863 | 0.1358 | 0/3 |
+| v19edge_attn_pool | 0.3278±0.0416 | 0.0009 | 0.7454 | 0.3819 | 0.7784 | 0.9692 | 0.0648 | 1/3 |
+| v1original | 0.2653±0.0216 | 0.0002 | 0.3077 | 0.9367 | 0.0918 | 0.9436 | 0.0000 | 3/3 |
+| v20edge_attr_scalar_gate | 0.5014±0.0193 | 0.0256 | 0.7349 | 0.3893 | 0.8132 | 0.8637 | 0.2004 | 0/3 |
+| v21dual_sgat_edge_attr | 0.4847±0.0137 | 0.0155 | 0.7316 | 0.3679 | 0.8308 | 0.8787 | 0.0998 | 0/3 |
+| v2edge_single_layer | 0.2514±0.0020 | -0.0000 | 0.3333 | 0.9972 | 0.0065 | 1.0000 | 0.0000 | 3/3 |
+| v3edge_cross_layers | 0.2986±0.0687 | -0.0074 | 0.2324 | 0.8192 | 0.1899 | 0.9444 | 0.0000 | 3/3 |
+| v4edge_pool_fusion | 0.5486±0.0551 | 0.0185 | 0.7294 | 0.3436 | 0.8886 | 0.9775 | 0.1903 | 0/3 |
+| v5edge_pool_residual | 0.3792±0.0059 | 0.0135 | 0.7460 | 0.4017 | 0.7752 | 0.7860 | 0.0403 | 0/3 |
+| v6edge_ee_aux | 0.4917±0.1739 | 0.0105 | 0.8196 | 0.5301 | 0.6316 | 0.8318 | 0.1542 | 1/3 |
+| v7edge_attr_fusion | 0.5111±0.0246 | 0.0150 | 0.7463 | 0.3618 | 0.8527 | 0.9021 | 0.2127 | 0/3 |
+| v8edge_denoise_attr | 0.6931±0.1485 | 0.0325 | 0.7248 | 0.3551 | 0.8786 | 0.8456 | 0.3814 | 0/3 |
+| v9edge_context_denoise | 0.6042±0.0804 | 0.0268 | 0.7058 | 0.4340 | 0.7120 | 0.7834 | 0.7052 | 1/3 |
+
+### 8.5 关键观察（指标层面）
+
+- `within_edge_ratio` 这类“簇内边比例”指标本身**会被塌缩极大抬高**（单簇时几乎所有边都在簇内），因此必须与 `cluster_entropy_norm` / `collapse_final` 绑定解读。
+- `stability_nmi` 在很多强模型（例如 v14/v11/v12/v13）上显著更高，能更直接反映“同一 recipe 下是否可复现”。
+- 在该诊断集上，强模型往往同时具备：更高的 `modularity`、更低的 `conductance_mean`、更高的 `cluster_entropy_norm`，以及更好的 `largest_cc_ratio_mean`（簇在图上更连通）。
