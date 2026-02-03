@@ -177,3 +177,105 @@ python tools/sweep_stability.py \
   - `SDCN_Q_BALANCE_WEIGHT / SDCN_PRED_BALANCE_WEIGHT`（例如 0.1→0.3）
   - `SDCN_EDGE_ATTR_FUSE_SCALE`（0.05/0.1/0.2）
   - 学习率（`--lrs 1e-3,5e-4`）
+
+## 7. 创新探索：其他边特征利用方式（v17~v21）
+
+本节尝试在 v5/v16 的“边信息入口”之外，探索更不同的 edge_attr/edge→node 路径。实现位置：`DLAA_NEW.py`。
+
+### 7.1 新增结构简述
+
+- **v17edge_attr_gate**：把 refined edge embedding 当作“门控信号”，对 node attention 使用的 `edge_attr` 做**乘性调制**（更保守，适合噪声 edge_attr）：
+  - `edge_attr_att = dist_feat * exp(fuse_scale * tanh(W(LN(edge_feat_1))))`
+- **v18edge_attr_mlp_fuse**：对 `[dist_feat, edge_feat_1]` 拼接做一个残差 MLP，让模型自己学“怎么把 refined edge 注入 edge_attr”：
+  - `edge_attr_att = dist_feat + fuse_scale * MLP([dist_feat, LN(edge_feat_1)])`
+  - MLP 以 “近似恒等映射” 初始化（delta≈0），理论上更稳，但可能需要更合适的 scale/训练配方才会出收益。
+- **v19edge_attn_pool**：替代 mean pooling，用 **node→incident-edge attention pooling** 聚合边特征（意图：抑制噪声边、突出“有用边”）：
+  - `pooled_i = Σ softmax(score(i,e)) * V(edge_feat_e)`（对每个节点在 incident edges 上做 softmax）
+  - 该路径用 `tanh(scale)` 控幅，初始化接近 0，避免一上来就破坏 baseline。
+- **v20edge_attr_scalar_gate**：把 refined edge embedding 融入 `edge_attr`，但只用 **每条边一个标量 gate**（更鲁棒）：
+  - `gate_e = sigmoid(w^T LN(edge_feat_1))`
+  - `edge_attr_att = dist_feat + fuse_scale * tanh(scale) * gate_e * LN(edge_feat_1)`（`scale` 可学习，初始化为 0）
+- **v21dual_sgat_edge_attr**：**双分支 SGAT**：raw edge_attr 分支 + fused edge_attr 分支，然后在 node 表征层面做残差融合：
+  - `node_raw = SGAT(x, edge_attr=dist_feat)`
+  - `node_fused = SGAT(x, edge_attr=dist_feat + fuse_scale * LN(edge_feat_1))`
+  - `node_att = node_raw + tanh(scale) * node_fused`（`scale` 初始化为 0）
+
+### 7.2 快速对比实验（edge_edge_denoise_nonknn, final_assign=pred）
+
+固定 recipe（与前文 v16 对比风格一致，主要看 pred head 的可用性）：
+
+```bash
+python tools/generate_synthetic_suite.py \
+  --output_root /tmp/sdcn_edge_debug_suite \
+  --seed 0 \
+  --presets edge_edge_denoise_nonknn
+
+python tools/sweep_stability.py \
+  --data_dir /tmp/sdcn_edge_debug_suite/edge_edge_denoise_nonknn \
+  --out_dir /tmp/sweep_edge_arch_explore_v20_v21_pred \
+  --variants v5edge_pool_residual,v7edge_attr_fusion,v16edge_ee_residual_aux_fusion,v17edge_attr_gate,v18edge_attr_mlp_fuse,v19edge_attn_pool,v20edge_attr_scalar_gate,v21dual_sgat_edge_attr \
+  --seeds 0,1,2 --epochs 60 \
+  --q_sources h4 --sigmas 0.2 \
+  --edge_messages 1 \
+  --edge_ees 1 \
+  --ee_graphs incidence_sim --ee_topks 4 --ee_sim_min_sims 0.4 \
+  --q_balance_weights 0.1 --pred_balance_weights 0.1 \
+  --edge_attr_fuses 1 --edge_attr_fuse_scales 0.1 --edge_attr_fuse_detaches 0 \
+  --edge_aux_weights 0.0 \
+  --gat_input_dropouts 0.1
+```
+
+结果汇总（mean±std over 3 seeds；`collapse_final` 为 3 个 seed 里出现“吃空簇”的次数）：
+
+| variant | acc | nmi | ari | f1 | collapse_final |
+|---|---:|---:|---:|---:|---:|
+| v5edge_pool_residual | 0.4083±0.0223 | 0.1174 | 0.0886 | 0.3539 | 0/3 |
+| v7edge_attr_fusion | 0.3986±0.0449 | 0.1225 | 0.0846 | 0.3546 | 1/3 |
+| v16edge_ee_residual_aux_fusion | 0.4208±0.0445 | 0.1335 | 0.1075 | 0.3459 | 1/3 |
+| v17edge_attr_gate | 0.4222±0.0431 | 0.1294 | 0.1166 | 0.3512 | 0/3 |
+| v18edge_attr_mlp_fuse | 0.3181±0.0599 | 0.0426 | 0.0279 | 0.2544 | 1/3 |
+| v19edge_attn_pool | 0.3722±0.0682 | 0.0886 | 0.0623 | 0.3063 | 1/3 |
+| v20edge_attr_scalar_gate | 0.3417±0.0450 | 0.0771 | 0.0328 | 0.2767 | 0/3 |
+| **v21dual_sgat_edge_attr** | **0.4569±0.0227** | **0.1677** | **0.1299** | **0.4282** | **0/3** |
+
+结论（当前这组 quick recipe）：
+- **v21（dual-SGAT）在 `final_assign=pred` 下表现最好且稳定**（0/3 collapse），说明“同时保留 raw edge_attr 与 fused edge_attr 两套注意力路径”对 pred head 更友好。
+- v17（乘性门控）依然是一个稳定的方向（0/3 collapse），但在 pred 指标上不如 v21。
+- v18/v19 仍偏不稳定/偏弱（1/3 seeds collapse），更适合在 `final_assign=q/p` 或更细的超参 sweep 下再评估。
+
+### 7.3 同一 recipe，但 final_assign=q（更贴近“聚类分配”）
+
+```bash
+python tools/sweep_stability.py \
+  --data_dir /tmp/sdcn_edge_debug_suite/edge_edge_denoise_nonknn \
+  --out_dir /tmp/sweep_edge_arch_explore_v20_v21_q \
+  --variants v5edge_pool_residual,v7edge_attr_fusion,v16edge_ee_residual_aux_fusion,v17edge_attr_gate,v18edge_attr_mlp_fuse,v19edge_attn_pool,v20edge_attr_scalar_gate,v21dual_sgat_edge_attr \
+  --seeds 0,1,2 --epochs 60 \
+  --q_sources h4 --sigmas 0.2 \
+  --edge_messages 1 \
+  --edge_ees 1 \
+  --ee_graphs incidence_sim --ee_topks 4 --ee_sim_min_sims 0.4 \
+  --q_balance_weights 0.1 --pred_balance_weights 0.1 \
+  --edge_attr_fuses 1 --edge_attr_fuse_scales 0.1 --edge_attr_fuse_detaches 0 \
+  --edge_aux_weights 0.0 \
+  --gat_input_dropouts 0.1 \
+  --final_assign q
+```
+
+结果汇总（mean±std over 3 seeds）：
+
+| variant | acc | nmi | ari | f1 | collapse_final |
+|---|---:|---:|---:|---:|---:|
+| v5edge_pool_residual | 0.3889±0.0129 | 0.0939 | 0.0646 | 0.3316 | 0/3 |
+| v7edge_attr_fusion | 0.5097±0.0258 | 0.2485 | 0.2107 | 0.4710 | 0/3 |
+| **v16edge_ee_residual_aux_fusion** | **0.5444±0.0586** | 0.2425 | **0.2198** | **0.5187** | 0/3 |
+| v17edge_attr_gate | 0.4972±0.0529 | 0.2284 | 0.2052 | 0.4401 | 0/3 |
+| v18edge_attr_mlp_fuse | 0.4417±0.0312 | 0.1574 | 0.1299 | 0.3849 | 0/3 |
+| v19edge_attn_pool | 0.3333±0.0335 | 0.0554 | 0.0345 | 0.2909 | 0/3 |
+| v20edge_attr_scalar_gate | 0.5042±0.0180 | 0.1997 | 0.1728 | 0.4449 | 0/3 |
+| v21dual_sgat_edge_attr | 0.4861±0.0119 | 0.2096 | 0.1830 | 0.4257 | 0/3 |
+
+结论（final_assign=q）：
+- 与 6.3 的观察一致：**final_assign=q 明显更稳**（本组里所有 variant 都是 0/3 collapse）。
+- v16 依然是该诊断集上的强基线（mean acc≈0.544）。
+- v20（标量门控）在 q 指标下变得更有竞争力（acc≈0.504 且 std 更小），但 pred 指标不占优，说明它更偏向“提升图分支聚类”而非 pred head。
