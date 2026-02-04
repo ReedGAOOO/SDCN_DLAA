@@ -20,6 +20,7 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 from scipy.sparse.csgraph import connected_components
+from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
 
 # Ensure repo root is importable when running from an arbitrary cwd.
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -179,6 +180,59 @@ def _pool_edge_attr_to_nodes_mean(adj_sp: sp.spmatrix, edge_attr: np.ndarray, n_
     denom = np.maximum(node_cnt, 1).astype(np.float32).reshape(-1, 1)
     return (node_sum / denom).astype(np.float32)
 
+
+def _internal_clustering_metrics(
+    embedding: np.ndarray,
+    labels: np.ndarray,
+    *,
+    silhouette_metric: str = "cosine",
+    silhouette_sample: int = 2000,
+    seed: int = 0,
+) -> dict[str, float]:
+    """
+    Internal clustering metrics computed in embedding space.
+    These can be unstable in high dimensions; use the representation actually used for clustering
+    (e.g., SDCN_Q_SOURCE embedding) and sampling for silhouette on large graphs.
+    """
+    if embedding is None or labels is None:
+        return {}
+    x = np.asarray(embedding)
+    y = np.asarray(labels).astype(np.int64, copy=False)
+    if x.ndim != 2 or y.ndim != 1 or x.shape[0] != y.shape[0]:
+        return {}
+    uniq = np.unique(y)
+    if uniq.size < 2 or uniq.size >= x.shape[0]:
+        return {}
+
+    out: dict[str, float] = {}
+
+    try:
+        out["davies_bouldin"] = float(davies_bouldin_score(x, y))
+    except Exception:
+        pass
+
+    try:
+        out["calinski_harabasz"] = float(calinski_harabasz_score(x, y))
+    except Exception:
+        pass
+
+    try:
+        n = int(x.shape[0])
+        sample_size = int(min(max(2, int(silhouette_sample)), n))
+        out["silhouette"] = float(
+            silhouette_score(
+                x,
+                y,
+                metric=str(silhouette_metric),
+                sample_size=sample_size if sample_size < n else None,
+                random_state=int(seed),
+            )
+        )
+    except Exception:
+        pass
+
+    return out
+
 def _apply_edge_ablation(edge_attr: np.ndarray, mode: str, seed: int) -> np.ndarray:
     mode = (mode or "none").strip().lower()
     if mode in {"none", "off", "no", ""}:
@@ -280,6 +334,23 @@ def main() -> None:
     parser.add_argument("--cpu", action="store_true")
     parser.add_argument("--summary_json", type=str, default="summary.json")
     parser.add_argument("--trace_jsonl", type=str, default="", help="Optional per-epoch trace output path (JSONL).")
+    parser.add_argument(
+        "--internal_metrics",
+        action="store_true",
+        help="If set, compute embedding-space internal metrics (silhouette/DB/CH) on the q-embedding.",
+    )
+    parser.add_argument(
+        "--internal_silhouette_metric",
+        type=str,
+        default="cosine",
+        help="Metric for silhouette_score (e.g., cosine|euclidean).",
+    )
+    parser.add_argument(
+        "--internal_silhouette_sample",
+        type=int,
+        default=2000,
+        help="Sample size for silhouette; <=0 disables silhouette; capped to n_nodes.",
+    )
     args = parser.parse_args()
 
     x = np.load(os.path.join(args.data_dir, "node_features.npy")).astype(np.float32)
@@ -332,7 +403,30 @@ def main() -> None:
     final_acc, final_f1, final_nmi, final_ari = eva(dataset.y, clusters, epoch="final")
     unique, counts = np.unique(clusters, return_counts=True)
     cluster_distribution = {int(k): int(v) for k, v in zip(unique, counts)}
+    max_cluster_frac = float(counts.max() / max(int(dataset.num_nodes), 1)) if counts.size else 0.0
+    effective_k = int(unique.size)
     graph_metrics = _graph_partition_metrics(adj_sp, clusters, n_clusters=int(args.n_clusters))
+
+    internal_metrics: dict[str, float] = {}
+    if bool(args.internal_metrics):
+        q_embed = getattr(model, "_last_q_input", None)
+        q_embed_np = None
+        if q_embed is not None:
+            try:
+                q_embed_np = q_embed.detach().cpu().numpy()
+            except Exception:
+                q_embed_np = None
+
+        seed_env = os.getenv("SDCN_SEED")
+        seed = int(seed_env) if seed_env is not None and seed_env.strip() != "" else 0
+        sil_sample = int(args.internal_silhouette_sample)
+        internal_metrics = _internal_clustering_metrics(
+            q_embed_np,
+            clusters,
+            silhouette_metric=str(args.internal_silhouette_metric),
+            silhouette_sample=sil_sample,
+            seed=seed,
+        )
 
     summary = {
         "data_dir": os.path.abspath(args.data_dir),
@@ -402,7 +496,10 @@ def main() -> None:
             "f1": float(final_f1),
             "nmi": float(final_nmi),
             "ari": float(final_ari),
+            "effective_k": float(effective_k),
+            "max_cluster_frac": float(max_cluster_frac),
             **{k: float(v) for k, v in graph_metrics.items()},
+            **{k: float(v) for k, v in internal_metrics.items()},
         },
         "cluster_distribution": cluster_distribution,
         "cuda": bool(use_cuda),

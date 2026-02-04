@@ -137,6 +137,12 @@ def _analyze_trace(trace_path: Path, n_nodes: int, n_clusters: int) -> dict:
     ent_p: list[float] = []
     kl_p_q: list[float] = []
     kl_p_pred: list[float] = []
+    align_nmi_q_pred: list[float] = []
+    align_ari_q_pred: list[float] = []
+    align_nmi_p_pred: list[float] = []
+    align_ari_p_pred: list[float] = []
+
+    last_rec: dict | None = None
 
     with open(trace_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -144,6 +150,7 @@ def _analyze_trace(trace_path: Path, n_nodes: int, n_clusters: int) -> dict:
             if not line:
                 continue
             rec = json.loads(line)
+            last_rec = rec
             total += 1
 
             cq = bool(rec.get("collapse_q", False))
@@ -178,28 +185,61 @@ def _analyze_trace(trace_path: Path, n_nodes: int, n_clusters: int) -> dict:
             if "kl_p_pred" in rec:
                 kl_p_pred.append(float(rec["kl_p_pred"]))
 
+            if "align_nmi_q_pred" in rec:
+                align_nmi_q_pred.append(float(rec["align_nmi_q_pred"]))
+            if "align_ari_q_pred" in rec:
+                align_ari_q_pred.append(float(rec["align_ari_q_pred"]))
+            if "align_nmi_p_pred" in rec:
+                align_nmi_p_pred.append(float(rec["align_nmi_p_pred"]))
+            if "align_ari_p_pred" in rec:
+                align_ari_p_pred.append(float(rec["align_ari_p_pred"]))
+
     if total <= 0:
         return {}
 
-    # Sanity check: compute final collapse flags from last hard distributions if present.
-    # (Trace already stores flags, but this helps detect schema mismatch.)
+    # Final collapse flags from last hard distributions if present.
     final_collapse = {}
-    try:
-        with open(trace_path, "r", encoding="utf-8") as f:
-            last = None
-            for line in f:
-                if line.strip():
-                    last = json.loads(line)
-            if last:
-                dist_pred = _as_int_dict(last.get("hard_pred") or {})
-                final_collapse["collapse_final_pred"] = bool(_collapse_flag(dist_pred, n_nodes=n_nodes, n_clusters=n_clusters))
-    except Exception:
-        pass
+    if isinstance(last_rec, dict):
+        try:
+            dist_q = _as_int_dict(last_rec.get("hard_q") or {})
+            dist_pred = _as_int_dict(last_rec.get("hard_pred") or {})
+            dist_p = _as_int_dict(last_rec.get("hard_p") or {})
+            final_collapse["collapse_final_q"] = bool(_collapse_flag(dist_q, n_nodes=n_nodes, n_clusters=n_clusters))
+            final_collapse["collapse_final_pred"] = bool(_collapse_flag(dist_pred, n_nodes=n_nodes, n_clusters=n_clusters))
+            final_collapse["collapse_final_p"] = bool(_collapse_flag(dist_p, n_nodes=n_nodes, n_clusters=n_clusters))
+        except Exception:
+            pass
 
     def _mean(values: list[float]) -> float | None:
         if not values:
             return None
         return float(np.mean(np.asarray(values, dtype=np.float64)))
+
+    def _trend(values: list[float], name: str) -> dict[str, float]:
+        """
+        Compute simple convergence trend stats.
+        Uses a window of ~20% epochs, capped at 10, min 1.
+        """
+        if not values:
+            return {}
+        arr = np.asarray(values, dtype=np.float64)
+        n = int(arr.size)
+        if n <= 0:
+            return {}
+        w = max(1, min(10, max(1, n // 5)))
+        first_mean = float(arr[:w].mean())
+        last_mean = float(arr[-w:].mean())
+        delta = float(last_mean - first_mean)
+        denom = max(abs(first_mean), 1e-12)
+        rel_change = float(delta / denom)
+        return {
+            f"{name}_first": float(arr[0]),
+            f"{name}_last": float(arr[-1]),
+            f"{name}_first_mean": first_mean,
+            f"{name}_last_mean": last_mean,
+            f"{name}_delta": delta,
+            f"{name}_rel_change": rel_change,
+        }
 
     return {
         "epochs_logged": int(total),
@@ -214,6 +254,19 @@ def _analyze_trace(trace_path: Path, n_nodes: int, n_clusters: int) -> dict:
         "p_entropy_mean": _mean(ent_p),
         "kl_p_q_mean": _mean(kl_p_q),
         "kl_p_pred_mean": _mean(kl_p_pred),
+        "align_nmi_q_pred_mean": _mean(align_nmi_q_pred),
+        "align_ari_q_pred_mean": _mean(align_ari_q_pred),
+        "align_nmi_p_pred_mean": _mean(align_nmi_p_pred),
+        "align_ari_p_pred_mean": _mean(align_ari_p_pred),
+        **_trend(kl_p_q, "kl_p_q"),
+        **_trend(kl_p_pred, "kl_p_pred"),
+        **_trend(ent_q, "q_entropy"),
+        **_trend(ent_pred, "pred_entropy"),
+        **_trend(ent_p, "p_entropy"),
+        **_trend(align_nmi_q_pred, "align_nmi_q_pred"),
+        **_trend(align_ari_q_pred, "align_ari_q_pred"),
+        **_trend(align_nmi_p_pred, "align_nmi_p_pred"),
+        **_trend(align_ari_p_pred, "align_ari_p_pred"),
         **final_collapse,
     }
 
@@ -374,6 +427,23 @@ def main() -> None:
         help="Comma-separated list for --edge_noise_std passed to test script (Gaussian noise added to edge_attr).",
     )
     parser.add_argument("--max_edges_per_node", type=int, default=10)
+    parser.add_argument(
+        "--internal_metrics",
+        action="store_true",
+        help="If set, ask the test script to compute embedding-space internal metrics (silhouette/DB/CH).",
+    )
+    parser.add_argument(
+        "--internal_silhouette_metric",
+        type=str,
+        default="cosine",
+        help="Metric for silhouette_score (passed to test script).",
+    )
+    parser.add_argument(
+        "--internal_silhouette_sample",
+        type=int,
+        default=2000,
+        help="Sample size for silhouette (passed to test script). <=0 disables silhouette.",
+    )
     parser.add_argument("--final_assign", type=str, default="pred", help="Final clustering source: pred|q|p (sets SDCN_FINAL_ASSIGN).")
     parser.add_argument("--pool_residuals", type=str, default="", help="Optional comma-separated 0/1 to set SDCN_POOL_RESIDUAL.")
     parser.add_argument("--pool_raws", type=str, default="", help="Optional comma-separated 0/1 to set SDCN_POOL_RAW.")
@@ -842,6 +912,10 @@ def main() -> None:
             "--trace_jsonl",
             "trace.jsonl",
         ]
+        if bool(args.internal_metrics):
+            cmd.append("--internal_metrics")
+            cmd.extend(["--internal_silhouette_metric", str(args.internal_silhouette_metric)])
+            cmd.extend(["--internal_silhouette_sample", str(int(args.internal_silhouette_sample))])
         if args.cpu:
             cmd.append("--cpu")
 

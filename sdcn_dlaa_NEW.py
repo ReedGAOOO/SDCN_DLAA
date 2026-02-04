@@ -1388,6 +1388,12 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                 collapse_pred = _collapse_flag(dist_pred, n_nodes=int(dataset.num_nodes), n_clusters=int(args.n_clusters))
                 collapse_p = _collapse_flag(dist_p, n_nodes=int(dataset.num_nodes), n_clusters=int(args.n_clusters))
 
+                # Alignment between the two self-supervised branches (no ground truth needed).
+                align_nmi_q_pred = float(nmi_score(res1, res2))
+                align_ari_q_pred = float(ari_score(res1, res2))
+                align_nmi_p_pred = float(nmi_score(res3, res2))
+                align_ari_p_pred = float(ari_score(res3, res2))
+
                 trace_record = {
                     "epoch": int(epoch),
                     "n_nodes": int(dataset.num_nodes),
@@ -1397,6 +1403,10 @@ def train_sdcn_dlaa_custom(dataset, adj, args, edge_attr=None):
                     "pred": {**pred_stats},
                     "kl_p_q": kl_p_q,
                     "kl_p_pred": kl_p_pred,
+                    "align_nmi_q_pred": align_nmi_q_pred,
+                    "align_ari_q_pred": align_ari_q_pred,
+                    "align_nmi_p_pred": align_nmi_p_pred,
+                    "align_ari_p_pred": align_ari_p_pred,
                     "hard_q": dist_q,
                     "hard_pred": dist_pred,
                     "hard_p": dist_p,

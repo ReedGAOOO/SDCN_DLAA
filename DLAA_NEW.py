@@ -457,6 +457,106 @@ class SpatialConvV3EdgeCrossLayers(nn.Module):
         return torch.cat([node_feat_1, edge_feat_1], dim=0)
 
 
+class SpatialConvV23SmanIncidenceBipartite(nn.Module):
+    """
+    SMAN-style incidence node update variant:
+    - Compute edge embedding from (src, dst, dist_feat_order).
+    - Optionally refine edges via edge↔edge graph (line graph).
+    - Update nodes by aggregating from *edge-nodes* on an incidence graph using edge-aware attention.
+
+    Concretely, treat each original edge e as a new node (id = N + e), and create directed
+    incidence edges (N+e)->src and (N+e)->dst. Node update runs on the (N+E)-node graph.
+    """
+
+    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4, activation=F.relu, out_activation=_UNSET):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.edge_dim = edge_dim if edge_dim is not None else hidden_size
+        self.out_activation = activation if out_activation is _UNSET else out_activation
+
+        self.edge_ee = _env_flag("SDCN_EDGE_EE", True)
+
+        self.edge_dim_proj = None
+        if self.edge_dim != hidden_size:
+            self.edge_dim_proj = nn.Linear(self.edge_dim, hidden_size)
+
+        # Edge init: [x_src, x_dst, dist_feat_order] -> edge_feat
+        self.edge_fc = nn.Linear(hidden_size * 3, hidden_size)
+
+        # Edge↔edge refinement on the line graph (operate on edges only).
+        self.ee_gat = GATLayer(hidden_size, hidden_size, heads=heads, dropout=dropout, activation=activation)
+
+        # Incidence SGAT on (N+E) nodes; edge_attr is the (projected) raw dist feature repeated per incidence edge.
+        self.en_gat = SGATLayer(
+            hidden_size,
+            hidden_size,
+            heads=heads,
+            dropout=dropout,
+            combine="mean",
+            edge_dim=hidden_size,
+            activation=None,
+        )
+
+    @staticmethod
+    def _build_incidence_edge_index(edge_index: torch.Tensor, num_nodes: int) -> torch.Tensor:
+        if edge_index.numel() == 0:
+            return torch.zeros((2, 0), dtype=torch.long, device=edge_index.device)
+        src = edge_index[0]
+        dst = edge_index[1]
+        num_edges = int(edge_index.size(1))
+        edge_nodes = torch.arange(num_edges, device=edge_index.device, dtype=torch.long) + int(num_nodes)
+
+        inc_src = torch.cat([edge_nodes, edge_nodes], dim=0)
+        inc_dst = torch.cat([src, dst], dim=0)
+        return torch.stack([inc_src, inc_dst], dim=0)
+
+    def forward(self, data):
+        x = data.x  # [N, H]
+        edge_index = data.edge_index  # [2, E]
+        dist_feat = data.dist_feat  # [E, edge_dim]
+        dist_feat_order = data.dist_feat_order  # [E, edge_dim]
+        edge_to_edge_index = data.edge_to_edge_index  # [2, M]
+
+        num_nodes = int(x.size(0))
+        num_edges = int(edge_index.size(1))
+
+        srcs, dsts = edge_index[0], edge_index[1]
+
+        if self.edge_dim_proj is not None and dist_feat_order.size(1) != self.hidden_size:
+            dist_feat_order = self.edge_dim_proj(dist_feat_order)  # -> [E, H]
+
+        edge_feat_0 = F.relu(self.edge_fc(torch.cat([x[srcs], x[dsts], dist_feat_order], dim=1)))  # [E, H]
+
+        if self.edge_ee and edge_to_edge_index.numel() > 0:
+            edge_feat_1 = self.ee_gat(edge_feat_0, edge_to_edge_index)  # [E, H]
+        else:
+            edge_feat_1 = edge_feat_0
+
+        # Build (directed) incidence graph edges (edge-nodes -> endpoint nodes).
+        inc_edge_index = self._build_incidence_edge_index(edge_index, num_nodes=num_nodes)  # [2, 2E]
+
+        # Use projected raw dist features as incidence edge_attr (repeat for the 2 incidence edges).
+        if self.edge_dim_proj is not None and dist_feat.size(1) != self.hidden_size:
+            dist_feat = self.edge_dim_proj(dist_feat)  # -> [E, H]
+
+        if num_edges > 0:
+            inc_edge_attr = torch.cat([dist_feat, dist_feat], dim=0)  # [2E, H]
+        else:
+            inc_edge_attr = dist_feat.new_zeros((0, self.hidden_size))
+
+        node_edge_feat_in = torch.cat([x, edge_feat_1], dim=0)  # [(N+E), H]
+        if inc_edge_index.numel() > 0:
+            node_edge_feat_out = self.en_gat(node_edge_feat_in, inc_edge_index, inc_edge_attr)
+            node_out = node_edge_feat_out[:num_nodes]
+        else:
+            node_out = x
+
+        if self.out_activation is not None:
+            node_out = self.out_activation(node_out)
+
+        return torch.cat([node_out, edge_feat_1], dim=0)
+
+
 class SpatialConvV4EdgePoolFusion(nn.Module):
     """
     Edge-pool fusion SpatialConv variant:
@@ -1545,6 +1645,7 @@ class SpatialConvV20EdgeAttrScalarGate(nn.Module):
         self.gate_lin = nn.Linear(hidden_size, 1)
         nn.init.zeros_(self.gate_lin.weight)
         nn.init.zeros_(self.gate_lin.bias)
+        # Learnable fusion scale (tanh-bounded); start at 0 for stability.
         self.gate_scale = nn.Parameter(torch.tensor(0.0))
 
         self.en_gat = SGATLayer(
@@ -3009,6 +3110,210 @@ class SpatialConvV15EdgeEeAuxContextSimilarityDenoise(nn.Module):
         return torch.cat([node_out, edge_attr], dim=0)
 
 
+class SpatialConvV22StableDenoiseScalarFuse(nn.Module):
+    """
+    V22 (stable denoise + scalar-gated fusion + edge-level aux):
+    - Uses v15-style *context-aware similarity smoothing* on raw edge features to avoid heterogeneous mixing.
+    - Keeps v5 philosophy for node attention: start from raw edge_attr (dist_feat) for stability.
+    - Injects the denoised edge embedding into node attention via a *scalar* per-edge gate (like v20),
+      with a learnable scale initialized at 0 so training starts close to the baseline.
+    - Keeps pooling residual (raw + denoised) and exposes edge-level auxiliary logits (like v15/v16).
+
+    Exposes (per forward call):
+      - self._last_edge_within_logit: [E] logits (float) for the training loop to consume.
+    """
+
+    def __init__(self, hidden_size, edge_dim=None, dropout=0.2, heads=4, activation=F.relu, out_activation=_UNSET):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.edge_dim = edge_dim if edge_dim is not None else hidden_size
+        self.out_activation = activation if out_activation is _UNSET else out_activation
+
+        self.edge_ee = _env_flag("SDCN_EDGE_EE", True)
+        self.node_att_edge = _env_flag("SDCN_NODE_ATT_EDGE", True)
+
+        alpha_env = os.getenv("SDCN_EDGE_DENOISE_ALPHA", "").strip()
+        self.denoise_alpha = float(alpha_env) if alpha_env else 0.1
+        gamma_env = os.getenv("SDCN_EDGE_SIM_GAMMA", "").strip()
+        self.sim_gamma = float(gamma_env) if gamma_env else 1.0
+
+        # Normalize the denoised edge embedding (edge_out) before using it for pooling / fusion.
+        self.edge_norm = nn.LayerNorm(hidden_size) if _env_flag("SDCN_EDGE_DENOISE_NORM", True) else None
+
+        # Optional fusion knobs (reuse v7/v16/v20 env vars for fair sweeps).
+        self.edge_attr_fuse = _env_flag("SDCN_EDGE_ATTR_FUSE", True)
+        self.edge_attr_fuse_detach = _env_flag("SDCN_EDGE_ATTR_FUSE_DETACH", False)
+        fuse_scale_env = os.getenv("SDCN_EDGE_ATTR_FUSE_SCALE", "").strip()
+        self.edge_attr_fuse_scale = float(fuse_scale_env) if fuse_scale_env else 0.1
+        self.edge_fuse_norm = nn.LayerNorm(hidden_size) if _env_flag("SDCN_EDGE_FUSE_NORM", True) else None
+
+        self.pool_residual = _env_flag("SDCN_POOL_RESIDUAL", True)
+        self.pool_raw = _env_flag("SDCN_POOL_RAW", True)
+        self.pool_upd = _env_flag("SDCN_POOL_UPD", True)
+        self.pool_gate_mode = os.getenv("SDCN_POOL_GATE_MODE", "learned").strip().lower()
+        if self.pool_gate_mode not in {"learned", "one", "zero"}:
+            raise ValueError(
+                f"Unknown SDCN_POOL_GATE_MODE={self.pool_gate_mode!r}. Use one of: learned, one, zero."
+            )
+
+        self.edge_dim_proj = None
+        if self.edge_dim != hidden_size:
+            self.edge_dim_proj = nn.Linear(self.edge_dim, hidden_size)
+            with torch.no_grad():
+                self.edge_dim_proj.weight.zero_()
+                self.edge_dim_proj.bias.zero_()
+                m = min(int(self.edge_dim), int(hidden_size))
+                self.edge_dim_proj.weight[:m, :m].copy_(torch.eye(m, device=self.edge_dim_proj.weight.device))
+
+        self.node_ctx_lin = nn.Linear(hidden_size * 2, hidden_size)
+        self.node_ctx_scale = nn.Parameter(torch.tensor(0.0))
+        self.sim_key_ctx_scale = nn.Parameter(torch.tensor(0.0))
+
+        # Scalar gate for fusion (per-edge). Scale starts at 0 => no fusion at init (stable).
+        self.gate_lin = nn.Linear(hidden_size, 1)
+        nn.init.zeros_(self.gate_lin.weight)
+        nn.init.zeros_(self.gate_lin.bias)
+        self.gate_scale = nn.Parameter(torch.tensor(0.0))
+
+        self.en_gat = SGATLayer(
+            hidden_size,
+            hidden_size,
+            heads=heads,
+            dropout=dropout,
+            combine="mean",
+            edge_dim=hidden_size,
+            activation=None,
+        )
+
+        self.pool_proj = nn.Linear(hidden_size, hidden_size)
+        self.pool_gate = nn.Linear(hidden_size * 2, hidden_size)
+        nn.init.eye_(self.pool_proj.weight)
+        nn.init.zeros_(self.pool_proj.bias)
+
+        # Edge-level auxiliary head: predict within-edge probability (logit).
+        self.edge_within_lin = nn.Linear(hidden_size, 1)
+        nn.init.zeros_(self.edge_within_lin.bias)
+        self._last_edge_within_logit: torch.Tensor | None = None
+
+    @staticmethod
+    def _pool_edges_to_nodes_mean(edge_feat: torch.Tensor, edge_index: torch.Tensor, num_nodes: int) -> torch.Tensor:
+        src = edge_index[0]
+        dst = edge_index[1]
+        node_sum = torch.zeros((num_nodes, edge_feat.size(1)), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_cnt = torch.zeros((num_nodes, 1), device=edge_feat.device, dtype=edge_feat.dtype)
+
+        node_sum.index_add_(0, src, edge_feat)
+        node_sum.index_add_(0, dst, edge_feat)
+
+        ones = torch.ones((edge_feat.size(0), 1), device=edge_feat.device, dtype=edge_feat.dtype)
+        node_cnt.index_add_(0, src, ones)
+        node_cnt.index_add_(0, dst, ones)
+
+        return node_sum / node_cnt.clamp(min=1.0)
+
+    @staticmethod
+    def _edge_similarity_smooth_key(
+        edge_value: torch.Tensor, edge_key: torch.Tensor, edge_to_edge_index: torch.Tensor, gamma: float
+    ) -> torch.Tensor:
+        if edge_to_edge_index is None or edge_to_edge_index.numel() == 0:
+            return edge_value
+        s = edge_to_edge_index[0]
+        t = edge_to_edge_index[1]
+        diff = edge_key[s] - edge_key[t]
+        d2 = (diff * diff).mean(dim=1)  # [M]
+        w = torch.exp(-float(gamma) * d2).clamp(min=1e-8)  # [M]
+
+        n_edges = edge_value.size(0)
+        w_sum = torch.zeros((n_edges,), device=edge_value.device, dtype=edge_value.dtype)
+        w_sum.index_add_(0, s, w)
+
+        out = torch.zeros_like(edge_value)
+        out.index_add_(0, s, edge_value[t] * w.unsqueeze(1))
+        out = out / w_sum.clamp(min=1e-8).unsqueeze(1)
+
+        return out
+
+    def forward(self, data):
+        x = data.x
+        edge_index = data.edge_index
+        dist_feat = data.dist_feat
+        edge_to_edge_index = data.edge_to_edge_index
+
+        num_nodes = x.size(0)
+        srcs, dsts = edge_index[0], edge_index[1]
+
+        if self.edge_dim_proj is not None and dist_feat.size(1) != self.hidden_size:
+            dist_feat = self.edge_dim_proj(dist_feat)
+
+        # Raw edge signal (baseline-style).
+        edge_raw = dist_feat  # [E, H]
+
+        # Heuristic: the 5th SDCN layer (cluster logits) uses out_activation=F.leaky_relu.
+        # Avoid applying additional message passing/denoise/context mixing in that logit space
+        # (can destabilize pred head). Treat this layer as an MLP head: return node logits as-is.
+        is_logits_layer = self.out_activation is F.leaky_relu
+
+        if is_logits_layer:
+            node_ctx = torch.zeros_like(edge_raw)
+            edge_base = edge_raw
+            edge_out = edge_raw
+        else:
+            # Context-aware similarity key.
+            node_ctx = self.node_ctx_lin(torch.cat([x[srcs], x[dsts]], dim=1))
+            edge_key = edge_raw + torch.tanh(self.sim_key_ctx_scale) * node_ctx
+
+            # Conservative edge↔edge smoothing (value=edge_raw, weights from edge_key).
+            if self.edge_ee:
+                edge_upd = self._edge_similarity_smooth_key(
+                    edge_raw, edge_key, edge_to_edge_index, gamma=float(self.sim_gamma)
+                )
+                a = float(self.denoise_alpha)
+                edge_base = (1.0 - a) * edge_raw + a * edge_upd
+            else:
+                edge_base = edge_raw
+
+            # Edge embedding exposed to downstream (and used for pooling / fusion).
+            edge_out = edge_base + torch.tanh(self.node_ctx_scale) * node_ctx
+            if self.edge_norm is not None:
+                edge_out = self.edge_norm(edge_out)
+
+        # Store edge auxiliary logits for the training loop to consume.
+        self._last_edge_within_logit = self.edge_within_lin(edge_base).squeeze(-1)
+
+        # Node attention uses raw edge_attr, with an optional scalar-gated injection of denoised edges.
+        node_edge_attr = edge_raw if self.node_att_edge else None
+        if node_edge_attr is not None and self.edge_attr_fuse and self.edge_attr_fuse_scale != 0.0:
+            fuse = edge_out.detach() if self.edge_attr_fuse_detach else edge_out
+            if self.edge_fuse_norm is not None:
+                fuse = self.edge_fuse_norm(fuse)
+            gate = torch.sigmoid(self.gate_lin(fuse))  # [E, 1]
+            node_edge_attr = node_edge_attr + float(self.edge_attr_fuse_scale) * torch.tanh(self.gate_scale) * (gate * fuse)
+
+        node_att = self.en_gat(x, edge_index, node_edge_attr)
+
+        node_out = node_att
+        if self.pool_residual and (self.pool_raw or self.pool_upd):
+            pooled = 0.0
+            if self.pool_raw:
+                pooled = pooled + self._pool_edges_to_nodes_mean(edge_raw, edge_index, num_nodes=num_nodes)
+            if self.pool_upd:
+                pooled = pooled + self._pool_edges_to_nodes_mean(edge_out, edge_index, num_nodes=num_nodes)
+
+            if self.pool_gate_mode == "learned":
+                gate_n = torch.sigmoid(self.pool_gate(torch.cat([node_att, pooled], dim=1)))
+            elif self.pool_gate_mode == "one":
+                gate_n = torch.ones_like(node_att)
+            else:
+                gate_n = torch.zeros_like(node_att)
+
+            node_out = node_att + gate_n * self.pool_proj(pooled)
+
+        if self.out_activation is not None:
+            node_out = self.out_activation(node_out)
+
+        return torch.cat([node_out, edge_out], dim=0)
+
+
 _DEFAULT_SPATIALCONV_VARIANT = "v5edge_pool_residual"
 SPATIALCONV_VARIANT_SELECTED = os.getenv("SPATIALCONV_VARIANT", _DEFAULT_SPATIALCONV_VARIANT).strip().lower()
 
@@ -3150,6 +3455,25 @@ elif SPATIALCONV_VARIANT_SELECTED in {
 }:
     SpatialConv = SpatialConvV16EdgeEeResidualAuxFusion
 elif SPATIALCONV_VARIANT_SELECTED in {
+    "v22",
+    "v22stable",
+    "v22_stable",
+    "v22stable_denoise_scalar_fuse",
+    "v22_stable_denoise_scalar_fuse",
+    "stable_denoise_scalar_fuse",
+    "denoise_scalar_fuse",
+}:
+    SpatialConv = SpatialConvV22StableDenoiseScalarFuse
+elif SPATIALCONV_VARIANT_SELECTED in {
+    "v23",
+    "v23sman_incidence",
+    "v23_sman_incidence",
+    "sman_incidence",
+    "sman_incidence_bipartite",
+    "incidence_bipartite",
+}:
+    SpatialConv = SpatialConvV23SmanIncidenceBipartite
+elif SPATIALCONV_VARIANT_SELECTED in {
     "v17",
     "v17edge_attr_gate",
     "v17_edge_attr_gate",
@@ -3208,6 +3532,7 @@ else:
         f"v9edge_context_denoise, v10edge_base_denoise_plus_context, v11edge_adaptive_denoise_context, "
         f"v12edge_similarity_denoise, v13edge_context_similarity_denoise, "
         f"v14edge_pool_concat_fusion, v15edge_ee_aux_context_similarity_denoise, v16edge_ee_residual_aux_fusion, "
+        f"v22stable_denoise_scalar_fuse, v23sman_incidence, "
         f"v17edge_attr_gate, v18edge_attr_mlp_fuse, v19edge_attn_pool, "
         f"v20edge_attr_scalar_gate, v21dual_sgat_edge_attr."
     )
